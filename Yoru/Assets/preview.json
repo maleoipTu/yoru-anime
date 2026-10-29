@@ -1,0 +1,1246 @@
+{
+  "response": [
+    {
+      "description": "Одержав победу над Королём демонов, отряд героя Химмеля вернулся домой. Приключение, растянувшееся на десятилетие, подошло к завершению. Волшебница-эльф Фрирен и её отважные товарищи принесли людям мир и разошлись в разные стороны, чтобы спокойно прожить остаток жизни. Однако не всех членов отряда ждёт одинаковая участь. Для эльфов время течёт иначе, поэтому Фрирен вынужденно становится свидетелем того, как её спутники один за другим постепенно уходят из жизни. Девушка осознала, что годы, проведённые в отряде героя, пронеслись в один миг, как падающая звезда в бескрайнем космосе её жизни, и столкнулась с сожалениями об упущенных возможностях. Сможет ли она смириться со смертью друзей и понять, что значит жизнь для окружающих её людей? Фрирен начинает новое путешествие, чтобы найти ответ.",
+      "poster": {
+        "fullsize": "//static.yani.tv/posters/full/1636668991.jpg",
+        "big": "//static.yani.tv/posters/big/1636668991.webp",
+        "small": "//static.yani.tv/posters/small/1636668991.webp",
+        "medium": "//static.yani.tv/posters/medium/1636668991.webp",
+        "huge": "//static.yani.tv/posters/huge/1636668991.avif",
+        "mega": "//static.yani.tv/posters/mega/1636668991.avif"
+      },
+      "title": "Провожающая в последний путь Фрирен",
+      "anime_url": "provozhayushchaya-posledniy-put-friren",
+      "anime_id": 10661,
+      "rating": {
+        "average": 8.98678493811301,
+        "counters": 11048,
+        "kp_rating": 8.7,
+        "anidub_rating": 0,
+        "myanimelist_rating": 9.24,
+        "worldart_rating": 8.8,
+        "shikimori_rating": 8.85900129394905
+      },
+      "year": 2023,
+      "min_age": {
+        "value": 3,
+        "title_long": "PG-13 (от 13 лет)",
+        "title": "PG-13"
+      },
+      "views": 4059051,
+      "season": 4,
+      "anime_status": {
+        "value": 0,
+        "title": "вышел",
+        "alias": "released",
+        "class": ""
+      },
+      "type": {
+        "name": "Сериал",
+        "value": 1,
+        "shortname": "ТВ",
+        "alias": "tv"
+      },
+      "remote_ids": {
+        "worldart_id": 11466,
+        "shikimori_id": 52991,
+        "anidub_id": 0,
+        "anilibria_alias": "sousou-no-frieren",
+        "myanimelist_id": 52991,
+        "kp_id": 5401195,
+        "worldart_type": "animation",
+        "sr_id": 1459
+      },
+      "top": {
+        "category": 17,
+        "global": 24
+      },
+      "blocked_in": []
+    },
+    {
+      "description": "Мир разделён на четыре народа: Водные племена, Королевство земли, Воздушные кочевники и Страна огня. В этом мире часть людей из каждого народа обладает способностью к контролю своего элемента, такие люди именуют себя магами воды, земли, воздуха или огня. Только аватар является властелином всех четырёх стихий. Его роль заключается в поддержке баланса между народами и сохранении мирового порядка. Однажды предводитель Страны огня, Хозяин огня, развязал войну со всем миром с целью подчинить себе остальные народы. Ответственность за спасение мира легла на плечи 12-летнего мальчика, мага воздуха по имени Аанг, который узнал, что он аватар. Аанг отправляется в опасное путешествие вместе со своими отважными друзьями из Племени воды, Катарой и её братом Соккой. Ему предстоит овладеть всеми стихиями, пройти через множество испытаний, перебороть свои страхи и сразить Хозяина огня, чтобы остановить войну и восстановить равновесие в мире.",
+      "poster": {
+        "fullsize": "//static.yani.tv/posters/full/1636669570.jpg",
+        "big": "//static.yani.tv/posters/big/1636669570.webp",
+        "small": "//static.yani.tv/posters/small/1636669570.webp",
+        "medium": "//static.yani.tv/posters/medium/1636669570.webp",
+        "huge": "//static.yani.tv/posters/huge/1636669570.avif",
+        "mega": "//static.yani.tv/posters/mega/1636669570.avif"
+      },
+      "title": "Аватар: Легенда об Аанге",
+      "anime_url": "avatar-legenda-ob-aange",
+      "anime_id": 10818,
+      "rating": {
+        "average": 9.45088408572487,
+        "counters": 4072,
+        "kp_rating": 0,
+        "anidub_rating": 0,
+        "myanimelist_rating": 0,
+        "worldart_rating": 8.8,
+        "shikimori_rating": 0
+      },
+      "genres": [
+        {
+          "title": "Сёнэн",
+          "url": "/catalog/category/senen",
+          "id": 8,
+          "alias": "senen"
+        },
+        {
+          "title": "Драма",
+          "url": "/catalog/category/drama",
+          "id": 15,
+          "alias": "drama"
+        },
+        {
+          "title": "Комедия",
+          "url": "/catalog/category/komediya",
+          "id": 16,
+          "alias": "komediya"
+        },
+        {
+          "title": "Приключения",
+          "url": "/catalog/category/priklyucheniya",
+          "id": 32,
+          "alias": "priklyucheniya"
+        },
+        {
+          "title": "Романтика",
+          "url": "/catalog/category/romantika",
+          "id": 33,
+          "alias": "romantika"
+        },
+        {
+          "title": "Фантастика",
+          "url": "/catalog/category/fantastika",
+          "id": 37,
+          "alias": "fantastika"
+        },
+        {
+          "title": "Фэнтези",
+          "url": "/catalog/category/fentezi",
+          "id": 42,
+          "alias": "fentezi"
+        },
+        {
+          "title": "Магия",
+          "url": "/catalog/category/magiya",
+          "id": 51,
+          "alias": "magiya"
+        },
+        {
+          "title": "Целый фэнтези мир",
+          "url": "/catalog/category/celyj-fentezi-mir",
+          "id": 59,
+          "alias": "celyj-fentezi-mir"
+        },
+        {
+          "title": "Экшен",
+          "url": "/catalog/category/ekshen",
+          "id": 63,
+          "alias": "ekshen"
+        },
+        {
+          "title": "Боевые искусства",
+          "url": "/catalog/category/boevye-iskusstva",
+          "id": 64,
+          "alias": "boevye-iskusstva"
+        },
+        {
+          "title": "Война",
+          "url": "/catalog/category/vojna",
+          "id": 75,
+          "alias": "vojna"
+        },
+        {
+          "title": "Военная тематика",
+          "url": "/catalog/category/voennaya-tematika",
+          "id": 76,
+          "alias": "voennaya-tematika"
+        },
+        {
+          "title": "Не японское",
+          "url": "/catalog/category/ne-yaponskoe",
+          "id": 101,
+          "alias": "ne-yaponskoe"
+        },
+        {
+          "title": "Сверхъестественное",
+          "url": "/catalog/category/sverh-estestvennoe",
+          "id": 103,
+          "alias": "sverh-estestvennoe"
+        }
+      ],
+      "year": 2005,
+      "min_age": {
+        "value": 2,
+        "title_long": "PG (для детей)",
+        "title": "PG"
+      },
+      "views": 1931060,
+      "season": 1,
+      "anime_status": {
+        "value": 0,
+        "title": "вышел",
+        "alias": "released",
+        "class": ""
+      },
+      "type": {
+        "name": "ONA",
+        "value": 7,
+        "shortname": "ONA",
+        "alias": "ona"
+      },
+      "remote_ids": {
+        "worldart_id": 547,
+        "shikimori_id": 0,
+        "anidub_id": 0,
+        "anilibria_alias": "",
+        "myanimelist_id": 0,
+        "kp_id": 401152,
+        "worldart_type": "cinema",
+        "sr_id": 0
+      },
+      "top": {
+        "category": 1,
+        "global": 1
+      },
+      "blocked_in": [
+        ""
+      ]
+    },
+    {
+      "description": "Современный человек Чэн Янь перерождается в четвёртом принце Королевства Грейкасл Роланде. Спасая от казни ведьму Анну, он узнаёт, что в этом мире существует магия. Понимая, что магия способна заменить современные технологии, Роланд разрабатывает план «великого развития магической индустрии» и начинает набирать ведьм в Пограничном городе.\n\nОн внедряет современные бизнес-идеи, налаживает производство огнестрельного оружия и завоёвывает поддержку населения. По мере роста числа ведьм магическая промышленность развивается, а Роланд сталкивается с противостоянием великих родов и других претендентов на трон. Ему предстоит не только подчинить западные территории и всё королевство, но и раскрыть секреты расы дьяволов и Империи ведьм.",
+      "poster": {
+        "fullsize": "//static.yani.tv/posters/full/1636885510.jpg",
+        "big": "//static.yani.tv/posters/big/1636885510.webp",
+        "small": "//static.yani.tv/posters/small/1636885510.webp",
+        "medium": "//static.yani.tv/posters/medium/1636885510.webp",
+        "huge": "//static.yani.tv/posters/huge/1636885510.avif",
+        "mega": "//static.yani.tv/posters/mega/1636885510.avif"
+      },
+      "title": "Освободите эту ведьму",
+      "anime_url": "fangkai-nage-nuwu",
+      "anime_id": 24920,
+      "rating": {
+        "average": 9.30250305208491,
+        "counters": 3276,
+        "kp_rating": 0,
+        "anidub_rating": 0,
+        "myanimelist_rating": 8.18,
+        "worldart_rating": 8.6,
+        "shikimori_rating": 8.39790929017029
+      },
+      "genres": [
+        {
+          "title": "Романтика",
+          "url": "/catalog/category/romantika",
+          "id": 33,
+          "alias": "romantika"
+        },
+        {
+          "title": "Фэнтези",
+          "url": "/catalog/category/fentezi",
+          "id": 42,
+          "alias": "fentezi"
+        },
+        {
+          "title": "Экшен",
+          "url": "/catalog/category/ekshen",
+          "id": 63,
+          "alias": "ekshen"
+        },
+        {
+          "title": "Не японское",
+          "url": "/catalog/category/ne-yaponskoe",
+          "id": 101,
+          "alias": "ne-yaponskoe"
+        },
+        {
+          "title": "Исэкай",
+          "url": "/catalog/category/isekai",
+          "id": 106,
+          "alias": "isekai"
+        }
+      ],
+      "year": 2026,
+      "min_age": {
+        "value": 3,
+        "title_long": "PG-13 (от 13 лет)",
+        "title": "PG-13"
+      },
+      "views": 1756405,
+      "season": 1,
+      "anime_status": {
+        "value": 0,
+        "title": "вышел",
+        "alias": "released",
+        "class": ""
+      },
+      "type": {
+        "name": "ONA",
+        "value": 7,
+        "shortname": "ONA",
+        "alias": "ona"
+      },
+      "remote_ids": {
+        "worldart_id": 100710,
+        "shikimori_id": 62927,
+        "anidub_id": 0,
+        "anilibria_alias": "",
+        "myanimelist_id": 62927,
+        "kp_id": 0,
+        "worldart_type": "cinema",
+        "sr_id": 0
+      },
+      "top": {
+        "category": 2,
+        "global": 3
+      },
+      "blocked_in": []
+    },
+    {
+      "description": "Девочка Тихиро вместе с родителями переезжают в свой новый дом. Сбившись с дороги, они оказываются в странном безлюдном городе, где столы ломятся от количества блюд. Родители с жадностью бросаются на еду и к ужасу и удивлению Тихиро превращаются в свиней. Они стали пленниками злой колдуньи Юбабы, хозяйки таинственного мира древних богов и могущественных духов. Тихиро решает во что бы то ни стало вернуть родителям их прежний облик.",
+      "poster": {
+        "fullsize": "//static.yani.tv/posters/full/1636666502.jpg",
+        "big": "//static.yani.tv/posters/big/1636666502.webp",
+        "small": "//static.yani.tv/posters/small/1636666502.webp",
+        "medium": "//static.yani.tv/posters/medium/1636666502.webp",
+        "huge": "//static.yani.tv/posters/huge/1636666502.avif",
+        "mega": "//static.yani.tv/posters/mega/1636666502.avif"
+      },
+      "title": "Унесенные призраками",
+      "anime_url": "unesennye-prizrakami",
+      "anime_id": 1486,
+      "rating": {
+        "average": 9.23828326135503,
+        "counters": 5825,
+        "kp_rating": 8.6,
+        "anidub_rating": 0,
+        "myanimelist_rating": 8.77,
+        "worldart_rating": 9.1,
+        "shikimori_rating": 8.95210361326514
+      },
+      "genres": [
+        {
+          "title": "Сёнэн",
+          "url": "/catalog/category/senen",
+          "id": 8,
+          "alias": "senen"
+        },
+        {
+          "title": "Драма",
+          "url": "/catalog/category/drama",
+          "id": 15,
+          "alias": "drama"
+        },
+        {
+          "title": "Приключения",
+          "url": "/catalog/category/priklyucheniya",
+          "id": 32,
+          "alias": "priklyucheniya"
+        },
+        {
+          "title": "Фэнтези",
+          "url": "/catalog/category/fentezi",
+          "id": 42,
+          "alias": "fentezi"
+        },
+        {
+          "title": "Драконы",
+          "url": "/catalog/category/drakony",
+          "id": 49,
+          "alias": "drakony"
+        },
+        {
+          "title": "Параллельный мир",
+          "url": "/catalog/category/parallel-nyj-mir",
+          "id": 62,
+          "alias": "parallel-nyj-mir"
+        },
+        {
+          "title": "Сверхъестественное",
+          "url": "/catalog/category/sverh-estestvennoe",
+          "id": 103,
+          "alias": "sverh-estestvennoe"
+        }
+      ],
+      "year": 2001,
+      "min_age": {
+        "value": 2,
+        "title_long": "PG (для детей)",
+        "title": "PG"
+      },
+      "views": 557836,
+      "season": 3,
+      "anime_status": {
+        "value": 0,
+        "title": "вышел",
+        "alias": "released",
+        "class": ""
+      },
+      "type": {
+        "name": "Полнометражный фильм",
+        "value": 2,
+        "shortname": "п/ф",
+        "alias": "movie"
+      },
+      "remote_ids": {
+        "worldart_id": 87,
+        "shikimori_id": 199,
+        "anidub_id": 0,
+        "anilibria_alias": "",
+        "myanimelist_id": 199,
+        "kp_id": 370,
+        "worldart_type": "animation",
+        "sr_id": 0
+      },
+      "top": {
+        "category": 1,
+        "global": 2
+      },
+      "blocked_in": [
+        ""
+      ]
+    },
+    {
+      "description": "18-летнюю Софи злая ведьма заточила в тело старухи. Как ей вернуть свой облик? В поисках ответа Софи знакомится с сильным волшебником Хаулом и демоном огня Кальцифером. У Кальцифера с Хаулом договор, по которому он должен служить волшебнику. Софи и демон договариваются помочь друг другу избавиться от злых чар…",
+      "poster": {
+        "fullsize": "//static.yani.tv/posters/full/1636891284.jpg",
+        "big": "//static.yani.tv/posters/big/1636891284.webp",
+        "small": "//static.yani.tv/posters/small/1636891284.webp",
+        "medium": "//static.yani.tv/posters/medium/1636891284.webp",
+        "huge": "//static.yani.tv/posters/huge/1636891284.avif",
+        "mega": "//static.yani.tv/posters/mega/1636891284.avif"
+      },
+      "title": "Ходячий замок",
+      "anime_url": "hodyachiy-zamok",
+      "anime_id": 481,
+      "rating": {
+        "average": 9.19285338880877,
+        "counters": 5709,
+        "kp_rating": 8.3,
+        "anidub_rating": 0,
+        "myanimelist_rating": 8.67,
+        "worldart_rating": 8.9,
+        "shikimori_rating": 8.86383059358568
+      },
+      "genres": [
+        {
+          "title": "Сёнэн",
+          "url": "/catalog/category/senen",
+          "id": 8,
+          "alias": "senen"
+        },
+        {
+          "title": "Драма",
+          "url": "/catalog/category/drama",
+          "id": 15,
+          "alias": "drama"
+        },
+        {
+          "title": "Приключения",
+          "url": "/catalog/category/priklyucheniya",
+          "id": 32,
+          "alias": "priklyucheniya"
+        },
+        {
+          "title": "Романтика",
+          "url": "/catalog/category/romantika",
+          "id": 33,
+          "alias": "romantika"
+        },
+        {
+          "title": "Фэнтези",
+          "url": "/catalog/category/fentezi",
+          "id": 42,
+          "alias": "fentezi"
+        },
+        {
+          "title": "Демоны",
+          "url": "/catalog/category/demony",
+          "id": 48,
+          "alias": "demony"
+        },
+        {
+          "title": "Альтернативная история",
+          "url": "/catalog/category/al-ternativnaya-istoriya",
+          "id": 72,
+          "alias": "al-ternativnaya-istoriya"
+        },
+        {
+          "title": "Антивойна",
+          "url": "/catalog/category/antivojna",
+          "id": 73,
+          "alias": "antivojna"
+        },
+        {
+          "title": "Война",
+          "url": "/catalog/category/vojna",
+          "id": 75,
+          "alias": "vojna"
+        },
+        {
+          "title": "Стимпанк",
+          "url": "/catalog/category/stimpank",
+          "id": 93,
+          "alias": "stimpank"
+        }
+      ],
+      "year": 2004,
+      "min_age": {
+        "value": 1,
+        "title_long": "G (для всех возрастов)",
+        "title": "G"
+      },
+      "views": 789314,
+      "season": 4,
+      "anime_status": {
+        "value": 0,
+        "title": "вышел",
+        "alias": "released",
+        "class": ""
+      },
+      "type": {
+        "name": "Полнометражный фильм",
+        "value": 2,
+        "shortname": "п/ф",
+        "alias": "movie"
+      },
+      "remote_ids": {
+        "worldart_id": 2495,
+        "shikimori_id": 431,
+        "anidub_id": 0,
+        "anilibria_alias": "",
+        "myanimelist_id": 431,
+        "kp_id": 49684,
+        "worldart_type": "animation",
+        "sr_id": 1404
+      },
+      "top": {
+        "category": 2,
+        "global": 4
+      },
+      "blocked_in": [
+        ""
+      ]
+    },
+    {
+      "description": "Субару и его спутники с трудом одержали победу в ожесточенной битве у Водных Врат города Пристелла, но цена оказалась разрушительной. Рем остается в бесконечном сне из-за Полномочия Чревоугодия, Круш потеряла память, а Юлиус лишился самого имени. В поисках способа спасти их, Субару узнает о существовании «Мудреца», который, как говорят, обладает всеобъемлющими знаниями и прозрением. Их следующая цель: «Сторожевая башня Плеяд», дом Мудреца — удаленная башня, возвышающаяся среди великих песчаных дюн Аугрии, смертоносной пустыни, из которой никто не возвращался живым. Там их ждут подавляющие силы природы, неведомые звери и невообразимые угрозы. Вместе со своими спутниками юноша отправляется в рискованное путешествие, чтобы вернуть все, что было потеряно.",
+      "poster": {
+        "fullsize": "//static.yani.tv/posters/full/1636924647.jpg",
+        "big": "//static.yani.tv/posters/big/1636924647.webp",
+        "small": "//static.yani.tv/posters/small/1636924647.webp",
+        "medium": "//static.yani.tv/posters/medium/1636924647.webp",
+        "huge": "//static.yani.tv/posters/huge/1636924647.avif",
+        "mega": "//static.yani.tv/posters/mega/1636924647.avif"
+      },
+      "title": "Re:Zero. Жизнь с нуля в альтернативном мире 4",
+      "anime_url": "re-zero-zhizn-s-nulya-v-alternativnom-mire-4",
+      "anime_id": 19627,
+      "rating": {
+        "average": 9.17842535780692,
+        "counters": 5868,
+        "kp_rating": 7.9,
+        "anidub_rating": 0,
+        "myanimelist_rating": 9.07,
+        "worldart_rating": 7.9,
+        "shikimori_rating": 8.63854743361171
+      },
+      "genres": [
+        {
+          "title": "Драма",
+          "url": "/catalog/category/drama",
+          "id": 15,
+          "alias": "drama"
+        },
+        {
+          "title": "Приключения",
+          "url": "/catalog/category/priklyucheniya",
+          "id": 32,
+          "alias": "priklyucheniya"
+        },
+        {
+          "title": "Триллер",
+          "url": "/catalog/category/triller",
+          "id": 35,
+          "alias": "triller"
+        },
+        {
+          "title": "Путешествия во времени",
+          "url": "/catalog/category/puteshestviya-vo-vremeni",
+          "id": 41,
+          "alias": "puteshestviya-vo-vremeni"
+        },
+        {
+          "title": "Фэнтези",
+          "url": "/catalog/category/fentezi",
+          "id": 42,
+          "alias": "fentezi"
+        },
+        {
+          "title": "Магия",
+          "url": "/catalog/category/magiya",
+          "id": 51,
+          "alias": "magiya"
+        },
+        {
+          "title": "Темное фэнтези",
+          "url": "/catalog/category/temnoe-fentezi",
+          "id": 56,
+          "alias": "temnoe-fentezi"
+        },
+        {
+          "title": "Целый фэнтези мир",
+          "url": "/catalog/category/celyj-fentezi-mir",
+          "id": 59,
+          "alias": "celyj-fentezi-mir"
+        },
+        {
+          "title": "Параллельный мир",
+          "url": "/catalog/category/parallel-nyj-mir",
+          "id": 62,
+          "alias": "parallel-nyj-mir"
+        },
+        {
+          "title": "Психология",
+          "url": "/catalog/category/psihologiya",
+          "id": 98,
+          "alias": "psihologiya"
+        },
+        {
+          "title": "Исэкай",
+          "url": "/catalog/category/isekai",
+          "id": 106,
+          "alias": "isekai"
+        }
+      ],
+      "year": 2026,
+      "min_age": {
+        "value": 4,
+        "title_long": "R-17+ (насилие и/или нецензурная лексика)",
+        "title": "R-17+"
+      },
+      "views": 9678353,
+      "season": 2,
+      "anime_status": {
+        "value": 0,
+        "title": "вышел",
+        "alias": "released",
+        "class": ""
+      },
+      "type": {
+        "name": "Сериал",
+        "value": 1,
+        "shortname": "ТВ",
+        "alias": "tv"
+      },
+      "remote_ids": {
+        "worldart_id": 12434,
+        "shikimori_id": 61316,
+        "anidub_id": 0,
+        "anilibria_alias": "",
+        "myanimelist_id": 61316,
+        "kp_id": 971114,
+        "worldart_type": "animation",
+        "sr_id": 0
+      },
+      "top": {
+        "category": 1,
+        "global": 5
+      },
+      "blocked_in": []
+    },
+    {
+      "description": "Иори Китахара поступил в университет в прибрежном городке и снял комнату у семьи Котэгава. Глава семьи владеет магазинчиком снаряжения для дайвинга, но эта тематика не близка сердцу Иори - он до ужаса боится воды. Но знакомство с компанией друзей-дайверов заставляет его постепенно менять свои взгляды, научиться смотреть своим страхам прямо в глаза и открыть для себя просторы необъятного океана.",
+      "poster": {
+        "fullsize": "//static.yani.tv/posters/full/1636966484.jpg",
+        "big": "//static.yani.tv/posters/big/1636966484.webp",
+        "small": "//static.yani.tv/posters/small/1636966484.webp",
+        "medium": "//static.yani.tv/posters/medium/1636966484.webp",
+        "huge": "//static.yani.tv/posters/huge/1636966484.avif",
+        "mega": "//static.yani.tv/posters/mega/1636966484.avif"
+      },
+      "title": "Необъятный океан 3",
+      "anime_url": "neobyatnyy-okean-3",
+      "anime_id": 15,
+      "rating": {
+        "average": 9.14121560326576,
+        "counters": 3307,
+        "kp_rating": 8.1,
+        "anidub_rating": 0,
+        "myanimelist_rating": 8.32,
+        "worldart_rating": 8.1,
+        "shikimori_rating": 8.48187005337751
+      },
+      "genres": [
+        {
+          "title": "Сэйнэн",
+          "url": "/catalog/category/sejnen",
+          "id": 10,
+          "alias": "sejnen"
+        },
+        {
+          "title": "Комедия",
+          "url": "/catalog/category/komediya",
+          "id": 16,
+          "alias": "komediya"
+        },
+        {
+          "title": "Романтика",
+          "url": "/catalog/category/romantika",
+          "id": 33,
+          "alias": "romantika"
+        },
+        {
+          "title": "Повседневность",
+          "url": "/catalog/category/povsednevnost",
+          "id": 86,
+          "alias": "povsednevnost"
+        }
+      ],
+      "year": 2026,
+      "min_age": {
+        "value": 3,
+        "title_long": "PG-13 (от 13 лет)",
+        "title": "PG-13"
+      },
+      "views": 3761371,
+      "season": 3,
+      "anime_status": {
+        "value": 0,
+        "title": "вышел",
+        "alias": "released",
+        "class": ""
+      },
+      "type": {
+        "name": "Сериал",
+        "value": 1,
+        "shortname": "ТВ",
+        "alias": "tv"
+      },
+      "remote_ids": {
+        "worldart_id": 12629,
+        "shikimori_id": 62542,
+        "anidub_id": 0,
+        "anilibria_alias": "grand-blue-season-3",
+        "myanimelist_id": 62542,
+        "kp_id": 1112986,
+        "worldart_type": "animation",
+        "sr_id": 0
+      },
+      "top": {
+        "category": 8,
+        "global": 13
+      },
+      "blocked_in": []
+    },
+    {
+      "description": "Бывший член нагоняющей на горожан ужас банды «Онибаку», байкер Эйкити Онидзука, ставит перед собой цель стать самым крутым школьным учителем. Почему учителем? Да просто в школах полно сексуальных старшеклассниц!\nОднако тирания школьной администрации и целый класс малолетних правонарушителей стоят между Онидзукой и его целью. И любыми средствами — неважно, законными или нет, — они хотят избавиться от нового учителя. Впрочем, самого Онидзуку это не сильно беспокоит — его способы воспитания учеников вы не найдёте ни в одном учебном пособии, законность и дозволенность методов его заботит ровно настолько же, насколько его заботит разница в возрасте между ним и вожделенными старшеклассницами.",
+      "poster": {
+        "fullsize": "//static.yani.tv/posters/full/1636876707.jpg",
+        "big": "//static.yani.tv/posters/big/1636876707.webp",
+        "small": "//static.yani.tv/posters/small/1636876707.webp",
+        "medium": "//static.yani.tv/posters/medium/1636876707.webp",
+        "huge": "//static.yani.tv/posters/huge/1636876707.avif",
+        "mega": "//static.yani.tv/posters/mega/1636876707.avif"
+      },
+      "title": "Крутой учитель Онидзука",
+      "anime_url": "krutoj-uchitel-onidzuka",
+      "anime_id": 662,
+      "rating": {
+        "average": 9.12317834765779,
+        "counters": 5764,
+        "kp_rating": 8.7,
+        "anidub_rating": 0,
+        "myanimelist_rating": 8.68,
+        "worldart_rating": 9.2,
+        "shikimori_rating": 9.03473082895281
+      },
+      "genres": [
+        {
+          "title": "Сёнэн",
+          "url": "/catalog/category/senen",
+          "id": 8,
+          "alias": "senen"
+        },
+        {
+          "title": "Драма",
+          "url": "/catalog/category/drama",
+          "id": 15,
+          "alias": "drama"
+        },
+        {
+          "title": "Комедия",
+          "url": "/catalog/category/komediya",
+          "id": 16,
+          "alias": "komediya"
+        },
+        {
+          "title": "Повседневность",
+          "url": "/catalog/category/povsednevnost",
+          "id": 86,
+          "alias": "povsednevnost"
+        },
+        {
+          "title": "Школьная жизнь",
+          "url": "/catalog/category/shkola",
+          "id": 95,
+          "alias": "shkola"
+        },
+        {
+          "title": "Хулиганы",
+          "url": "/catalog/category/badguys",
+          "id": 109,
+          "alias": "badguys"
+        }
+      ],
+      "year": 1999,
+      "min_age": {
+        "value": 4,
+        "title_long": "R-17+ (насилие и/или нецензурная лексика)",
+        "title": "R-17+"
+      },
+      "views": 2255529,
+      "season": 2,
+      "anime_status": {
+        "value": 0,
+        "title": "вышел",
+        "alias": "released",
+        "class": ""
+      },
+      "type": {
+        "name": "Сериал",
+        "value": 1,
+        "shortname": "ТВ",
+        "alias": "tv"
+      },
+      "remote_ids": {
+        "worldart_id": 311,
+        "shikimori_id": 245,
+        "anidub_id": 0,
+        "anilibria_alias": "",
+        "myanimelist_id": 245,
+        "kp_id": 408596,
+        "worldart_type": "animation",
+        "sr_id": 0
+      },
+      "top": {
+        "category": 2,
+        "global": 7
+      },
+      "blocked_in": [
+        ""
+      ]
+    },
+    {
+      "description": "Прошел год после неудачного Черного Восстания, которое поднял против Священной Британской Империи ныне пропавший борец за справедливость Зеро. Без своего лидера Черные Рыцари, повстанцы Зоны 11, не в силах побороть жестокость, с которой Британия относится к одиннадцатым, и которая дополнительно усилилась, чтобы подавить даже мысли о новой революции.\n\nА тем временем Лелуш Ламперуж, лишившийся воспоминаний о своей двойной жизни, мирно учится с друзьями в Академии Эшфорд. Его партнерша С.С. не может принять подобный поворот событий и берет в свои руки задачу напомнить принцу в изгнании о его прежних целях. Она надеется, что стратегический гений Зеро поднимется вновь, чтобы завершить начатое.",
+      "poster": {
+        "fullsize": "//static.yani.tv/posters/full/1636691210.jpg",
+        "big": "//static.yani.tv/posters/big/1636691210.webp",
+        "small": "//static.yani.tv/posters/small/1636691210.webp",
+        "medium": "//static.yani.tv/posters/medium/1636691210.webp",
+        "huge": "//static.yani.tv/posters/huge/1636691210.avif",
+        "mega": "//static.yani.tv/posters/mega/1636691210.avif"
+      },
+      "title": "Код Гиасс: Восстание Лелуша 2",
+      "anime_url": "kod-gias-vosstavshij-lelush-r2",
+      "anime_id": 610,
+      "rating": {
+        "average": 9.10686344219326,
+        "counters": 5624,
+        "kp_rating": 8.5,
+        "anidub_rating": 0,
+        "myanimelist_rating": 8.92,
+        "worldart_rating": 9.1,
+        "shikimori_rating": 9.02844809716007
+      },
+      "genres": [
+        {
+          "title": "Драма",
+          "url": "/catalog/category/drama",
+          "id": 15,
+          "alias": "drama"
+        },
+        {
+          "title": "Меха",
+          "url": "/catalog/category/meha",
+          "id": 25,
+          "alias": "meha"
+        },
+        {
+          "title": "Пилотируемые роботы",
+          "url": "/catalog/category/pilotiruemye-roboty",
+          "id": 27,
+          "alias": "pilotiruemye-roboty"
+        },
+        {
+          "title": "Фантастика",
+          "url": "/catalog/category/fantastika",
+          "id": 37,
+          "alias": "fantastika"
+        },
+        {
+          "title": "Альтернативная реальность",
+          "url": "/catalog/category/al-ternativnaya-real-nost",
+          "id": 43,
+          "alias": "al-ternativnaya-real-nost"
+        },
+        {
+          "title": "Экшен",
+          "url": "/catalog/category/ekshen",
+          "id": 63,
+          "alias": "ekshen"
+        },
+        {
+          "title": "Перестрелки",
+          "url": "/catalog/category/perestrelki",
+          "id": 66,
+          "alias": "perestrelki"
+        },
+        {
+          "title": "Суперспособности",
+          "url": "/catalog/category/supersposobnosti",
+          "id": 70,
+          "alias": "supersposobnosti"
+        },
+        {
+          "title": "Война",
+          "url": "/catalog/category/vojna",
+          "id": 75,
+          "alias": "vojna"
+        },
+        {
+          "title": "Военная тематика",
+          "url": "/catalog/category/voennaya-tematika",
+          "id": 76,
+          "alias": "voennaya-tematika"
+        },
+        {
+          "title": "Политика",
+          "url": "/catalog/category/politika",
+          "id": 87,
+          "alias": "politika"
+        },
+        {
+          "title": "Психология",
+          "url": "/catalog/category/psihologiya",
+          "id": 98,
+          "alias": "psihologiya"
+        }
+      ],
+      "year": 2008,
+      "min_age": {
+        "value": 4,
+        "title_long": "R-17+ (насилие и/или нецензурная лексика)",
+        "title": "R-17+"
+      },
+      "views": 1175275,
+      "season": 2,
+      "anime_status": {
+        "value": 0,
+        "title": "вышел",
+        "alias": "released",
+        "class": ""
+      },
+      "type": {
+        "name": "Сериал",
+        "value": 1,
+        "shortname": "ТВ",
+        "alias": "tv"
+      },
+      "remote_ids": {
+        "worldart_id": 6804,
+        "shikimori_id": 2904,
+        "anidub_id": 0,
+        "anilibria_alias": "codegeass-r2",
+        "myanimelist_id": 2904,
+        "kp_id": 408674,
+        "worldart_type": "animation",
+        "sr_id": 0
+      },
+      "top": {
+        "category": 5,
+        "global": 10
+      },
+      "blocked_in": [
+        ""
+      ]
+    },
+    {
+      "description": "Прошло три месяца с тех пор, как Иори Китахара поселился над магазином снаряжения для дайвинга «Гранд Блю», принадлежащим его дяде, и вступил в дайвинг-клуб своего университета. Вместе с другими членами клуба он проводил дни, выпивая и безрассудно развлекаясь. Однако, когда сестра Иори, Шиори, узнает о его поведении, она решает взять дело в свои руки — и вернуть его домой, чтобы он взял на себя управление семейной гостиницей.\n\nНесмотря на все свои усилия, Шиори на время сдается, видя, как Иори привязался к «Гранд Блю» и его друзьям. Пока Иори и остальные члены дайвинг-клуба продолжают веселиться как сумасшедшие, они попадают во всевозможные забавные ситуации, но при этом каким-то образом умудряются оттачивать свои навыки дайвинга!",
+      "poster": {
+        "fullsize": "//static.yani.tv/posters/full/1636889109.jpg",
+        "big": "//static.yani.tv/posters/big/1636889109.webp",
+        "small": "//static.yani.tv/posters/small/1636889109.webp",
+        "medium": "//static.yani.tv/posters/medium/1636889109.webp",
+        "huge": "//static.yani.tv/posters/huge/1636889109.avif",
+        "mega": "//static.yani.tv/posters/mega/1636889109.avif"
+      },
+      "title": "Необъятный океан 2",
+      "anime_url": "neobyatnyy-okean-2",
+      "anime_id": 15109,
+      "rating": {
+        "average": 9.0924301494382,
+        "counters": 6156,
+        "kp_rating": 8.1,
+        "anidub_rating": 0,
+        "myanimelist_rating": 8.5,
+        "worldart_rating": 8,
+        "shikimori_rating": 8.66185870241529
+      },
+      "genres": [
+        {
+          "title": "Сэйнэн",
+          "url": "/catalog/category/sejnen",
+          "id": 10,
+          "alias": "sejnen"
+        },
+        {
+          "title": "Комедия",
+          "url": "/catalog/category/komediya",
+          "id": 16,
+          "alias": "komediya"
+        },
+        {
+          "title": "Повседневность",
+          "url": "/catalog/category/povsednevnost",
+          "id": 86,
+          "alias": "povsednevnost"
+        }
+      ],
+      "year": 2025,
+      "min_age": {
+        "value": 3,
+        "title_long": "PG-13 (от 13 лет)",
+        "title": "PG-13"
+      },
+      "views": 3832995,
+      "season": 3,
+      "anime_status": {
+        "value": 0,
+        "title": "вышел",
+        "alias": "released",
+        "class": ""
+      },
+      "type": {
+        "name": "Сериал",
+        "value": 1,
+        "shortname": "ТВ",
+        "alias": "tv"
+      },
+      "remote_ids": {
+        "worldart_id": 12245,
+        "shikimori_id": 59986,
+        "anidub_id": 0,
+        "anilibria_alias": "",
+        "myanimelist_id": 59986,
+        "kp_id": 1112986,
+        "worldart_type": "animation",
+        "sr_id": 0
+      },
+      "top": {
+        "category": 7,
+        "global": 12
+      },
+      "blocked_in": []
+    },
+    {
+      "description": "20 млн. просмотров — именно столько набрал клип «POP IN 2» новой обновленной группы «B-KOMACHI» на их новый невероятный сингл, который произвел фурор и заставил всех фанатов по новому разжечь пламя в своих сердцах\n \nНе смотря на то что Аква все ещё не осознал что на самом деле происходит, он продолжил свою карьеру актера во многих дорамах и ТВ-сериалах, начал встречаться с Аканэ пытаясь с того момента жить счастливо посвящая себя своему любимому делу, больше не думая о мести\nРуби же наоборот, понимая что виновник смерти её матери все ещё на свободе, не согласившись смириться с этим, продолжает дело своего брата и в одиночку пытается достичь правды пойдя на радикальные меры...\n\n«Копни по глубже! Один шанс!» — ТВ-шоу в котором наши близнецы примут участие и вновь окунуться в мир шоу-бизнеса для того чтобы наконец найти ответы на свои вопросы и узнать, кто же все это время стоял по ту сторону темной и мрачной индустрии развлечений.",
+      "poster": {
+        "fullsize": "//static.yani.tv/posters/full/1636881822.jpg",
+        "big": "//static.yani.tv/posters/big/1636881822.webp",
+        "small": "//static.yani.tv/posters/small/1636881822.webp",
+        "medium": "//static.yani.tv/posters/medium/1636881822.webp",
+        "huge": "//static.yani.tv/posters/huge/1636881822.avif",
+        "mega": "//static.yani.tv/posters/mega/1636881822.avif"
+      },
+      "title": "Звёздное дитя 3",
+      "anime_url": "rebenok-idola-3",
+      "anime_id": 15269,
+      "rating": {
+        "average": 9.09228797212452,
+        "counters": 4681,
+        "kp_rating": 8.6,
+        "anidub_rating": 0,
+        "myanimelist_rating": 8.67,
+        "worldart_rating": 8.4,
+        "shikimori_rating": 8.73123351187145
+      },
+      "genres": [
+        {
+          "title": "Сэйнэн",
+          "url": "/catalog/category/sejnen",
+          "id": 10,
+          "alias": "sejnen"
+        },
+        {
+          "title": "Детектив",
+          "url": "/catalog/category/detektiv",
+          "id": 14,
+          "alias": "detektiv"
+        },
+        {
+          "title": "Драма",
+          "url": "/catalog/category/drama",
+          "id": 15,
+          "alias": "drama"
+        },
+        {
+          "title": "Романтика",
+          "url": "/catalog/category/romantika",
+          "id": 33,
+          "alias": "romantika"
+        },
+        {
+          "title": "Музыка",
+          "url": "/catalog/category/muzyka",
+          "id": 79,
+          "alias": "muzyka"
+        },
+        {
+          "title": "Повседневность",
+          "url": "/catalog/category/povsednevnost",
+          "id": 86,
+          "alias": "povsednevnost"
+        },
+        {
+          "title": "Сверхъестественное",
+          "url": "/catalog/category/sverh-estestvennoe",
+          "id": 103,
+          "alias": "sverh-estestvennoe"
+        }
+      ],
+      "year": 2026,
+      "min_age": {
+        "value": 3,
+        "title_long": "PG-13 (от 13 лет)",
+        "title": "PG-13"
+      },
+      "views": 2703832,
+      "season": 1,
+      "anime_status": {
+        "value": 0,
+        "title": "вышел",
+        "alias": "released",
+        "class": ""
+      },
+      "type": {
+        "name": "Сериал",
+        "value": 1,
+        "shortname": "ТВ",
+        "alias": "tv"
+      },
+      "remote_ids": {
+        "worldart_id": 12250,
+        "shikimori_id": 60058,
+        "anidub_id": 0,
+        "anilibria_alias": "oshi-no-ko-3rd-season",
+        "myanimelist_id": 60058,
+        "kp_id": 5308105,
+        "worldart_type": "animation",
+        "sr_id": 0
+      },
+      "top": {
+        "category": 13,
+        "global": 18
+      },
+      "blocked_in": [
+        "RU"
+      ]
+    },
+    {
+      "description": "Охотник — это тот, кто путешествует по миру, выполняя различные опасные миссии: от поимки преступников до поисков сокровищ в неизведанных землях. Главный герой — мальчик по имени Гон. Его отец, Джин, был охотником, но исчез много лет назад. Гон считает, что если пойдёт по стопам отца и станет охотником, то рано или поздно вновь встретится с ним. Мальчик надеется, что, повстречав отца, наконец сможет задать ему один-единственный вопрос: почему он предпочёл жизнь охотника своему маленькому сынишке.\nГон, как в своё время и его отец, покидает родной остров с целью сдать официальный экзамен на охотника. Но экзамен очень сложен, и каждый год множество людей погибают, пытаясь получить это звание. Во время своего путешествия Гон знакомится с Курапикой, Леорио и Киллуа, вместе с которыми ступает на тернистый путь охотника.",
+      "poster": {
+        "fullsize": "//static.yani.tv/posters/full/1636690825.jpg",
+        "big": "//static.yani.tv/posters/big/1636690825.webp",
+        "small": "//static.yani.tv/posters/small/1636690825.webp",
+        "medium": "//static.yani.tv/posters/medium/1636690825.webp",
+        "huge": "//static.yani.tv/posters/huge/1636690825.avif",
+        "mega": "//static.yani.tv/posters/mega/1636690825.avif"
+      },
+      "title": "Хантер х Хантер (2011)",
+      "anime_url": "hanter-h-hanter",
+      "anime_id": 468,
+      "rating": {
+        "average": 9.08800521501297,
+        "counters": 7670,
+        "kp_rating": 8.6,
+        "anidub_rating": 0,
+        "myanimelist_rating": 9.03,
+        "worldart_rating": 8.8,
+        "shikimori_rating": 9.01297292252412
+      },
+      "genres": [
+        {
+          "title": "Сёнэн",
+          "url": "/catalog/category/senen",
+          "id": 8,
+          "alias": "senen"
+        },
+        {
+          "title": "Приключения",
+          "url": "/catalog/category/priklyucheniya",
+          "id": 32,
+          "alias": "priklyucheniya"
+        },
+        {
+          "title": "Фэнтези",
+          "url": "/catalog/category/fentezi",
+          "id": 42,
+          "alias": "fentezi"
+        },
+        {
+          "title": "Экшен",
+          "url": "/catalog/category/ekshen",
+          "id": 63,
+          "alias": "ekshen"
+        },
+        {
+          "title": "Суперспособности",
+          "url": "/catalog/category/supersposobnosti",
+          "id": 70,
+          "alias": "supersposobnosti"
+        }
+      ],
+      "year": 2011,
+      "min_age": {
+        "value": 3,
+        "title_long": "PG-13 (от 13 лет)",
+        "title": "PG-13"
+      },
+      "views": 6562331,
+      "season": 4,
+      "anime_status": {
+        "value": 0,
+        "title": "вышел",
+        "alias": "released",
+        "class": ""
+      },
+      "type": {
+        "name": "Сериал",
+        "value": 1,
+        "shortname": "ТВ",
+        "alias": "tv"
+      },
+      "remote_ids": {
+        "worldart_id": 126,
+        "shikimori_id": 11061,
+        "anidub_id": 0,
+        "anilibria_alias": "",
+        "myanimelist_id": 11061,
+        "kp_id": 647602,
+        "worldart_type": "animation",
+        "sr_id": 1084
+      },
+      "top": {
+        "category": 4,
+        "global": 9
+      },
+      "blocked_in": [
+        ""
+      ]
+    }
+  ]
+}

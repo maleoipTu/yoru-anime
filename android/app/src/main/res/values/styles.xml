@@ -1,0 +1,10 @@
+<resources>
+ <style name="Theme.Yoru" parent="android:style/Theme.Material.NoActionBar">
+  <item name="android:fontFamily">sans</item><item name="android:colorAccent">#B3A2FF</item>
+  <item name="android:windowBackground">#111117</item><item name="android:colorBackground">#111117</item>
+  <item name="android:textColorPrimary">#F5F3FF</item><item name="android:textColorSecondary">#AEA6BE</item>
+  <item name="android:statusBarColor">#111117</item><item name="android:navigationBarColor">#15151E</item>
+  <item name="android:windowLightStatusBar">false</item>
+  <item name="android:windowActionModeOverlay">true</item>
+ </style>
+</resources>

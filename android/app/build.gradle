@@ -1,0 +1,32 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'app.yoru.anime'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'app.yoru.anime'
+        minSdk 26
+        targetSdk 35
+        versionCode 2
+        versionName '0.2.0'
+        testInstrumentationRunner 'android.test.InstrumentationTestRunner'
+    }
+    signingConfigs {
+        personal {
+            if (System.getenv('YORU_STORE_FILE')) {
+                storeFile file(System.getenv('YORU_STORE_FILE'))
+                storePassword System.getenv('YORU_STORE_PASSWORD')
+                keyAlias 'yoru'
+                keyPassword System.getenv('YORU_KEY_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (System.getenv('YORU_STORE_FILE')) signingConfig signingConfigs.personal
+        }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    lint { abortOnError true; checkReleaseBuilds true }
+}
+dependencies { testImplementation 'junit:junit:4.13.2' }

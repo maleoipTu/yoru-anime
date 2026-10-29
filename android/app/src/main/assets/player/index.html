@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="strict-origin-when-cross-origin"><title>Yoru Player</title>
+<style>html,body,iframe{width:100%;height:100%;margin:0;border:0;background:#08080d;overflow:hidden}#error{color:#ddd;font:16px system-ui;padding:40px}</style></head>
+<body><iframe id="player" name="yoru-provider" title="Видеоплеер" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+<script>
+(() => {
+ const frame = document.getElementById('player');
+ const session = new URLSearchParams(location.search).get('session');
+ let nativePort=null;
+ const pending=[];
+ const notify = (state, value) => {
+   const data={state,value,session};
+   if(window.chrome?.webview) window.chrome.webview.postMessage(data);
+   else if(nativePort) nativePort.postMessage(JSON.stringify(data));
+   else pending.push(data);
+ };
+ let provider;
+ try { provider = new URL(new URLSearchParams(location.search).get('src')); if(provider.protocol !== 'https:') throw new Error(); }
+ catch { frame.remove(); document.body.innerHTML='<div id="error">Не удалось открыть адрес плеера.</div>'; notify('invalid-source'); return; }
+ frame.addEventListener('load', () => notify('frame-ready'));
+ frame.addEventListener('error', () => notify('frame-error'));
+ window.addEventListener('message', event => {
+   if(event.data==='yoru-connect' && event.ports?.length===1 &&
+      (event.source===null || (event.source===window && event.origin===location.origin))) {
+     nativePort=event.ports[0];
+     for(const data of pending.splice(0)) nativePort.postMessage(JSON.stringify(data));
+     return;
+   }
+   if(event.source !== frame.contentWindow || event.origin !== provider.origin) return;
+   let data=event.data;
+   if(typeof data === 'string') { try { data=JSON.parse(data); } catch { return; } }
+   const key=data?.key ?? data?.event;
+   if(['kodik_player_play','player_play','player_video_started'].includes(key)) notify('playing');
+   if(['kodik_player_pause','player_pause'].includes(key)) notify('paused');
+   if(['kodik_player_video_ended','player_video_ended'].includes(key)) notify('ended');
+   if(['kodik_player_time_update','player_time_update'].includes(key)) {
+     const seconds=Number(typeof data.value==='object' ? data.value?.time : data.value);
+     if(Number.isFinite(seconds) && seconds>=0) notify('time',seconds);
+   }
+ });
+ frame.src=provider.href;
+})();
+</script></body></html>

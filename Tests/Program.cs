@@ -1,0 +1,122 @@
+using System.Net;
+using System.Net.Http;
+using System.Text.Json;
+using System.Windows;
+using System.Windows.Markup;
+using System.Xml.Linq;
+using Yoru;
+
+internal static class Program
+{
+    static int passed;
+    static void Check(bool condition, string title)
+    {
+        if (!condition) throw new Exception("FAIL: " + title);
+        Console.WriteLine("PASS: " + title); passed++;
+    }
+    [STAThread]
+    static int Main(string[] args)
+    {
+        try
+        {
+            if (args.Length == 1 && args[0] == "--live")
+            {
+                Live().GetAwaiter().GetResult(); return 0;
+            }
+            if (args.Length == 2 && args[0] == "--player")
+            {
+                using var doc = JsonDocument.Parse(File.ReadAllText(args[1]));
+                var item = ApiParser.Field(doc.RootElement, "response");
+                var anime = ApiParser.Anime(item);
+                var videos = ApiParser.Videos(ApiParser.Field(item, "videos"));
+                var first = videos.FirstOrDefault(v => v.Url.Contains("kodik")) ?? videos.First();
+                var app = new Application();
+                var xaml = XDocument.Load("Yoru/App.xaml");
+                XNamespace ns = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
+                var dictionary = new XElement(ns + "ResourceDictionary", new XAttribute(XNamespace.Xmlns + "x", "http://schemas.microsoft.com/winfx/2006/xaml"), xaml.Root!.Element(ns + "Application.Resources")!.Elements());
+                app.Resources = (ResourceDictionary)XamlReader.Parse(dictionary.ToString());
+                var local = new LocalStore(Path.Combine(Environment.CurrentDirectory, "work", "player-test"));
+                var player = new PlayerWindow(anime, videos, first, local);
+                player.PlaybackStateChanged += state => Console.WriteLine(DateTime.Now.ToString("HH:mm:ss") + " " + state);
+                app.Run(player);
+                return 0;
+            }
+            Run().GetAwaiter().GetResult();
+            Console.WriteLine($"{passed} checks passed."); return 0;
+        }
+        catch (Exception e) { Console.Error.WriteLine(e); return 1; }
+    }
+    static async Task Live()
+    {
+        using var client = new YummyClient { Token = AppConfig.DefaultApplicationToken };
+        var catalog = await client.Catalog("Фрирен", "rating", "", 0, default);
+        Check(catalog.Count > 0, "live authenticated search returns results");
+        var detail = await client.Detail(catalog[0].Id, default);
+        Check(detail.Anime.Id == catalog[0].Id && detail.Videos.Count > 0, "live authenticated detail returns episode players");
+        var schedule = await client.Schedule(default);
+        Check(schedule.Count > 0, "live authenticated schedule parses");
+        Console.WriteLine($"Live catalog: {catalog.Count} titles; detail: {detail.Videos.Count} videos; schedule: {schedule.Count} titles.");
+    }
+    static async Task Run()
+    {
+        var root = Path.Combine(Environment.CurrentDirectory, "work", "tests-" + Guid.NewGuid().ToString("N"));
+        using var catalogDoc = JsonDocument.Parse(File.ReadAllText("Yoru/Assets/preview.json"));
+        var catalog = ApiParser.Catalog(catalogDoc.RootElement);
+        Check(catalog.Count == 12 && catalog.All(a => a.Id > 0 && a.Title.Length > 0), "real catalog fixture parses");
+        Check(catalog.All(a => a.Poster.StartsWith("https://")), "protocol-relative poster URLs normalized");
+        Check(ApiParser.Plain("<p>Текст &amp; текст</p>") == "Текст & текст", "description is plain decoded text");
+        using var sparse = JsonDocument.Parse("{\"anime_id\":22,\"title\":\"Test\"}");
+        Check(ApiParser.Anime(sparse.RootElement).Rating == 0, "missing optional fields are tolerated");
+        using var videosDoc = JsonDocument.Parse("""
+        [{"video_id":2,"number":"2","index":2,"data":{"dubbing":"Dub","player":"Player"},"iframe_url":"//player.test/2"},
+         {"video_id":1,"number":"1","index":1,"data":{"dubbing":"Dub","player":"Player"},"iframe_url":"https://player.test/1"},
+         {"video_id":3,"iframe_url":"javascript:alert(1)"}, {"video_id":4,"iframe_url":"file:///secret"}]
+        """);
+        var videos = ApiParser.Videos(videosDoc.RootElement);
+        Check(videos.Count == 2 && videos[0].Number == "1" && videos[1].Number == "2", "episodes ordered and unsafe URL schemes rejected");
+        var options = videos.Concat([new Episode(5,"1",1,"Dub","Other","https://other.test/1"),new Episode(6,"1",1,"Sub","Player","https://player.test/sub")]).ToList();
+        Check(PlaybackSources.Dubbings(options).Count == 2 && PlaybackSources.Players(options,"Dub").Count == 2 && PlaybackSources.Players(options,"Sub").Count == 1, "voice and provider selections are independent");
+        Check(PlaybackSources.Episodes(options,"Dub","Other").Single().Id == 5, "switching provider uses its matching episode URL");
+        Check(PlaybackSources.Resume(options,new WatchEntry(catalog[0],5,"1","Dub · Other",DateTimeOffset.Now))?.Player == "Other", "resume restores provider and voice by video ID");
+        Check(PlaybackSources.Alternative(options,videos[0])?.Id==5, "alternative preserves current episode and voice");
+        Check(PlaybackSources.Alternative(options,videos[1])==null, "missing episode on alternative never falls back to episode one");
+        Check(videos[0].ToString()=="Серия 1", "episode selector shows a label instead of internal data");
+        var handler = new Stub(HttpStatusCode.OK, "{\"response\":[]}");
+        using var client = new YummyClient(handler) { Token = "fixture-app-key" };
+        await client.Catalog("Фрирен & test", "rating", "ongoing", 24, default);
+        Check(handler.Url!.Host == "api.yani.tv" && handler.Url.AbsolutePath == "/anime" && handler.Url.Query.Contains("offset=24"), "catalog endpoint and pagination");
+        Check(handler.Key == "fixture-app-key" && handler.Language == "ru", "application key and language sent as headers");
+        Check(handler.Url.Query.Contains("%26") && handler.Url.Query.Contains("status=ongoing"), "search is encoded and status applied");
+        client.Token = "";
+        var noKey = false; try { await client.Get("anime"); } catch (InvalidOperationException) { noKey = true; }
+        Check(noKey, "missing key requires setup");
+        foreach (var status in new[] {401,403,420,429,503})
+        {
+            using var errorClient = new YummyClient(new Stub((HttpStatusCode)status, "{}")) { Token = "fixture" };
+            var handled = false; try { await errorClient.Get("anime"); } catch (InvalidOperationException) { handled = true; }
+            Check(handled, "API error " + status + " produces actionable message");
+        }
+        var store = new LocalStore(root);
+        Check(store.ToggleFavorite(catalog[0]), "add favorite");
+        Check(new LocalStore(root).Data.Favorites.Single().Id == catalog[0].Id, "favorite survives restart");
+        store.Started(catalog[0], videos[0]); store.Started(catalog[0], videos[1]);
+        var reloaded = new LocalStore(root);
+        Check(reloaded.Data.History.Count == 1 && reloaded.Data.History[0].Number == "2", "history resumes latest series and avoids duplicates");
+        Check(!store.ToggleFavorite(catalog[0]) && new LocalStore(root).Data.Favorites.Count == 0, "remove favorite persists");
+        store.SaveToken("private-fixture-key");
+        Check(store.ReadToken() == "private-fixture-key" && !File.ReadAllText(Path.Combine(root, "application.key")).Contains("private-fixture-key"), "key protected with Windows DPAPI and round-trips");
+        File.WriteAllText(Path.Combine(root, "library.json"), "corrupted fixture");
+        var damaged = new LocalStore(root); damaged.Save();
+        Check(Directory.GetFiles(root, "library.recovery-*.json").Any(), "damaged library backed up before replacement");
+    }
+    sealed class Stub(HttpStatusCode status, string body) : HttpMessageHandler
+    {
+        public Uri? Url; public string Key = ""; public string Language = "";
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            Url = request.RequestUri;
+            Key = request.Headers.GetValues("X-Application").Single(); Language = request.Headers.GetValues("Lang").Single();
+            return Task.FromResult(new HttpResponseMessage(status) { Content = new StringContent(body) });
+        }
+    }
+}
