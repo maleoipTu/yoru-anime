@@ -10,7 +10,7 @@ import java.util.regex.*;
 
 /** Resolves content streams only. Provider HTML and advertising JavaScript are never executed. */
 final class StreamResolver {
-    static final String USER_AGENT = "Yoru/0.3.0 (Android)";
+    static final String USER_AGENT = "Yoru/0.4.0 (Android)";
     static final int MAX_BODY = 2 * 1024 * 1024;
     interface Transport { Page request(String url, String body, String referer) throws Exception; }
     static final class Page {
