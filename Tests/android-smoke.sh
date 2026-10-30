@@ -8,10 +8,11 @@ if [ "${QA_VIEWPORT:-default}" = compact ]; then
   adb shell settings put system font_scale 1.3
 fi
 status=0
-bash android/gradlew -p android connectedDebugAndroidTest \
+timeout --signal=TERM --kill-after=15s 8m bash android/gradlew -p android connectedDebugAndroidTest \
   -Pandroid.testInstrumentationRunnerArguments.live=true \
   -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true \
   --console plain || status=$?
 mkdir -p outputs/android-qa
 adb pull /sdcard/Android/data/app.yoru.anime/files/qa outputs/android-qa/ || true
+adb exec-out screencap -p > outputs/android-qa/device-final.png || true
 exit "$status"
