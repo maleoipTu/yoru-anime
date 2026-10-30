@@ -124,6 +124,18 @@ internal static class Program
         Check(config.Configured && config.Url == "https://demo.supabase.co" && config.AnonKey == "public-anon", "supabase.properties parsed");
         Check(!SupabaseConfig.Load(Path.Combine(root, "missing.properties")).Configured || Environment.GetEnvironmentVariable("YORU_SUPABASE_URL") != null, "missing config disables accounts");
 
+        Check(StreamResolver.Supports("https://kodik.info/seria/1/abc/720p") && !StreamResolver.Supports("https://example.com/x"), "native player handles Kodik only");
+        var encoded = new string(Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("//cdn.example.net/video/720.mp4:hls:manifest.m3u8")).Select(c => c is >= 'A' and <= 'Z' ? (char)('A' + (c - 'A' + 26 - 3) % 26) : c is >= 'a' and <= 'z' ? (char)('a' + (c - 'a' + 26 - 3) % 26) : c).ToArray());
+        using (var links = JsonDocument.Parse("{\"links\":{\"360\":[{\"src\":\"" + encoded + "\"}],\"720\":[{\"src\":\"" + encoded.Replace("720", "720") + "\"}],\"bad\":[]}}"))
+        {
+            var parsed = StreamResolver.Parse(links.RootElement, 3, "https://kodik.info/seria/1");
+            Check(parsed.Streams.Count == 1 && parsed.Streams[0].Url == "https://cdn.example.net/video/720.mp4:hls:manifest.m3u8" && parsed.Streams[0].Mime == "application/x-mpegURL", "Kodik stream links decoded and deduplicated");
+        }
+        var unsafeRejected = false; try { StreamResolver.SafeUri("https://127.0.0.1/x"); } catch (InvalidOperationException) { unsafeRejected = true; }
+        Check(unsafeRejected, "proxy refuses local addresses");
+        var store2 = new LocalStore(Path.Combine(root, "positions")); store2.Data.Positions["5"] = 42; store2.Save();
+        Check(new LocalStore(Path.Combine(root, "positions")).Position(5) == 42, "native player position survives restart");
+
         var server = new FakeSupabase();
         var accountRoot = Path.Combine(root, "account");
         using (var account = new AccountClient(config, accountRoot, server))
@@ -135,8 +147,8 @@ internal static class Program
             await account.Refresh();
             Check(account.DisplayName == "Харука" && account.Owned.Contains("frame_sakura") && account.Decorations.Count == 2, "profile, decorations and inventory load");
             Check(server.LastAuthorization == "Bearer access-1" && server.LastApiKey == "public-anon", "requests use session token and anon key");
-            var award = await account.Award(10, 100, "1", 650);
-            Check(award["awarded"]!.GetValue<bool>() && AccountClient.Int(account.Profile, "points") == 165 && server.LastBody.Contains("\"p_episode\":\"1\""), "award updates balance");
+            var award = await account.Award(new Anime { Id = 10, Title = "Фрирен", Poster = "https://p/f.jpg", EpisodeCount = 28 }, 100, "1", 650);
+            Check(award["awarded"]!.GetValue<bool>() && AccountClient.Int(account.Profile, "points") == 165 && server.LastBody.Contains("\"p_episode\":\"1\"") && server.LastBody.Contains("\"p_total\":28"), "award updates balance and sends list data");
             var failed = false; try { await account.Rpc("buy_decoration", new System.Text.Json.Nodes.JsonObject { ["p_id"] = "frame_gold" }); } catch (AccountException e) { failed = Rewards.Error(e.Message) == "Не хватает очков."; }
             Check(failed, "purchase errors surface as readable messages");
         }

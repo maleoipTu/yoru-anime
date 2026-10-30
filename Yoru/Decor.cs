@@ -74,4 +74,23 @@ public static class Decor
         System.Windows.Automation.AutomationProperties.SetName(grid, "Аватар " + name);
         return grid;
     }
+
+    /// <summary>Строка пользователя: аватар с рамкой, ник в его цвете, значок и подпись.</summary>
+    public static FrameworkElement Person(JsonNode? p, AccountClient account, string subtitle, double size = 44)
+    {
+        var name = AccountClient.Text(p, "display_name").Trim() is { Length: > 0 } n ? n : AccountClient.Text(p, "username");
+        string Equipped(string key, string fallback) => AccountClient.Text(p, key) is { Length: > 0 } v ? v : fallback;
+        var row = new DockPanel { Margin = new Thickness(0, 6, 0, 6) };
+        var avatar = Avatar(size, account.Style(Equipped("equipped_frame", "frame_moon")), name, AccountClient.Text(p, "avatar_url"));
+        DockPanel.SetDock(avatar, Dock.Left); row.Children.Add(avatar);
+        var text = new StackPanel { Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+        var nameRow = new StackPanel { Orientation = Orientation.Horizontal };
+        nameRow.Children.Add(new TextBlock { Text = name, FontSize = 15, FontWeight = FontWeights.SemiBold, Foreground = NameBrush(account.Style(Equipped("equipped_color", "color_default"))) });
+        var badge = Badge(account.Style(AccountClient.Text(p, "equipped_badge")), 15); badge.Margin = new Thickness(6, 0, 0, 0); nameRow.Children.Add(badge);
+        text.Children.Add(nameRow);
+        if (subtitle.Length > 0) text.Children.Add(new TextBlock { Text = subtitle, FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0x9A, 0x98, 0xB0)), Margin = new Thickness(0, 3, 0, 0), TextWrapping = TextWrapping.Wrap });
+        row.Children.Add(text);
+        System.Windows.Automation.AutomationProperties.SetName(row, name + ". " + subtitle);
+        return row;
+    }
 }

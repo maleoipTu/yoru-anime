@@ -11,3 +11,4 @@ outputs/
 **/*.keystore
 **/signing.properties
 Yoru/Assets/*.jpg
+Yoru/Assets/PlayerHost/hls.min.js

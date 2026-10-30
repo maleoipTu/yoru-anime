@@ -16,7 +16,7 @@
    <Button x:Name="SetupButton" Content="Подключить API" Style="{StaticResource Primary}" HorizontalAlignment="Left" Visibility="Collapsed" Click="SetupClick"/>
    <Button x:Name="RetryButton" Content="Повторить загрузку" HorizontalAlignment="Left" Visibility="Collapsed" Click="RetryClick"/>
   </StackPanel></Border>
-  <ScrollViewer Grid.Row="2"><StackPanel Margin="0,0,8,0">
+  <ScrollViewer Grid.Row="2"><StackPanel x:Name="ScrollBody" Margin="0,0,8,0">
    <TextBlock x:Name="GenresText" Foreground="#BCACE4" FontSize="13" Margin="0,0,0,15"/>
    <TextBlock Text="О чём эта история" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
    <TextBlock x:Name="DescriptionText" Foreground="#BDB6CD" FontSize="14" LineHeight="24" MaxHeight="96" TextTrimming="CharacterEllipsis"/>

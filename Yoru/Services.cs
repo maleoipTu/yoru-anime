@@ -53,6 +53,11 @@ public sealed class LibraryData
 {
     public List<Anime> Favorites { get; set; } = [];
     public List<WatchEntry> History { get; set; } = [];
+    /// <summary>Позиция в серии (секунды) по ID видео — для нативного плеера.</summary>
+    public Dictionary<string, double> Positions { get; set; } = [];
+    public string Quality { get; set; } = "";
+    public double Speed { get; set; } = 1;
+    public bool AutoNext { get; set; } = true;
 }
 public sealed class LocalStore
 {
@@ -89,6 +94,7 @@ public sealed class LocalStore
         File.WriteAllBytes(path + ".tmp", bytes);
         File.Move(path + ".tmp", path, true);
     }
+    public double Position(long videoId) => Data.Positions.TryGetValue(videoId.ToString(), out var seconds) ? seconds : 0;
     public bool ToggleFavorite(Anime anime)
     {
         var old = Data.Favorites.FirstOrDefault(a => a.Id == anime.Id);
