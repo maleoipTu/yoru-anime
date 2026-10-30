@@ -83,19 +83,27 @@ public partial class MainWindow : Window
         ContinuePanel.Visibility = page == "catalog" && query.Length == 0 && recent != null ? Visibility.Visible : Visibility.Collapsed;
         Hero.Visibility = page == "catalog" && query.Length == 0 && recent == null && featured != null ? Visibility.Visible : Visibility.Collapsed;
         if (recent != null) { ContinueTitle.Text = recent.Anime.Title; ContinueMeta.Text = $"Серия {recent.Number} · {recent.Track}"; }
-        Filters.Visibility = page == "catalog" ? Visibility.Visible : Visibility.Collapsed;
+        Filters.Visibility = page is "catalog" or "favorites" ? Visibility.Visible : Visibility.Collapsed;
+        SortBox.Visibility = StatusBox.Visibility = page == "catalog" ? Visibility.Visible : Visibility.Collapsed;
+        ListPicker.Visibility = page == "favorites" ? Visibility.Visible : Visibility.Collapsed;
         MoreButton.Visibility = Visibility.Collapsed;
         StatusText.Text = "";
         SetBusy(false);
         if (page == "settings") return;
         if (!append) { offset = 0; displayed = []; Cards.ItemsSource = null; BrowseScroll.ScrollToTop(); }
-        PageTitle.Text = page switch { "favorites" => "Твои любимые истории", "history" => "Вернись к своей истории", "schedule" => "Когда следующая серия?", _ => query.Length > 0 ? $"Поиск: {query}" : "Найди свою следующую историю" };
+        PageTitle.Text = page switch { "favorites" => ListPicker.SelectedItem is ComboBoxItem { Tag: string l } && l.Length > 0 ? "Список: " + AccountClient.ListLabel(l) : "Твои любимые истории", "history" => "Вернись к своей истории", "schedule" => "Когда следующая серия?", _ => query.Length > 0 ? $"Поиск: {query}" : "Найди свою следующую историю" };
         PageSubtitle.Text = page switch { "favorites" => "Всё, что хочется сохранить на потом", "history" => "Последние открытые серии · запоминаем серию и озвучку", "schedule" => "Ближайшие серии · время указано для этого компьютера", _ => IsPreview ? "Знакомство с интерфейсом · образец каталога YummyAnime" : "Большие миры начинаются с одной серии" };
         try
         {
             SetBusy(true);
             List<Anime> items;
-            if (page == "favorites") items = store.Data.Favorites.ToList();
+            var list = (string)((ComboBoxItem)ListPicker.SelectedItem).Tag;
+            if (page == "favorites" && list.Length > 0)
+            {
+                if (!AccountClient.Shared.SignedIn) { ShowCards([]); EmptyText.Text = "Войди в профиль (карточка слева), чтобы видеть свои списки."; return; }
+                items = await AccountClient.Shared.List(list);
+            }
+            else if (page == "favorites") items = store.Data.Favorites.ToList();
             else if (page == "history") items = store.Data.History.Select(h => h.Anime with { DisplayNote = $"Серия {h.Number} · {h.Track}" }).ToList();
             else if (page == "schedule")
             {
@@ -125,6 +133,7 @@ public partial class MainWindow : Window
             if (IsPreview && page == "catalog") StatusText.Text = "Предпросмотр: поиск работает только по загруженному образцу. Для полного каталога и видео подключите свой ключ.";
         }
         catch (OperationCanceledException) { if (!ct.IsCancellationRequested) StatusText.Text = "Сервер не ответил вовремя. Нажмите «Обновить»."; }
+        catch (AccountException ex) { ShowCards(displayed); StatusText.Text = Rewards.Error(ex.Message); }
         catch (Exception ex) when (ex is HttpRequestException or JsonException or InvalidOperationException)
         {
             ShowCards(displayed);
@@ -149,6 +158,7 @@ public partial class MainWindow : Window
         query = requestedQuery; SearchBox.Text = requestedQuery; await LoadPage();
     }
     async void FilterChanged(object sender, SelectionChangedEventArgs e) { if (ready && page == "catalog") await LoadPage(); }
+    async void ListChanged(object sender, SelectionChangedEventArgs e) { if (ready && page == "favorites") await LoadPage(); }
     async void RefreshClick(object sender, RoutedEventArgs e) => await LoadPage();
     async void MoreClick(object sender, RoutedEventArgs e) { if (!busy) await LoadPage(true); }
     void SettingsClick(object sender, RoutedEventArgs e) => SettingsNav.IsChecked = true;
@@ -197,7 +207,7 @@ public partial class MainWindow : Window
     {
         var detail = new DetailWindow(anime, api, store) { Owner = this };
         detail.ShowDialog();
-        if (page == "favorites") { displayed = store.Data.Favorites.ToList(); ShowCards(displayed); }
+        if (page == "favorites") _ = LoadPage();
         if (page == "history") { displayed = store.Data.History.Select(h => h.Anime with { DisplayNote = $"Серия {h.Number} · {h.Track}" }).ToList(); ShowCards(displayed); }
         if (detail.WantsSettings) SettingsNav.IsChecked = true;
     }

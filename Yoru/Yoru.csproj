@@ -6,12 +6,18 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Yoru</AssemblyName>
-    <Version>0.3.0</Version>
+    <Version>0.4.0</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
-    <Content Include="Assets\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Assets\**\*" Exclude="Assets\PlayerHost\hls.min.js" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Assets\PlayerHost\hls.min.js" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="..\supabase.properties" Link="supabase.properties" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Condition="Exists('..\supabase.properties')" />
   </ItemGroup>
+  <!-- hls.js (Apache-2.0) для нативного плеера: скачивается при первой сборке фиксированной версии. -->
+  <PropertyGroup><HlsJsVersion>1.5.17</HlsJsVersion></PropertyGroup>
+  <Target Name="FetchHlsJs" BeforeTargets="BeforeBuild" Condition="!Exists('$(MSBuildProjectDirectory)\Assets\PlayerHost\hls.min.js')">
+    <DownloadFile SourceUrl="https://cdn.jsdelivr.net/npm/hls.js@$(HlsJsVersion)/dist/hls.min.js" DestinationFolder="$(MSBuildProjectDirectory)\Assets\PlayerHost" Retries="3" />
+  </Target>
 </Project>

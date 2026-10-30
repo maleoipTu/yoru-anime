@@ -13,10 +13,15 @@ public partial class DetailWindow : Window
     readonly CancellationTokenSource cts = new();
     bool changingSelection;
     bool expanded;
+    bool refreshOnActivate;
     public bool WantsSettings { get; private set; }
+    readonly SocialPanel social;
     public DetailWindow(Anime item, YummyClient client, LocalStore local)
     {
         InitializeComponent(); WindowTheme.Apply(this); anime = item; api = client; store = local; Render();
+        social = new SocialPanel(this, anime, store); ScrollBody.Children.Insert(0, social.Root);
+        Loaded += async (_, _) => await social.Refresh();
+        Activated += async (_, _) => { if (refreshOnActivate) { refreshOnActivate = false; await social.Refresh(); } };
         Loaded += async (_, _) => await LoadVideos();
         Closed += (_, _) => cts.Cancel();
     }
@@ -41,7 +46,7 @@ public partial class DetailWindow : Window
         {
             var result = await api.Detail(anime.Id, cts.Token);
             if (cts.IsCancellationRequested) return;
-            anime = result.Anime; videos = result.Videos; Render();
+            anime = result.Anime; social.Anime = anime; videos = result.Videos; Render();
             if (videos.Count == 0) { VideoStatus.Text = "Для этого аниме API не вернул доступных видео. Попробуй открыть его на сайте."; return; }
             VideoStatus.Text = $"Доступно серий: {videos.Select(v => v.Number).Distinct().Count()}. Выбери озвучку.";
             Selectors.Visibility = Visibility.Visible;
@@ -85,6 +90,7 @@ public partial class DetailWindow : Window
     {
         if (EpisodeBox.SelectedItem is not Episode video) return;
         new PlayerWindow(anime, videos, video, store, AccountClient.Shared) { Owner = this }.ShowDialog();
+        refreshOnActivate = true;
     }
     void ExpandClick(object sender, RoutedEventArgs e) { expanded = !expanded; DescriptionText.MaxHeight = expanded ? double.PositiveInfinity : 96; ExpandButton.Content = expanded ? "Свернуть описание ↑" : "Развернуть описание ↓"; }
     void CloseClick(object sender, RoutedEventArgs e) => Close();

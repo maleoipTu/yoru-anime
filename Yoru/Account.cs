@@ -58,6 +58,12 @@ public static class Rewards
         "too_short" => "Посмотри серию подольше, чтобы получить очки",
         _ => ""
     };
+    public static bool OnSale(string from, string until, DateTimeOffset now) =>
+        (from.Length == 0 || !DateTimeOffset.TryParse(from, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var f) || f <= now) &&
+        (until.Length == 0 || !DateTimeOffset.TryParse(until, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var u) || now <= u);
+    public static string Until(string iso) => DateTimeOffset.TryParse(iso, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var u)
+        ? u.AddDays(-1).ToLocalTime().ToString("d MMMM", CultureInfo.GetCultureInfo("ru-RU")) : "";
+    public static string Days(int n) { int m = n % 100, k = n % 10; return n + (m is >= 11 and <= 14 ? " дней" : k == 1 ? " день" : k is >= 2 and <= 4 ? " дня" : " дней"); }
     public static string Error(string? raw)
     {
         var text = (raw ?? "").ToLowerInvariant();
@@ -70,6 +76,11 @@ public static class Rewards
         if (text.Contains("level_too_low")) return "Нужен более высокий уровень.";
         if (text.Contains("already_owned")) return "Это украшение уже есть.";
         if (text.Contains("not_owned")) return "Сначала получи это украшение.";
+        if (text.Contains("user_not_found")) return "Пользователь с таким ником не найден.";
+        if (text.Contains("self_friend")) return "Себя в друзья добавить нельзя.";
+        if (text.Contains("achievement_only")) return "Это украшение выдаётся только за достижение.";
+        if (text.Contains("not_available")) return "Это сезонное украшение сейчас не продаётся.";
+        if (text.Contains("too_many_requests")) return "Слишком много неотвеченных заявок.";
         if (text.Contains("username_taken")) return "Этот ник уже занят.";
         if (text.Contains("bad_username")) return "Ник: 3–20 символов, латиница, цифры и _.";
         if (text.Contains("jwt") || text.Contains("not_authenticated") || text.Contains("refresh token")) return "Сессия истекла. Войди в аккаунт снова.";
@@ -230,19 +241,71 @@ public sealed class AccountClient : IDisposable
         await Rpc("equip_decoration", new JsonObject { ["p_kind"] = kind, ["p_id"] = id });
     }
     public Task<JsonNode?> Equip(string kind, string id) => Rpc("equip_decoration", new JsonObject { ["p_kind"] = kind, ["p_id"] = id });
-    public async Task<JsonObject> Award(long animeId, long videoId, string episode, int seconds)
+    public async Task<JsonObject> Award(Anime anime, long videoId, string episode, int seconds)
     {
-        var result = (await Rpc("award_watch", new JsonObject { ["p_anime_id"] = animeId, ["p_video_id"] = videoId, ["p_episode"] = episode, ["p_seconds"] = seconds }))!.AsObject();
+        var tz = (int)TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).TotalMinutes;
+        var result = (await Rpc("award_watch", new JsonObject { ["p_anime_id"] = anime.Id, ["p_video_id"] = videoId, ["p_episode"] = episode, ["p_seconds"] = seconds,
+            ["p_title"] = anime.Title, ["p_poster"] = anime.Poster, ["p_total"] = anime.EpisodeCount, ["p_tz_minutes"] = tz }))!.AsObject();
         if (result["awarded"]?.GetValue<bool>() == true)
         {
             Profile["points"] = result["balance"]?.GetValue<int>() ?? 0;
             Profile["total_earned"] = result["total"]?.GetValue<int>() ?? 0;
             Profile["episodes_watched"] = Int(Profile, "episodes_watched") + 1;
+            Profile["streak_days"] = Int(result, "streak");
             SaveCache();
         }
         return result;
     }
 
+    // ───── Публичные данные (работают и без входа) ─────
+    async Task<string?> Bearer() => SignedIn ? await Token() : null;
+    public async Task<JsonNode?> PublicRpc(string name, JsonObject arguments) => JsonNode.Parse(await Send(HttpMethod.Post, "/rest/v1/rpc/" + name, arguments, await Bearer()));
+    public async Task<JsonArray> Get(string path) => JsonNode.Parse(await Send(HttpMethod.Get, path, null, await Bearer()))!.AsArray();
+
+    // ───── Списки ─────
+    public static readonly string[] Lists = ["watching", "planned", "completed", "dropped"];
+    public static string ListLabel(string status) => status switch { "watching" => "Смотрю", "planned" => "Запланировано", "completed" => "Просмотрено", "dropped" => "Брошено", _ => "Избранное" };
+    public async Task<List<Anime>> List(string status) =>
+        (await Get($"/rest/v1/anime_lists?user_id=eq.{UserId}&status=eq.{status}&select=anime_id,title,poster,episodes,total&order=updated_at.desc&limit=500"))
+        .Select(r => new Anime { Id = Long(r, "anime_id"), Title = Text(r, "title"), Poster = Text(r, "poster"), EpisodeCount = Int(r, "total"),
+            DisplayNote = Int(r, "episodes") > 0 ? $"Серий: {Int(r, "episodes")}" + (Int(r, "total") > 0 ? $" из {Int(r, "total")}" : "") : "" }).ToList();
+    public async Task<JsonObject> ListEntry(long animeId) => (await Get($"/rest/v1/anime_lists?user_id=eq.{UserId}&anime_id=eq.{animeId}&select=status,episodes,total")).FirstOrDefault() as JsonObject ?? new JsonObject();
+    public async Task<JsonObject> SetList(Anime anime, string status) => (await Rpc("set_list_status", new JsonObject { ["p_anime_id"] = anime.Id, ["p_status"] = status, ["p_title"] = anime.Title, ["p_poster"] = anime.Poster, ["p_total"] = anime.EpisodeCount }))!.AsObject();
+
+    // ───── Оценки и отзывы ─────
+    public async Task<JsonObject> Rating(long animeId) => (await PublicRpc("anime_rating", new JsonObject { ["p_anime_id"] = animeId }))!.AsObject();
+    public Task<JsonArray> Reviews(long animeId) => Get($"/rest/v1/reviews?anime_id=eq.{animeId}&select=user_id,score,body,updated_at,profiles(username,display_name,avatar_url,equipped_frame,equipped_badge,equipped_color)&order=updated_at.desc&limit=30");
+    public async Task<JsonObject> SetReview(Anime anime, int score, string body) => (await Rpc("set_review", new JsonObject { ["p_anime_id"] = anime.Id, ["p_score"] = score, ["p_body"] = body, ["p_title"] = anime.Title, ["p_poster"] = anime.Poster }))!.AsObject();
+
+    // ───── Достижения ─────
+    public JsonArray Achievements { get; private set; } = new();
+    public HashSet<string> Unlocked { get; private set; } = [];
+    public async Task LoadAchievements()
+    {
+        Achievements = await Get("/rest/v1/achievements?select=*&order=sort.asc");
+        if (SignedIn) Unlocked = (await Get($"/rest/v1/user_achievements?user_id=eq.{UserId}&select=achievement_id")).Select(r => Text(r, "achievement_id")).ToHashSet();
+    }
+    public async Task EnsureCatalog()
+    {
+        if (Decorations.Count == 0) { Decorations = await Get("/rest/v1/decorations?select=*&order=kind.asc,sort.asc"); }
+        if (Achievements.Count == 0) Achievements = await Get("/rest/v1/achievements?select=*&order=sort.asc");
+    }
+    /// <summary>Текст про только что открытые достижения из ответа сервера, или пустая строка.</summary>
+    public static string Announce(JsonNode? result) => string.Join("  ", (result?["achievements"] as JsonArray ?? new JsonArray()).Select(a =>
+        $"🏆 «{Text(a, "title")}»" + (Int(a, "points") > 0 ? $" +{Int(a, "points")}" : "") + (Text(a, "reward").Length > 0 ? " и украшение" : "")));
+
+    // ───── Друзья ─────
+    public async Task<JsonArray> Friends() => (await Rpc("my_friends", new JsonObject()))!.AsArray();
+    public async Task<JsonArray> Feed() => (await Rpc("friend_feed", new JsonObject()))!.AsArray();
+    public async Task<JsonArray> Search(string query)
+    {
+        var q = new string(query.ToLowerInvariant().Where(c => c is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '_').ToArray());
+        return q.Length == 0 ? new JsonArray() : await Get($"/rest/v1/profiles?username=ilike.*{q}*&select=id,username,display_name,avatar_url,status,equipped_frame,equipped_badge,equipped_color,total_earned&order=username.asc&limit=20");
+    }
+    public async Task<JsonObject?> PublicProfile(string username) => await PublicRpc("public_profile", new JsonObject { ["p_username"] = username }) as JsonObject;
+
+    public static long Long(JsonNode? node, string key) => node?[key] is JsonValue v && v.TryGetValue<long>(out var l) ? l : 0;
+    public static bool Bool(JsonNode? node, string key) => node?[key] is JsonValue v && v.TryGetValue<bool>(out var b) && b;
     public static string Text(JsonNode? node, string key) => node?[key] is JsonValue v && v.TryGetValue<string>(out var s) ? s : "";
     public static int Int(JsonNode? node, string key) => node?[key] is JsonValue v && v.TryGetValue<int>(out var i) ? i : 0;
     public string DisplayName => Text(Profile, "display_name").Trim() is { Length: > 0 } name ? name : Text(Profile, "username") is { Length: > 0 } nick ? nick : "Гость";

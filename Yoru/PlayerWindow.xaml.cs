@@ -21,6 +21,8 @@ public partial class PlayerWindow : Window
     readonly AccountClient? account;
     readonly DispatcherTimer watchTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     long watchedEpisode = -1; int watchedSeconds; bool playing, awardSent; DateTime awardRetryAt;
+    // Нативный режим: прямой поток Kodik в собственном плеере (native.html), видео идёт через прокси приложения.
+    bool nativeMode, forceSite; StreamResolver.Result? resolved; CancellationTokenSource? resolveCts; double duration; DateTime lastPositionSave;
     public PlayerWindow(Anime item, List<Episode> list, Episode selected, LocalStore local, AccountClient? accountClient = null)
     {
         InitializeComponent(); WindowTheme.Apply(this);
@@ -31,7 +33,7 @@ public partial class PlayerWindow : Window
         SyncSelection(selected);
         SeriesBox.SelectionChanged += (_,_) => { if(!changing) UpdateSelectionHint(); };
         Loaded += async (_, _) => await InitializePlayer();
-        Closed += (_, _) => { closed=true; watchTimer.Stop(); Browser.Dispose(); };
+        Closed += (_, _) => { closed=true; watchTimer.Stop(); resolveCts?.Cancel(); SavePrefs(); Browser.Dispose(); };
     }
     void Status(string message, string state)
     {
@@ -45,13 +47,17 @@ public partial class PlayerWindow : Window
         if(closed) return;
         if(watchedEpisode!=current.Id) { watchedEpisode=current.Id; watchedSeconds=0; awardSent=false; }
         if(playing) watchedSeconds++;
-        if(account is not { SignedIn: true } || awardSent || DateTime.Now<awardRetryAt || TimeSpan.FromSeconds(watchedSeconds)<Rewards.Threshold(null)) return;
+        if(account is not { SignedIn: true } || awardSent || DateTime.Now<awardRetryAt || TimeSpan.FromSeconds(watchedSeconds)<Rewards.Threshold(nativeMode && duration>0 ? TimeSpan.FromSeconds(duration) : null)) return;
         awardSent=true; var episode=current;
         try
         {
-            var result=await account.Award(anime.Id,episode.Id,episode.Number,watchedSeconds);
+            var result=await account.Award(anime,episode.Id,episode.Number,watchedSeconds);
             if(closed) return;
-            if(result["awarded"]?.GetValue<bool>()==true) PlayerStatus.Text=$"+{AccountClient.Int(result,"points")} очков за {episode.Label} · баланс ◆ {Rewards.Points(AccountClient.Int(result,"balance"))}";
+            if(result["awarded"]?.GetValue<bool>()==true)
+            {
+                var bonus=AccountClient.Int(result,"streak_bonus");
+                PlayerStatus.Text=$"+{AccountClient.Int(result,"points")} очков за {episode.Label}"+(bonus>0?$" · 🔥 {Rewards.Days(AccountClient.Int(result,"streak"))} подряд (+{bonus})":"")+$" · баланс ◆ {Rewards.Points(AccountClient.Int(result,"balance"))}  {AccountClient.Announce(result)}";
+            }
             else if(Rewards.SkipReason(AccountClient.Text(result,"reason")) is { Length: > 0 } reason && AccountClient.Text(result,"reason")!="already") PlayerStatus.Text=reason;
         }
         catch(Exception e) when (e is AccountException or System.Net.Http.HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException)
@@ -84,6 +90,8 @@ public partial class PlayerWindow : Window
             core.Settings.IsPasswordAutosaveEnabled=false;
             core.Settings.IsGeneralAutofillEnabled=false;
             core.NewWindowRequested += (_,e) => e.Handled=true;
+            core.AddWebResourceRequestedFilter($"https://{Host}/proxy*", CoreWebView2WebResourceContext.All);
+            core.WebResourceRequested += Proxy;
             core.DownloadStarting += (_,e) => e.Cancel=true;
             core.PermissionRequested += (_,e) => e.State=CoreWebView2PermissionState.Deny;
             core.NavigationStarting += (_,e) =>
@@ -122,12 +130,25 @@ public partial class PlayerWindow : Window
                         Status("Плеер загружен · нажми ▶ в видео",state);
                         try { store.Started(anime,current); } catch(IOException) { Status("Плеер загружен · не удалось сохранить историю",state); }
                     }
+                    else if(state=="ready" && nativeMode) _ = StartNative(current, navigationSession);
+                    else if(state=="next") Move(1);
+                    else if(state=="site") { forceSite=true; NavigateEpisode(current); }
+                    else if(state=="retry") NavigateEpisode(current);
+                    else if(state=="fullscreen") SetFullscreen(!fullscreen);
+                    else if(state=="exit-fullscreen") SetFullscreen(false);
+                    else if(state=="quality") { store.Data.Quality=ApiParser.Text(ApiParser.Field(doc.RootElement,"value")); SavePrefs(); }
+                    else if(state=="speed") { store.Data.Speed=ApiParser.Number(ApiParser.Field(doc.RootElement,"value")); SavePrefs(); }
+                    else if(state=="autonext") { store.Data.AutoNext=ApiParser.Field(doc.RootElement,"value").ValueKind==JsonValueKind.True; SavePrefs(); }
+                    else if(state=="error") Status("Видео недоступно · можно открыть плеер сайта","error");
                     else if(state=="playing") Status("Идёт просмотр · "+current.Label,state);
                     else if(state=="paused") Status("Пауза · "+current.Label,state);
-                    else if(state=="ended") Status("Серия закончилась · можно перейти к следующей",state);
+                    else if(state=="ended") { Status("Серия закончилась · можно перейти к следующей",state); if(nativeMode) SavePosition(0, true); }
                     else if(state=="time")
                     {
                         var seconds=ApiParser.Number(ApiParser.Field(doc.RootElement,"value"));
+                        var length=ApiParser.Number(ApiParser.Field(doc.RootElement,"duration"));
+                        if(length>0) duration=length;
+                        if(nativeMode) SavePosition(seconds, false);
                         if(seconds>=1) Status($"Идёт просмотр · {TimeSpan.FromSeconds(seconds):mm\\:ss}","time:"+(int)seconds);
                     }
                     else if(state is "invalid-source" or "frame-error") Failed("Не получилось открыть видео. Выбери другой плеер справа.");
@@ -160,7 +181,9 @@ public partial class PlayerWindow : Window
     void NavigateEpisode(Episode episode)
     {
         if(!initialized || closed) return;
-        current=episode; sourceFailed=false;
+        if(episode.Id!=current.Id) forceSite=false;
+        current=episode; sourceFailed=false; resolved=null; resolveCts?.Cancel(); duration=0;
+        nativeMode=StreamResolver.Supports(episode.Url) && !forceSite;
         SyncSelection(episode);
         navigationSession=Guid.NewGuid().ToString("N");
         Browser.Visibility=Visibility.Visible; PlayerMessage.Visibility=Visibility.Collapsed;
@@ -170,8 +193,70 @@ public partial class PlayerWindow : Window
         var index=playlist.FindIndex(v=>v.Id==episode.Id);
         PreviousButton.IsEnabled=index>0; NextButton.IsEnabled=index>=0 && index<playlist.Count-1;
         Status("Загрузка · "+episode.Label,"loading");
-        Browser.CoreWebView2.Navigate($"https://{Host}/index.html?src={Uri.EscapeDataString(episode.Url)}&session={navigationSession}");
+        if(nativeMode) { TrackLabel.Text=episode.Track+" · плеер Yoru без рекламы"; Browser.CoreWebView2.Navigate($"https://{Host}/native.html?session={navigationSession}"); }
+        else Browser.CoreWebView2.Navigate($"https://{Host}/index.html?src={Uri.EscapeDataString(episode.Url)}&session={navigationSession}");
     }
+    /// <summary>Получает прямые потоки и передаёт их странице плеера вместе с позицией и настройками.</summary>
+    async Task StartNative(Episode episode, string session)
+    {
+        Status("Получаем видеопоток…","loading");
+        resolveCts?.Cancel(); var cts=new CancellationTokenSource(); resolveCts=cts;
+        try
+        {
+            var result=await StreamResolver.Resolve(episode.Url, cts.Token);
+            if(closed || session!=navigationSession) return;
+            resolved=result;
+            var streams=new System.Text.Json.Nodes.JsonArray();
+            foreach(var stream in result.Streams) streams.Add(new System.Text.Json.Nodes.JsonObject { ["label"]=stream.Label, ["url"]=stream.Url, ["mime"]=stream.Mime });
+            Post(new System.Text.Json.Nodes.JsonObject { ["cmd"]="load", ["session"]=session, ["streams"]=streams, ["quality"]=store.Data.Quality,
+                ["speed"]=store.Data.Speed is >= 0.5 and <= 2 ? store.Data.Speed : 1, ["autoNext"]=store.Data.AutoNext, ["hasNext"]=NextButton.IsEnabled, ["start"]=store.Position(episode.Id) });
+            Status("Плеер Yoru · "+episode.Label,"loaded");
+            try { store.Started(anime,episode); } catch(IOException) { }
+        }
+        catch(Exception ex) when (ex is InvalidOperationException or System.Net.Http.HttpRequestException or TaskCanceledException or JsonException)
+        {
+            if(closed || session!=navigationSession || cts.IsCancellationRequested) return;
+            var text=ex is System.Net.Http.HttpRequestException or TaskCanceledException ? "Не удалось связаться с источником видео. Проверь подключение и повтори." : ex.Message;
+            Post(new System.Text.Json.Nodes.JsonObject { ["cmd"]="error", ["session"]=session, ["text"]=text });
+            Status("Видео недоступно · можно открыть плеер сайта","error");
+        }
+    }
+    void Post(System.Text.Json.Nodes.JsonObject message) { if(!closed && Browser.CoreWebView2!=null) Browser.CoreWebView2.PostWebMessageAsJson(message.ToJsonString()); }
+    void SavePrefs() { try { store.Save(); } catch(IOException) { } }
+    void SavePosition(double seconds, bool force)
+    {
+        if(!force && (DateTime.Now-lastPositionSave).TotalSeconds<15) return;
+        lastPositionSave=DateTime.Now;
+        store.Data.Positions[current.Id.ToString()]=duration>0 && seconds>=duration-10 ? 0 : Math.Max(0,seconds);
+        SavePrefs();
+    }
+    /// <summary>Прокси видео: страница плеера запрашивает https://player.yoru.local/proxy?u=…, приложение скачивает с CDN с нужным Referer.</summary>
+    async void Proxy(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
+    {
+        var core=Browser.CoreWebView2;
+        var source=resolved;
+        if(core==null) return;
+        if(source==null || !nativeMode) { e.Response=core.Environment.CreateWebResourceResponse(null,403,"Forbidden",""); return; }
+        var query=new Uri(e.Request.Uri).Query;
+        var target=query.StartsWith("?u=") ? Uri.UnescapeDataString(query[3..]) : "";
+        var range=e.Request.Headers.Contains("Range") ? e.Request.Headers.GetHeader("Range") : null;
+        var deferral=e.GetDeferral();
+        try
+        {
+            var response=await StreamResolver.Fetch(target, source.Referer, range, resolveCts?.Token ?? default);
+            var body=await response.Content.ReadAsStreamAsync();
+            var headers=new System.Text.StringBuilder("Access-Control-Allow-Origin: *\r\nCache-Control: no-store\r\n");
+            if(response.Content.Headers.ContentType is { } type) headers.Append("Content-Type: ").Append(type).Append("\r\n");
+            if(response.Content.Headers.ContentLength is { } length) headers.Append("Content-Length: ").Append(length).Append("\r\n");
+            if(response.Content.Headers.ContentRange is { } contentRange) headers.Append("Content-Range: ").Append(contentRange).Append("\r\n");
+            if(response.Headers.AcceptRanges.Count>0) headers.Append("Accept-Ranges: ").Append(string.Join(",",response.Headers.AcceptRanges)).Append("\r\n");
+            if(!closed) e.Response=core.Environment.CreateWebResourceResponse(body,(int)response.StatusCode,response.ReasonPhrase ?? "OK",headers.ToString());
+        }
+        catch(Exception ex) when (ex is InvalidOperationException or System.Net.Http.HttpRequestException or TaskCanceledException or IOException or UriFormatException)
+        { if(!closed) e.Response=core.Environment.CreateWebResourceResponse(null,502,"Bad Gateway",""); }
+        finally { deferral.Complete(); }
+    }
+    void SiteClick(object sender,RoutedEventArgs e) { forceSite=!forceSite || !StreamResolver.Supports(current.Url); if(initialized) NavigateEpisode(current); }
     void VoiceChanged(object sender,SelectionChangedEventArgs e)
     {
         if(changing || VoiceBox.SelectedItem is not string voice) return;

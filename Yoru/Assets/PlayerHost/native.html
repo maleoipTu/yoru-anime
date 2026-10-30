@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Yoru Player</title>
+<style>
+:root{--bg:#08080d;--panel:#171821cc;--text:#f4f2fa;--muted:#a2a3b6;--accent:#bfaeff;--on:#1c1530}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px "Segoe UI",system-ui,sans-serif;overflow:hidden;user-select:none}
+#stage{position:relative;width:100%;height:100%}video{width:100%;height:100%;background:#000;display:block}
+#ui{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;transition:opacity .25s}
+#ui.hidden{opacity:0;cursor:none}
+.shade{position:absolute;left:0;right:0;bottom:0;height:150px;background:linear-gradient(transparent,#000c);pointer-events:none}
+.bar{position:relative;display:flex;align-items:center;gap:8px;padding:0 18px 14px}
+button{font:inherit;color:var(--text);background:#0008;border:0;border-radius:20px;padding:8px 14px;cursor:pointer;min-height:36px}
+button:hover{background:#fff2}button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);color:var(--on);font-weight:600}
+#play{width:44px;height:44px;border-radius:22px;padding:0;font-size:18px}
+.spacer{flex:1}#clock{color:#fff;font-variant-numeric:tabular-nums;font-size:13px;text-shadow:0 1px 2px #000}
+#timeline{position:relative;margin:0 18px 10px;height:22px;cursor:pointer}
+#timeline .track{position:absolute;left:0;right:0;top:9px;height:4px;border-radius:2px;background:#ffffff33}
+#timeline .buffer{position:absolute;left:0;top:9px;height:4px;border-radius:2px;background:#ffffff55}
+#timeline .done{position:absolute;left:0;top:9px;height:4px;border-radius:2px;background:var(--accent)}
+#timeline .knob{position:absolute;top:4px;width:14px;height:14px;margin-left:-7px;border-radius:7px;background:#fff}
+#skip{position:absolute;right:22px;bottom:110px;background:#000a;border:1px solid #fff4;display:none}
+#menu{position:absolute;right:18px;bottom:70px;background:#171821f2;border:1px solid #2c2d3a;border-radius:14px;padding:8px;display:none;min-width:200px}
+#menu .title{color:var(--muted);font-size:12px;padding:6px 10px}#menu button{display:block;width:100%;text-align:left;background:transparent;border-radius:10px}
+#menu button.on{color:var(--accent);font-weight:600}
+#center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+#message{background:#171821ee;border:1px solid #2c2d3a;border-radius:18px;padding:22px 26px;max-width:460px;text-align:center;display:none;pointer-events:auto}
+#message h2{margin:0 0 8px;font-size:19px}#message p{margin:0 0 16px;color:var(--muted);line-height:1.5}
+#spinner{width:42px;height:42px;border-radius:21px;border:3px solid #ffffff33;border-top-color:var(--accent);animation:spin 1s linear infinite;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style></head>
+<body><div id="stage">
+<video id="video" playsinline preload="auto"></video>
+<div id="center"><div id="spinner"></div><div id="message"><h2 id="mtitle"></h2><p id="mtext"></p><div id="mactions"></div></div></div>
+<div id="ui"><div class="shade"></div>
+ <button id="skip" title="Пропустить опенинг">Пропустить опенинг · +85 с</button>
+ <div id="timeline" role="slider" aria-label="Позиция в серии" tabindex="0"><div class="track"></div><div class="buffer"></div><div class="done"></div><div class="knob"></div></div>
+ <div class="bar">
+  <button id="back10" title="Назад на 10 секунд (←)" aria-label="Назад на 10 секунд">−10</button>
+  <button id="play" class="primary" aria-label="Воспроизвести">▶</button>
+  <button id="fwd10" title="Вперёд на 10 секунд (→)" aria-label="Вперёд на 10 секунд">+10</button>
+  <span id="clock">00:00 / --:--</span><span class="spacer"></span>
+  <button id="settings" aria-label="Качество и скорость">⚙ <span id="summary">Авто · 1×</span></button>
+  <button id="full" aria-label="Полный экран">⛶</button>
+ </div>
+ <div id="menu" role="menu"></div>
+</div></div>
+<script src="hls.min.js"></script>
+<script>
+(() => {
+ 'use strict';
+ const $ = id => document.getElementById(id);
+ const video=$('video'), ui=$('ui'), play=$('play'), clock=$('clock'), menu=$('menu'), skip=$('skip');
+ const session=new URLSearchParams(location.search).get('session');
+ const send=(state,value,extra={})=>window.chrome?.webview?.postMessage({state,value,session,...extra});
+ let streams=[], current=0, speed=1, hls=null, autoNext=false, hasNext=false, countdown=0, countdownTimer=0, hideTimer=0, lastReport=0, pendingStart=0;
+ const proxy=u=>'https://player.yoru.local/proxy?u='+encodeURIComponent(u);
+ const time=s=>{s=Math.max(0,Math.floor(s||0));const h=Math.floor(s/3600),m=Math.floor(s/60)%60,x=s%60;return (h?h+':'+String(m).padStart(2,'0'):String(m).padStart(2,'0'))+':'+String(x).padStart(2,'0');};
+
+ function message(title,text,actions=[]){$('mtitle').textContent=title;$('mtext').textContent=text;const box=$('mactions');box.replaceChildren();for(const [label,fn,primary] of actions){const b=document.createElement('button');b.textContent=label;if(primary)b.className='primary';b.onclick=fn;b.style.margin='0 4px';box.appendChild(b);}$('message').style.display=title?'block':'none';}
+ function spinner(on){$('spinner').style.display=on?'block':'none';}
+ function showUi(){ui.classList.remove('hidden');clearTimeout(hideTimer);hideTimer=setTimeout(()=>{if(!video.paused&&menu.style.display!=='block')ui.classList.add('hidden');},3000);}
+
+ function load(index,start){
+  current=index;const s=streams[index];if(!s)return;
+  if(hls){hls.destroy();hls=null;}
+  spinner(true);message('');pendingStart=start||0;
+  if(s.mime==='application/x-mpegURL'){
+   if(window.Hls&&Hls.isSupported()){
+    // Плейлист и сегменты запрашиваются через прокси приложения, а относительные адреса считаются от исходного URL.
+    hls=new Hls({xhrSetup:(xhr,url)=>{xhr.open('GET',url.startsWith('https://player.yoru.local/')?url:proxy(url),true);},maxBufferLength:60});
+    hls.on(Hls.Events.ERROR,(e,data)=>{if(data.fatal){if(data.type===Hls.ErrorTypes.NETWORK_ERROR&&!data.retried){data.retried=true;hls.startLoad();}else fail('Не получилось воспроизвести видео. Попробуй другое качество или источник.');}});
+    hls.loadSource(s.url);hls.attachMedia(video);
+   } else if(video.canPlayType('application/vnd.apple.mpegurl')) video.src=proxy(s.url);
+   else { fail('Встроенный плеер не загрузился. Открой плеер сайта.'); return; }
+  } else video.src=proxy(s.url);
+  video.playbackRate=speed;video.play().catch(()=>{});
+  summary();
+ }
+ function fail(text){spinner(false);send('error',text);message('Видео недоступно',text,[['Повторить',()=>load(current,video.currentTime),true],['Плеер сайта',()=>send('site')]]);}
+ function summary(){$('summary').textContent=(streams[current]?.label||'Авто')+' · '+speed+'×';}
+
+ video.addEventListener('loadedmetadata',()=>{if(pendingStart>0&&pendingStart<video.duration-10)video.currentTime=pendingStart;pendingStart=0;});
+ video.addEventListener('playing',()=>{spinner(false);message('');send('playing',video.currentTime,{duration:video.duration});play.textContent='❚❚';play.setAttribute('aria-label','Пауза');showUi();});
+ video.addEventListener('pause',()=>{send('paused',video.currentTime,{duration:video.duration});play.textContent='▶';play.setAttribute('aria-label','Воспроизвести');ui.classList.remove('hidden');});
+ video.addEventListener('waiting',()=>spinner(true));
+ video.addEventListener('canplay',()=>spinner(false));
+ video.addEventListener('error',()=>fail('Не получилось воспроизвести видео. Попробуй другое качество или источник.'));
+ video.addEventListener('timeupdate',()=>{
+  const t=video.currentTime,d=video.duration||0;clock.textContent=time(t)+' / '+(d?time(d):'--:--');
+  const p=d?t/d*100:0;document.querySelector('#timeline .done').style.width=p+'%';document.querySelector('#timeline .knob').style.left=p+'%';
+  if(video.buffered.length&&d)document.querySelector('#timeline .buffer').style.width=(video.buffered.end(video.buffered.length-1)/d*100)+'%';
+  skip.style.display=t<300&&(!d||t+85<d)&&!video.paused?'block':'none';
+  if(Date.now()-lastReport>1000){lastReport=Date.now();send('time',t,{duration:d});}
+ });
+ video.addEventListener('ended',()=>{send('ended',0,{duration:video.duration});if(autoNext&&hasNext)startCountdown();else message('Серия закончилась',hasNext?'Можно включить следующую.':'Это была последняя доступная серия.',hasNext?[['Следующая серия',()=>send('next'),true]]:[]);});
+ function startCountdown(){countdown=6;tick();}
+ function tick(){countdown--;if(countdown<=0){message('');send('next');return;}message('Следующая серия через '+countdown+' с','',[['Смотреть сейчас',()=>{clearTimeout(countdownTimer);message('');send('next');},true],['Остаться',()=>{clearTimeout(countdownTimer);message('Серия закончилась','Автопереход отменён.',[['Следующая серия',()=>send('next'),true]]);}]]);countdownTimer=setTimeout(tick,1000);}
+
+ const toggle=()=>{if(video.paused)video.play().catch(()=>{});else video.pause();};
+ const seek=d=>{if(video.duration){video.currentTime=Math.max(0,Math.min(video.duration-0.5,video.currentTime+d));showUi();}};
+ play.onclick=toggle;$('back10').onclick=()=>seek(-10);$('fwd10').onclick=()=>seek(10);skip.onclick=()=>seek(85);
+ $('full').onclick=()=>send('fullscreen');
+ video.addEventListener('click',toggle);video.addEventListener('dblclick',()=>send('fullscreen'));
+ const timeline=$('timeline');
+ const scrub=e=>{const r=timeline.getBoundingClientRect();if(video.duration)video.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*video.duration;};
+ timeline.addEventListener('pointerdown',e=>{timeline.setPointerCapture(e.pointerId);scrub(e);timeline.onpointermove=scrub;});
+ timeline.addEventListener('pointerup',()=>{timeline.onpointermove=null;});
+ document.addEventListener('mousemove',showUi);
+ document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='BUTTON'&&(e.key===' '||e.key==='Enter'))return;
+  if(e.key===' '||e.key==='k'){e.preventDefault();toggle();}
+  else if(e.key==='ArrowLeft'){e.preventDefault();seek(-10);}
+  else if(e.key==='ArrowRight'){e.preventDefault();seek(10);}
+  else if(e.key==='f'||e.key==='F11'){e.preventDefault();send('fullscreen');}
+  else if(e.key==='Escape'){if(menu.style.display==='block')menu.style.display='none';else send('exit-fullscreen');}
+  else if(e.key==='n'||e.key==='N')send('next');
+  else if(e.key==='s'||e.key==='S')seek(85);
+  showUi();
+ });
+ $('settings').onclick=()=>{
+  if(menu.style.display==='block'){menu.style.display='none';return;}
+  menu.replaceChildren();const head=t=>{const d=document.createElement('div');d.className='title';d.textContent=t;menu.appendChild(d);};
+  const item=(label,on,fn)=>{const b=document.createElement('button');b.textContent=(on?'✓ ':'')+label;if(on)b.className='on';b.onclick=()=>{fn();menu.style.display='none';summary();};menu.appendChild(b);};
+  head('Качество');streams.forEach((s,i)=>item(s.label,i===current,()=>{if(i!==current){const t=video.currentTime;load(i,t);send('quality',s.label);}}));
+  head('Скорость');[0.5,0.75,1,1.25,1.5,1.75,2].forEach(v=>item(v+'×',v===speed,()=>{speed=v;video.playbackRate=v;send('speed',v);}));
+  head('Автопереход');item(autoNext?'Включён':'Выключен',autoNext,()=>{autoNext=!autoNext;send('autonext',autoNext);});
+  menu.style.display='block';showUi();
+ };
+
+ window.chrome?.webview?.addEventListener('message',e=>{
+  const m=e.data;if(!m||m.session!==session)return;
+  if(m.cmd==='load'){streams=m.streams||[];speed=m.speed||1;autoNext=!!m.autoNext;hasNext=!!m.hasNext;let i=streams.findIndex(s=>s.label===m.quality);load(i<0?0:i,m.start||0);}
+  else if(m.cmd==='error'){spinner(false);message('Видео недоступно',m.text||'',[['Повторить',()=>send('retry'),true],['Плеер сайта',()=>send('site')]]);}
+  else if(m.cmd==='pause')video.pause();
+ });
+ spinner(true);send('ready');
+})();
+</script></body></html>

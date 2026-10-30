@@ -19,10 +19,11 @@ public partial class ProfileWindow : Window
     static readonly Brush Warm = new SolidColorBrush(Color.FromRgb(0xFF, 0xC7, 0x68));
     static readonly Brush AccentBrush = new SolidColorBrush(Color.FromRgb(0xC4, 0xB5, 0xFF));
 
-    public ProfileWindow(AccountClient client, LocalStore local)
+    readonly string viewing;
+    public ProfileWindow(AccountClient client, LocalStore local, string username = "")
     {
         InitializeComponent(); WindowTheme.Apply(this);
-        account = client; store = local;
+        account = client; store = local; viewing = username;
         Closed += (_, _) => closed = true;
         Loaded += async (_, _) => await Reload();
     }
@@ -32,9 +33,15 @@ public partial class ProfileWindow : Window
     {
         StatusText.Text = "";
         if (!account.Config.Configured) { NotConfigured(); return; }
+        if (viewing.Length > 0 && viewing != AccountClient.Text(account.Profile, "username"))
+        {
+            JsonObject? data = null;
+            await Run(async () => { await account.EnsureCatalog(); data = await account.PublicProfile(viewing); }, () => RenderPublic(data));
+            return;
+        }
         if (!account.SignedIn) { AuthForm(); return; }
         if (account.Profile.ContainsKey("username")) RenderProfile();
-        await Run(account.Refresh, RenderProfile);
+        await Run(async () => { await account.Refresh(); await account.LoadAchievements(); }, RenderProfile);
     }
 
     /// <summary>Выполняет запрос, показывает ошибку понятным текстом и перерисовывает экран.</summary>
@@ -132,7 +139,10 @@ public partial class ProfileWindow : Window
         var status = AccountClient.Text(p, "status");
         who.Children.Add(new TextBlock { Text = status.Length > 0 ? $"«{status}»" : "Добавь статус — о чём сейчас твой вечер?", Foreground = status.Length > 0 ? Brushes.WhiteSmoke : Muted, FontSize = 14, Margin = new Thickness(0, 10, 0, 0), TextWrapping = TextWrapping.Wrap });
         var edit = new Button { Content = "Редактировать профиль", HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 14, 0, 0), Foreground = AccentBrush };
-        edit.Click += (_, _) => EditProfile(); who.Children.Add(edit);
+        edit.Click += (_, _) => EditProfile();
+        var friends = new Button { Content = "♥  Друзья", HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(10, 14, 0, 0), Foreground = AccentBrush };
+        friends.Click += (_, _) => { new FriendsWindow(account, store) { Owner = this }.ShowDialog(); _ = Reload(); };
+        var heroActions = new StackPanel { Orientation = Orientation.Horizontal }; heroActions.Children.Add(edit); heroActions.Children.Add(friends); who.Children.Add(heroActions);
         hero.Children.Add(who);
         Body.Children.Add(Card(hero));
 
@@ -140,14 +150,14 @@ public partial class ProfileWindow : Window
         var stats = new UniformGrid3();
         stats.Add("◆ " + Rewards.Points(points), "очков", Warm);
         stats.Add(level.ToString(), "уровень", AccentBrush);
-        stats.Add(AccountClient.Int(p, "episodes_watched").ToString(), "серий за очки", new SolidColorBrush(Color.FromRgb(0x7E, 0xDC, 0xA9)));
+        stats.Add("🔥 " + AccountClient.Int(p, "streak_days"), "дней подряд", new SolidColorBrush(Color.FromRgb(0xFF, 0x8A, 0x5B)));
         var progress = new StackPanel();
         progress.Children.Add(stats.Grid);
         var levelRow = new DockPanel { Margin = new Thickness(0, 20, 0, 8) };
         var next = Text($"ещё {Rewards.Points(Rewards.ToNext(total))} до уровня {level + 1}", 12, Muted); DockPanel.SetDock(next, Dock.Right); levelRow.Children.Add(next);
         levelRow.Children.Add(Text("Уровень " + level, 15, null, true)); progress.Children.Add(levelRow);
         progress.Children.Add(new ProgressBar { Height = 6, Maximum = 1, Value = Rewards.Progress(total), Foreground = new SolidColorBrush(Color.FromRgb(0xB3, 0xA2, 0xFF)), Background = Line, BorderThickness = new Thickness(0) });
-        var hint = Text($"Очки начисляются за просмотр в плеере Yoru: {Rewards.EpisodePoints} за серию и +{Rewards.NewAnimeBonus} за первое знакомство с новым аниме. Серия засчитывается после 10 минут просмотра.", 12, Muted); hint.Margin = new Thickness(0, 12, 0, 0); progress.Children.Add(hint);
+        var hint = Text($"Засчитано серий: {AccountClient.Int(p, "episodes_watched")}. Очки начисляются за просмотр в плеере Yoru: {Rewards.EpisodePoints} за серию, +{Rewards.NewAnimeBonus} за новое аниме и до +20 за дни подряд. Ещё очки дают достижения.", 12, Muted); hint.Margin = new Thickness(0, 12, 0, 0); progress.Children.Add(hint);
         Body.Children.Add(Card(progress));
 
         // Витрина «любимое аниме».
@@ -173,6 +183,9 @@ public partial class ProfileWindow : Window
         }
         Body.Children.Add(Card(showcase));
 
+        var achievementsCard = Achievements(account.Unlocked);
+        if (achievementsCard != null) Body.Children.Add(achievementsCard);
+
         // Магазин украшений.
         var shop = new StackPanel();
         var shopHead = new DockPanel();
@@ -187,7 +200,9 @@ public partial class ProfileWindow : Window
         }
         shop.Children.Add(tabs);
         var grid = new WrapPanel();
-        foreach (var d in account.Decorations.OfType<JsonObject>().Where(d => AccountClient.Text(d, "kind") == tab)) grid.Children.Add(Tile(d, points, level));
+        foreach (var d in account.Decorations.OfType<JsonObject>().Where(d => AccountClient.Text(d, "kind") == tab
+            && (account.Owned.Contains(AccountClient.Text(d, "id")) || Rewards.OnSale(AccountClient.Text(d, "available_from"), AccountClient.Text(d, "available_until"), DateTimeOffset.Now))))
+            grid.Children.Add(Tile(d, points, level));
         if (grid.Children.Count == 0) shop.Children.Add(Text(busy ? "Загружаем украшения…" : "Украшения пока не загрузились.", 13, Muted));
         shop.Children.Add(grid);
         Body.Children.Add(Card(shop));
@@ -208,7 +223,9 @@ public partial class ProfileWindow : Window
         string id = AccountClient.Text(d, "id"), kind = AccountClient.Text(d, "kind"), rarity = AccountClient.Text(d, "rarity");
         int price = AccountClient.Int(d, "price"), minLevel = Math.Max(1, AccountClient.Int(d, "min_level"));
         var style = d["style"] as JsonObject ?? new JsonObject();
-        var have = price == 0 || account.Owned.Contains(id);
+        var exclusive = AccountClient.Bool(d, "exclusive");
+        var have = (price == 0 && !exclusive) || account.Owned.Contains(id);
+        var until = AccountClient.Text(d, "available_until");
         var equipped = AccountClient.Text(account.Profile, kind switch { "frame" => "equipped_frame", "badge" => "equipped_badge", _ => "equipped_color" });
         var worn = id == equipped;
         var panel = new StackPanel { Width = 170 };
@@ -218,10 +235,11 @@ public partial class ProfileWindow : Window
         else preview.Children.Add(new TextBlock { Text = account.DisplayName, FontSize = 19, FontWeight = FontWeights.Bold, Foreground = Decor.NameBrush(style), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
         panel.Children.Add(preview);
         panel.Children.Add(new TextBlock { Text = AccountClient.Text(d, "title"), FontSize = 14, FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0) });
-        panel.Children.Add(new TextBlock { Text = Rewards.Rarity(rarity), FontSize = 11, Foreground = new SolidColorBrush(Decor.Parse(Rewards.RarityColor(rarity), Colors.Gray)), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 3, 0, 0) });
+        panel.Children.Add(new TextBlock { Text = Rewards.Rarity(rarity) + (until.Length > 0 && !have ? " · до " + Rewards.Until(until) : ""), FontSize = 11, Foreground = new SolidColorBrush(Decor.Parse(Rewards.RarityColor(rarity), Colors.Gray)), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 3, 0, 0) });
         string state; Brush color;
         if (worn) { state = kind == "badge" ? "✓ Надето · снять" : "✓ Надето"; color = AccentBrush; }
         else if (have) { state = "Надеть"; color = Brushes.WhiteSmoke; }
+        else if (exclusive) { state = "🏆 За достижение"; color = Muted; }
         else if (level < minLevel) { state = "С уровня " + minLevel; color = Muted; }
         else { state = "◆ " + Rewards.Points(price); color = points >= price ? Warm : Muted; }
         panel.Children.Add(new TextBlock { Text = state, FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = color, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0) });
@@ -232,10 +250,11 @@ public partial class ProfileWindow : Window
             if (busy) return;
             if (worn) { if (kind == "badge") await Run(() => account.Equip(kind, ""), RenderProfile); return; }
             if (have) { await Run(() => account.Equip(kind, id), RenderProfile); return; }
+            if (exclusive) { StatusText.Text = AccountClient.Text(d, "description"); return; }
             if (level < minLevel) { StatusText.Text = $"«{AccountClient.Text(d, "title")}» откроется на уровне {minLevel}."; return; }
             if (points < price) { StatusText.Text = $"Не хватает {Rewards.Points(price - points)} очков."; return; }
             if (MessageBox.Show(this, $"Купить «{AccountClient.Text(d, "title")}» за {Rewards.Points(price)} очков и сразу надеть?\nОстанется: {Rewards.Points(points - price)}.", "Украшение", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
-            await Run(() => account.Buy(id, kind), RenderProfile);
+            await Run(async () => { await account.Buy(id, kind); if (account.Owned.Count >= 5) { await account.Refresh(); await account.LoadAchievements(); } }, RenderProfile);
         };
         return button;
     }
@@ -310,6 +329,84 @@ public partial class ProfileWindow : Window
         };
         actions.Children.Add(save); actions.Children.Add(cancel); panel.Children.Add(actions);
         Body.Children.Add(Card(panel));
+    }
+
+    /// <summary>Сетка достижений: открытые — в цвете, закрытые — приглушены.</summary>
+    Border? Achievements(HashSet<string> got)
+    {
+        if (account.Achievements.Count == 0) return null;
+        var panel = new StackPanel();
+        panel.Children.Add(Text($"Достижения · {got.Count} из {account.Achievements.Count}", 18, null, true));
+        var wrap = new WrapPanel { Margin = new Thickness(0, 12, 0, 0) };
+        foreach (var a in account.Achievements.OfType<JsonObject>())
+        {
+            var open = got.Contains(AccountClient.Text(a, "id"));
+            var cell = new StackPanel { Width = 112 };
+            cell.Children.Add(new TextBlock { Text = AccountClient.Text(a, "glyph"), FontSize = 28, HorizontalAlignment = HorizontalAlignment.Center, Foreground = open ? Warm : new SolidColorBrush(Color.FromRgb(0x4A, 0x4B, 0x5A)), Opacity = open ? 1 : 0.6 });
+            cell.Children.Add(new TextBlock { Text = AccountClient.Text(a, "title"), FontSize = 11, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, Foreground = open ? Brushes.WhiteSmoke : Muted, Margin = new Thickness(0, 6, 0, 0) });
+            var reward = AccountClient.Text(a, "reward").Length > 0 ? " · украшение в награду" : "";
+            var tip = $"{AccountClient.Text(a, "description")}" + (AccountClient.Int(a, "points") > 0 ? $" · +{AccountClient.Int(a, "points")} очков" : "") + reward + (open ? " · получено" : "");
+            var border = new Border { Child = cell, Padding = new Thickness(6, 10, 6, 10), Margin = new Thickness(0, 0, 8, 8), CornerRadius = new CornerRadius(12), Background = open ? new SolidColorBrush(Color.FromRgb(0x2D, 0x28, 0x43)) : new SolidColorBrush(Color.FromRgb(0x21, 0x22, 0x2D)), ToolTip = tip };
+            System.Windows.Automation.AutomationProperties.SetName(border, AccountClient.Text(a, "title") + ". " + tip);
+            wrap.Children.Add(border);
+        }
+        panel.Children.Add(wrap);
+        return Card(panel);
+    }
+
+    void RenderPublic(JsonObject? data)
+    {
+        Body.Children.Clear();
+        var p = data?["profile"] as JsonObject;
+        if (p == null) { Heading.Text = "Профиль не найден"; Body.Children.Add(Card(Text($"Пользователя @{viewing} нет — возможно, он сменил ник.", 14, Muted))); return; }
+        var name = AccountClient.Text(p, "display_name").Trim() is { Length: > 0 } n ? n : AccountClient.Text(p, "username");
+        Heading.Text = name;
+        var hero = new StackPanel();
+        hero.Children.Add(Decor.Person(p, account, "@" + AccountClient.Text(p, "username") + (AccountClient.Text(p, "status") is { Length: > 0 } st ? $"  ·  «{st}»" : ""), 96));
+        var state = AccountClient.Text(data, "friendship");
+        if (state != "self")
+        {
+            var friend = new Button { Content = state switch { "friend" => "✓ Друзья · удалить", "outgoing" => "Заявка отправлена", "incoming" => "Принять заявку в друзья", _ => "Добавить в друзья" }, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 14, 0, 0), IsEnabled = state != "outgoing" && account.SignedIn, Foreground = AccentBrush };
+            var id = AccountClient.Text(p, "id"); var username = AccountClient.Text(p, "username");
+            friend.Click += async (_, _) =>
+            {
+                JsonNode? result = null;
+                await Run(async () => result = state switch
+                {
+                    "friend" => await account.Rpc("remove_friend", new JsonObject { ["p_user"] = id }),
+                    "incoming" => await account.Rpc("respond_friend_request", new JsonObject { ["p_requester"] = id, ["p_accept"] = true }),
+                    _ => await account.Rpc("send_friend_request", new JsonObject { ["p_username"] = username })
+                }, async () => { await Reload(); StatusText.Text = AccountClient.Announce(result); });
+            };
+            hero.Children.Add(friend);
+        }
+        Body.Children.Add(Card(hero));
+        var stats = new UniformGrid3();
+        stats.Add(Rewards.Level(AccountClient.Int(p, "total_earned")).ToString(), "уровень", AccentBrush);
+        stats.Add(AccountClient.Int(p, "episodes_watched").ToString(), "серий", new SolidColorBrush(Color.FromRgb(0x7E, 0xDC, 0xA9)));
+        stats.Add("🔥 " + AccountClient.Int(p, "streak_days"), "дней подряд", new SolidColorBrush(Color.FromRgb(0xFF, 0x8A, 0x5B)));
+        var lists = data?["lists"] as JsonObject;
+        var info = new StackPanel(); info.Children.Add(stats.Grid);
+        var line = string.Join("  ·  ", AccountClient.Lists.Select(l => $"{AccountClient.ListLabel(l)}: {AccountClient.Int(lists, l)}")) + $"  ·  Отзывов: {AccountClient.Int(data, "reviews")}";
+        var listText = Text(line, 13, Muted); listText.Margin = new Thickness(0, 14, 0, 0); info.Children.Add(listText);
+        Body.Children.Add(Card(info));
+        if (p["showcase"] is JsonArray showcase && showcase.Count > 0)
+        {
+            var box = new StackPanel(); box.Children.Add(Text("Любимое аниме", 18, null, true));
+            var row = new WrapPanel { Margin = new Thickness(0, 12, 0, 0) };
+            foreach (var item in showcase)
+            {
+                var cell = new StackPanel { Width = 116, Margin = new Thickness(0, 0, 14, 8) };
+                var poster = new Border { Height = 160, CornerRadius = new CornerRadius(10), Background = new SolidColorBrush(Color.FromRgb(0x27, 0x24, 0x31)), ClipToBounds = true };
+                if (Uri.TryCreate(AccountClient.Text(item, "poster"), UriKind.Absolute, out var uri) && uri.Scheme == "https") poster.Child = new Image { Source = new BitmapImage(uri), Stretch = Stretch.UniformToFill };
+                cell.Children.Add(poster);
+                cell.Children.Add(new TextBlock { Text = AccountClient.Text(item, "title"), FontSize = 12, Margin = new Thickness(0, 6, 0, 0), MaxHeight = 34, TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.Wrap });
+                row.Children.Add(cell);
+            }
+            box.Children.Add(row); Body.Children.Add(Card(box));
+        }
+        var theirs = (data?["achievements"] as JsonArray ?? new JsonArray()).Select(a => a?.ToString() ?? "").ToHashSet();
+        if (Achievements(theirs) is { } card) Body.Children.Add(card);
     }
 
     /// <summary>Три плитки статистики в ряд.</summary>
