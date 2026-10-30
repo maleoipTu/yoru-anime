@@ -64,3 +64,28 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check Supabase migration and account rules
         run: bash Tests/database.sh
+  # Последняя сборка из main как pre-release «nightly»: постоянные прямые ссылки, скачиваются без входа в GitHub.
+  #   https://github.com/maleoipTu/yoru-anime/releases/download/nightly/Yoru-Windows.zip
+  #   https://github.com/maleoipTu/yoru-anime/releases/download/nightly/Yoru-Android-debug.apk
+  nightly:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [windows, android, database]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Publish nightly pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          (cd artifacts/Yoru-Windows && zip -qr ../../Yoru-Windows.zip .)
+          cp artifacts/Yoru-Android-debug/app-debug.apk Yoru-Android-debug.apk
+          sha256sum Yoru-Windows.zip Yoru-Android-debug.apk > SHA256SUMS.txt
+          gh release delete nightly --yes --cleanup-tag || true
+          gh release create nightly Yoru-Windows.zip Yoru-Android-debug.apk SHA256SUMS.txt --prerelease --target "$GITHUB_SHA" \
+            --title "Последняя сборка (nightly)" \
+            --notes "Автоматическая сборка из main, коммит ${GITHUB_SHA::7}. Windows — переносная версия (распаковать и запустить Yoru.exe). Android — отладочная подпись: ставится поверх только отладочной версии. Подписанные релизы — в версиях без пометки pre-release."
