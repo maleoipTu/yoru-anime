@@ -7,12 +7,10 @@
 --  * очки, уровень, покупки и надетые украшения меняются только через функции ниже (security definer);
 --  * очки за серию начисляются один раз на пару «аниме + номер серии», с паузой между начислениями и дневным лимитом.
 
-create extension if not exists citext;
-
 -- ───────────────────────── Профиль ─────────────────────────
 create table if not exists public.profiles (
   id               uuid primary key references auth.users (id) on delete cascade,
-  username         citext not null unique
+  username         text not null unique
                    check (username ~ '^[a-z0-9_]{3,20}$'),
   display_name     text not null default ''
                    check (char_length(display_name) <= 32),
@@ -74,7 +72,7 @@ create index if not exists watch_awards_recent on public.watch_awards (user_id, 
 
 -- ───────────────────────── Правила начисления ─────────────────────────
 create or replace function public.yoru_level(total integer)
-returns integer language sql immutable as $$
+returns integer language sql immutable set search_path = public as $$
   -- Уровень N требует 50·(N−1)² очков: 1 → 0, 2 → 50, 3 → 200, 4 → 450, 5 → 800 …
   select greatest(1, floor(sqrt(greatest(total, 0) / 50.0))::integer + 1);
 $$;
@@ -107,7 +105,7 @@ grant select on public.watch_awards to authenticated;
 grant update (display_name, status, avatar_url, showcase) on public.profiles to authenticated;
 
 create or replace function public.touch_profile()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql set search_path = public as $$
 begin new.updated_at := now(); return new; end $$;
 drop trigger if exists profiles_touch on public.profiles;
 create trigger profiles_touch before update on public.profiles
@@ -135,7 +133,7 @@ create trigger on_auth_user_created after insert on auth.users
 
 -- ───────────────────────── RPC ─────────────────────────
 create or replace function public.username_available(p_username text)
-returns boolean language sql stable security definer set search_path = public as $$
+returns boolean language sql stable security invoker set search_path = public as $$
   select lower(p_username) ~ '^[a-z0-9_]{3,20}$'
      and not exists (select 1 from public.profiles where username = lower(p_username));
 $$;
