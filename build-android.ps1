@@ -10,6 +10,8 @@ try {
     if($LASTEXITCODE -ne 0){throw 'Сборка или проверки Android не пройдены.'}
     New-Item -ItemType Directory -Force outputs | Out-Null
     $variant=if($Release){'release'}else{'debug'}
-    Copy-Item -LiteralPath "android/app/build/outputs/apk/$variant/app-$variant.apk" -Destination "outputs/Yoru-Android-0.2.0-$variant.apk"
-    Write-Host "Готово: outputs/Yoru-Android-0.2.0-$variant.apk"
+    $metadata=Get-Content "android/app/build/outputs/apk/$variant/output-metadata.json" -Raw | ConvertFrom-Json
+    $version=$metadata.elements[0].versionName
+    Copy-Item -LiteralPath "android/app/build/outputs/apk/$variant/app-$variant.apk" -Destination "outputs/Yoru-Android-$version-$variant.apk"
+    Write-Host "Готово: outputs/Yoru-Android-$version-$variant.apk"
 } finally { Pop-Location }
