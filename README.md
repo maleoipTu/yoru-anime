@@ -1,20 +1,66 @@
-# Yoru · Windows и Android
+<div align="center">
 
-Нативный клиент YummyAnime с русским интерфейсом: приложение Windows на C# / WPF и приложение Android на Java с системными элементами интерфейса. Каталог и видео подключаются напрямую через официальный API YummyAnime. Публичный ключ приложения уже встроен.
+<img src="docs/icon.png" width="112" alt="Иконка Yoru">
 
-| Платформа | Требования | Файл |
-|---|---|---|
-| Windows | Windows 10/11 x64, Microsoft Edge WebView2 Runtime | `Yoru-0.2.0-win-x64.zip` |
-| Android | Android 8.0 и новее | `Yoru-Android-0.4.0.apk` |
+# Yoru
 
-Установочные файлы публикуются в разделе **Releases** вместе с `SHA256SUMS.txt`. Android APK подписан отдельным локальным ключом; приватный ключ и пароли в репозиторий не входят.
+**Аниме-клиент YummyAnime для Windows и Android — без рекламы, с аккаунтом, очками и профилем, который хочется украсить.**
 
-## Установка на Android
+[![Сборка](https://github.com/maleoipTu/yoru-anime/actions/workflows/build.yml/badge.svg)](https://github.com/maleoipTu/yoru-anime/actions/workflows/build.yml)
+[![Последняя сборка](https://img.shields.io/github/release-date-pre/maleoipTu/yoru-anime?label=%D0%BF%D0%BE%D1%81%D0%BB%D0%B5%D0%B4%D0%BD%D1%8F%D1%8F%20%D1%81%D0%B1%D0%BE%D1%80%D0%BA%D0%B0&color=ff4d67)](https://github.com/maleoipTu/yoru-anime/releases/tag/nightly)
+![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-1f1f26?logo=windows)
+![Android](https://img.shields.io/badge/Android-8.0%2B-1f1f26?logo=android)
 
-1. Скачайте APK из Releases и откройте его на телефоне.
-2. Если Android запросит разрешение на установку из выбранного источника, предоставьте его самостоятельно для установки APK.
-3. Откройте Yoru: каталог загрузится автоматически. Доступны поиск, фильтры, карточки, избранное, история и расписание.
-4. В карточке выберите озвучку, источник **Kodik** и серию. Нажмите «Смотреть»: откроется собственный нативный плеер Yoru.
+[**⬇ Установщик для Windows**](https://github.com/maleoipTu/yoru-anime/releases/download/nightly/Yoru-Setup.exe) · [**⬇ APK для Android**](https://github.com/maleoipTu/yoru-anime/releases/download/nightly/Yoru-Android.apk) · [Все сборки](https://github.com/maleoipTu/yoru-anime/releases)
+
+</div>
+
+---
+
+## Что умеет
+
+| | |
+|---|---|
+| 🎬 **Плеер без рекламы** | Kodik открывается в собственном плеере Yoru: качество, скорость, перемотка, пропуск опенинга (+85 с), автопереход к следующей серии, позиция сохраняется. |
+| 🔎 **Удобный поиск** | Подсказки прямо при вводе названия, фильтры по жанрам, годам и возрастному рейтингу, сортировки и случайная подборка. |
+| 👤 **Профиль как в Discord** | Баннер и аватар (в том числе анимированные GIF и WebM), «Обо мне», местоимения, статус, цвета темы профиля, витрина любимого аниме. |
+| ◆ **Очки и украшения** | Очки за реальный просмотр, уровни, дни подряд, 15 достижений, рамки аватара, значки и цвета ника, сезонные коллекции. |
+| 📚 **Списки и друзья** | «Смотрю / Запланировано / Просмотрено / Брошено» синхронно на ПК и телефоне, друзья, лента их просмотров, оценки и отзывы. |
+| 🛠 **Админ-панель** | Статистика, пользователи, очки, блокировки, модерация отзывов и аватаров, редактор украшений, журнал действий. |
+| ⟳ **Автообновление** | Установщик для Windows и проверка обновлений на Android: новая версия ставится в пару кликов. |
+
+## Установка
+
+**Windows.** Скачайте [Yoru-Setup.exe](https://github.com/maleoipTu/yoru-anime/releases/download/nightly/Yoru-Setup.exe) и запустите — права администратора не нужны, Yoru ставится в профиль пользователя и дальше обновляется сам. Нужен Microsoft Edge WebView2 Runtime (в Windows 11 уже есть). Переносная версия без установки — `Yoru-Windows.zip` в [той же сборке](https://github.com/maleoipTu/yoru-anime/releases/tag/nightly).
+
+**Android.** Скачайте [Yoru-Android.apk](https://github.com/maleoipTu/yoru-anime/releases/download/nightly/Yoru-Android.apk) на телефон и откройте; если Android спросит, разрешите установку из этого источника. Приложение само сообщит о новой версии.
+
+При первом запуске Yoru попросит войти или зарегистрироваться — аккаунт нужен для профиля, очков, списков и друзей.
+
+## Админ-панель
+
+Доступ выдаётся только через базу данных. В Supabase → SQL Editor:
+
+```sql
+-- выдать доступ
+insert into public.admins (user_id, note) select id, 'владелец' from public.profiles where username = 'ваш_ник';
+-- забрать доступ
+delete from public.admins where user_id = (select id from public.profiles where username = 'ваш_ник');
+```
+
+После этого в профиле появится кнопка «Админ-панель». Каждое действие дополнительно проверяется на сервере и записывается в журнал.
+
+## Как устроено
+
+- **Windows** — C# / WPF (.NET 10), одно окно со страницами; плеер — HTML5 + hls.js внутри WebView2, видео идёт через встроенный прокси приложения.
+- **Android** — Java, нативные элементы интерфейса, плеер на Media3 ExoPlayer.
+- **Сервер** — Supabase: аккаунты, Postgres с правилами доступа (RLS) и серверными функциями для очков, покупок и модерации, хранилище аватаров и баннеров. Схема — в [`supabase/migrations`](supabase/migrations), проверки — в [`supabase/tests`](supabase/tests).
+- **CI** — GitHub Actions собирает и тестирует обе платформы и базу, а каждая сборка из `main` публикуется как pre-release [nightly](https://github.com/maleoipTu/yoru-anime/releases/tag/nightly).
+
+Каталог и видео — через официальный API YummyAnime (`api.yani.tv`); API заявлен владельцем для личного использования. Yoru — независимый клиент; доступность серий и видео зависит от YummyAnime и поставщиков плееров.
+
+<details>
+<summary><b>История версий и подробности</b></summary>
 
 ## Списки, достижения, друзья и отзывы (Android 0.7.0, Windows 0.4.0)
 
@@ -144,6 +190,8 @@ GitHub Actions собирает и проверяет обе платформы.
 API требует ключ приложения и заявлен владельцем для личного использования. Для коммерческого применения необходимо согласование с владельцем API. Документация: https://api.yani.tv/.
 
 Yoru — независимый клиент. Наличие видео, доступность в регионе, качество и работа озвучки определяются YummyAnime и поставщиками видео. Если поток недоступен, выберите другую озвучку/источник или откройте карточку на сайте. Нативный Android-плеер получает ссылки из ответа Kodik; Windows и резервный плеер сайта используют iframe.
+
+</details>
 
 ## Сборка из исходников
 

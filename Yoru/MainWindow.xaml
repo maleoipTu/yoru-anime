@@ -10,7 +10,7 @@
     <StackPanel DockPanel.Dock="Bottom">
      <Button x:Name="ProfileCard" Click="ProfileClick" Background="#1C1C23" Padding="12" Margin="0,0,0,20" HorizontalContentAlignment="Stretch" AutomationProperties.Name="Профиль"><DockPanel><ContentControl x:Name="ProfileAvatar" DockPanel.Dock="Left" Width="44" Height="44" Focusable="False"/><StackPanel Margin="12,0,0,0" VerticalAlignment="Center"><TextBlock x:Name="ProfileName" Text="Войти в аккаунт" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/><TextBlock x:Name="ProfilePoints" Text="Очки и украшения профиля" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,5,0,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/></StackPanel></DockPanel></Button>
      <RadioButton x:Name="SettingsNav" GroupName="Navigation" Style="{StaticResource Nav}" Content="⚙    Настройки" Tag="settings" Checked="Navigate"/>
-     <TextBlock Text="Yoru 0.4 · Windows" Foreground="#9990AA" FontSize="12" Margin="16,17,0,0"/>
+     <TextBlock Text="Yoru 0.5 · Windows" Foreground="#9990AA" FontSize="12" Margin="16,17,0,0"/>
     </StackPanel>
     <StackPanel>
      <TextBlock Text="ОБЗОР" Foreground="#767286" FontSize="10" FontWeight="SemiBold" Margin="16,0,0,12"/>
