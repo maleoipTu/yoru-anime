@@ -12,7 +12,7 @@ import static org.junit.Assert.*;
 @androidx.annotation.OptIn(markerClass=androidx.media3.common.util.UnstableApi.class)
 public class NativePlayerSmokeTest {
  PlayerActivity activity;
- @Test public void playbackControlsLifecycleAndEpisodeTransition()throws Exception{
+ @Test(timeout=180000) public void playbackControlsLifecycleAndEpisodeTransition()throws Exception{
   Assume.assumeTrue("Pass live=true to test the video service","true".equals(InstrumentationRegistry.getArguments().getString("live")));
   Context context=DesignChecks.I.getTargetContext();JSONObject raw=Api.get("anime/10661?need_videos=true").getJSONObject("response");Api.save(context,raw);List<Episode>videos=Api.videos(raw);Episode first=null;for(Episode episode:videos)if(episode.number.equals("1")&&episode.voice.contains("AniLibria")&&StreamResolver.supports(episode.url)){first=episode;break;}assertNotNull(first);new Library(context).position(first.id,45000);
   activity=(PlayerActivity)DesignChecks.I.startActivitySync(new Intent(context,PlayerActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra("anime_id",10661L).putExtra("video_id",first.id));
@@ -27,9 +27,9 @@ public class NativePlayerSmokeTest {
   DesignChecks.onUi(()->activity.setFullscreen(false));SystemClock.sleep(1000);DesignChecks.onUi(()->activity.chooseSeries());DesignChecks.tapChoice("Серия 2");
   DesignChecks.await(()->activity.engine!=null&&activity.engine.isPlaying()&&activity.current.number.equals("2")&&activity.engine.getVideoSize().width>0&&activity.engine.getCurrentPosition()>1500,60000);DesignChecks.onUi(()->{assertTrue(activity.previous.isEnabled());activity.showControls();});DesignChecks.screenshot("native-player-episode-two.png");
   // Rotation outside fullscreen must leave a usable scrolling panel.
-  DesignChecks.onUi(()->activity.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE));SystemClock.sleep(1500);DesignChecks.onUi(()->{assertFalse(activity.fullscreen);assertTrue(activity.details.getHeight()>=Ui.dp(activity,70));DesignChecks.target(activity.timeline);activity.showControls();});DesignChecks.screenshot("native-player-windowed-landscape.png");
+  DesignChecks.onUi(()->activity.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE));SystemClock.sleep(1500);DesignChecks.onUi(()->{assertFalse(activity.fullscreen);assertTrue(activity.details.getHeight()>=Ui.dp(activity,70));activity.showControls();DesignChecks.target(activity.timeline);DesignChecks.disjoint(activity.play,DesignChecks.findDescription(activity.overlay,"Настройки просмотра"));DesignChecks.disjoint(activity.play,activity.full);DesignChecks.disjoint(activity.play,activity.timeline);});DesignChecks.screenshot("native-player-windowed-landscape.png");
   DesignChecks.onUi(()->activity.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT));SystemClock.sleep(1000);
   DesignChecks.onUi(()->activity.showError("Сервис временно недоступен. Проверь подключение и попробуй снова. Если выбранный источник больше не работает, открой настройки просмотра и выбери другую озвучку или источник. Позиция серии сохранена."));DesignChecks.onUi(()->DesignChecks.target(DesignChecks.findText(activity.error,"Повторить")));DesignChecks.screenshot("native-player-error.png");
  }
- @After public void close(){if(activity!=null)DesignChecks.onUi(()->activity.finish());}
+ @After public void close()throws Exception{if(activity!=null)try{DesignChecks.screenshot("native-player-final-state.png");}finally{DesignChecks.onUi(()->activity.finish());}}
 }
