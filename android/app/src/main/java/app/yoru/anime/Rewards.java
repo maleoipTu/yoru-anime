@@ -57,11 +57,22 @@ final class Rewards {
   if(text.contains("level_too_low"))return "Нужен более высокий уровень.";
   if(text.contains("already_owned"))return "Это украшение уже есть.";
   if(text.contains("not_owned"))return "Сначала получи это украшение.";
+  if(text.contains("user_not_found"))return "Пользователь с таким ником не найден.";
+  if(text.contains("self_friend"))return "Себя в друзья добавить нельзя.";
+  if(text.contains("achievement_only"))return "Это украшение выдаётся только за достижение.";
+  if(text.contains("not_available"))return "Это сезонное украшение сейчас не продаётся.";
+  if(text.contains("too_many_requests"))return "Слишком много неотвеченных заявок.";
   if(text.contains("username_taken"))return "Этот ник уже занят.";
   if(text.contains("bad_username"))return "Ник: 3–20 символов, латиница, цифры и _.";
   if(text.contains("jwt")||text.contains("not_authenticated")||text.contains("refresh token"))return "Сессия истекла. Войди в аккаунт снова.";
   return "Не получилось связаться с сервером аккаунтов. Проверь подключение и попробуй ещё раз.";
  }
+
+ /** Сезонное украшение: продаётся ли сейчас и до какого числа. available_until хранится как ISO-время. */
+ static boolean onSale(String from,String until,long nowMillis){return (from==null||from.isEmpty()||parse(from)<=nowMillis)&&(until==null||until.isEmpty()||nowMillis<=parse(until));}
+ static long parse(String iso){try{return java.time.OffsetDateTime.parse(iso).toInstant().toEpochMilli();}catch(Exception e){try{return java.time.LocalDate.parse(iso.substring(0,10)).atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli();}catch(Exception ignored){return 0;}}}
+ static String until(String iso){if(iso==null||iso.isEmpty())return "";long t=parse(iso)-86_400_000L;return java.time.Instant.ofEpochMilli(t).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("d MMMM",Locale.forLanguageTag("ru")));}
+ static String days(int n){int m=n%100,k=n%10;return n+(m>=11&&m<=14?" дней":k==1?" день":k>=2&&k<=4?" дня":" дней");}
 
  /** Считает реальное время воспроизведения одной серии. */
  static final class WatchMeter {

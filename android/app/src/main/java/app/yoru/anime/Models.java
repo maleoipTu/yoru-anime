@@ -12,13 +12,17 @@ final class Anime {
   poster=Api.https(p==null?"":p.optString("fullsize")); rating=r==null?0:r.optDouble("average",0); year=o.optInt("year");
   type=t==null?"":t.optString("name"); status=s==null?"":s.optString("title"); nextDate=e==null?0:e.optLong("next_date");
  }
- static JSONObject compact(JSONObject o){JSONObject r=new JSONObject();for(String key:new String[]{"anime_id","title","anime_url","description","poster","rating","type","anime_status","year","episodes","genres","min_age"})try{if(o.has(key))r.put(key,o.get(key));}catch(JSONException ignored){}return r;}
+ static JSONObject compact(JSONObject o){JSONObject r=new JSONObject();for(String key:new String[]{"anime_id","title","anime_url","description","poster","rating","type","anime_status","year","episodes","genres","min_age","yoru_progress"})try{if(o.has(key))r.put(key,o.get(key));}catch(JSONException ignored){}return r;}
  String meta(){return (year>0?year+" · ":"")+type+(status.isEmpty()?"":" · "+statusLabel());}
  String statusLabel(){return status.isEmpty()?"":status.substring(0,1).toUpperCase(Locale.forLanguageTag("ru"))+status.substring(1);}
  /** ongoing, released или announcement — по alias из API, с запасным вариантом по названию статуса. */
  String statusKey(){JSONObject s=raw.optJSONObject("anime_status");String alias=s==null?"":s.optString("alias");if(!alias.isEmpty())return alias;String value=status.toLowerCase(Locale.ROOT);return value.contains("онгоинг")?"ongoing":value.contains("анонс")?"announcement":"";}
  String age(){JSONObject a=raw.optJSONObject("min_age");return a==null?"":a.optString("title").replace('-','\u2011');}
  String genres(){JSONArray all=raw.optJSONArray("genres");if(all==null)return "";List<String>result=new ArrayList<>();for(int i=0;i<all.length()&&result.size()<4;i++){Object value=all.opt(i);String name=value instanceof JSONObject?((JSONObject)value).optString("title"):value instanceof String?(String)value:"";if(!name.isEmpty())result.add(name);}return String.join(" · ",result);}
+ /** Число серий из API (episodes.count), 0 — если неизвестно. */
+ int totalEpisodes(){JSONObject e=raw.optJSONObject("episodes");return e==null?0:Math.max(e.optInt("count"),0);}
+ /** Прогресс из облачного списка, например «3 из 12». */
+ String progress(){return raw.optString("yoru_progress");}
  String score(){return rating>0?String.format(Locale.US,"★ %.1f",rating):"Без оценки";}
 }
 final class Episode {
