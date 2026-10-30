@@ -7,6 +7,12 @@ jobs:
   native-player:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        viewport: [default, compact]
+    env:
+      QA_VIEWPORT: ${{ matrix.viewport }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -34,7 +40,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Android-player-QA
+          name: Android-player-QA-${{ matrix.viewport }}
           path: |
             outputs/android-qa
             android/app/build/reports/androidTests

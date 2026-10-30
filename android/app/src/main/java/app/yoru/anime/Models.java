@@ -14,7 +14,7 @@ final class Anime {
  }
  static JSONObject compact(JSONObject o){JSONObject r=new JSONObject();for(String key:new String[]{"anime_id","title","anime_url","description","poster","rating","type","anime_status","year","episodes","genres","min_age"})try{if(o.has(key))r.put(key,o.get(key));}catch(JSONException ignored){}return r;}
  String meta(){return (year>0?year+" · ":"")+type+(status.isEmpty()?"":" · "+status);}
- String score(){return rating>0?String.format(Locale.US,"★ %.1f",rating):"Новинка";}
+ String score(){return rating>0?String.format(Locale.US,"★ %.1f",rating):"Без оценки";}
 }
 final class Episode {
  final long id; final String number,voice,player,url; final int index;
