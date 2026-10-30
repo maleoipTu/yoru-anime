@@ -84,7 +84,7 @@ public partial class DetailWindow : Window
     void WatchClick(object sender, RoutedEventArgs e)
     {
         if (EpisodeBox.SelectedItem is not Episode video) return;
-        new PlayerWindow(anime, videos, video, store) { Owner = this }.ShowDialog();
+        new PlayerWindow(anime, videos, video, store, AccountClient.Shared) { Owner = this }.ShowDialog();
     }
     void ExpandClick(object sender, RoutedEventArgs e) { expanded = !expanded; DescriptionText.MaxHeight = expanded ? double.PositiveInfinity : 96; ExpandButton.Content = expanded ? "Свернуть описание ↑" : "Развернуть описание ↓"; }
     void CloseClick(object sender, RoutedEventArgs e) => Close();

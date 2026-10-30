@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Windows.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -16,19 +17,45 @@ public partial class PlayerWindow : Window
     string navigationSession = "";
     WindowState previousState;
     public event Action<string>? PlaybackStateChanged;
-    public PlayerWindow(Anime item, List<Episode> list, Episode selected, LocalStore local)
+    // Очки за просмотр: секунды реального воспроизведения текущей серии.
+    readonly AccountClient? account;
+    readonly DispatcherTimer watchTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+    long watchedEpisode = -1; int watchedSeconds; bool playing, awardSent; DateTime awardRetryAt;
+    public PlayerWindow(Anime item, List<Episode> list, Episode selected, LocalStore local, AccountClient? accountClient = null)
     {
         InitializeComponent(); WindowTheme.Apply(this);
+        account=accountClient;
+        watchTimer.Tick += async (_, _) => await WatchTick();
         anime=item; videos=list; current=selected; store=local;
         VoiceBox.ItemsSource=PlaybackSources.Dubbings(videos);
         SyncSelection(selected);
         SeriesBox.SelectionChanged += (_,_) => { if(!changing) UpdateSelectionHint(); };
         Loaded += async (_, _) => await InitializePlayer();
-        Closed += (_, _) => { closed=true; Browser.Dispose(); };
+        Closed += (_, _) => { closed=true; watchTimer.Stop(); Browser.Dispose(); };
     }
     void Status(string message, string state)
     {
         PlayerStatus.Text=message; PlaybackStateChanged?.Invoke(state);
+        // Время считается, пока плеер сообщает о воспроизведении; пауза, конец, загрузка и ошибка его останавливают.
+        if(state is "playing" || state.StartsWith("time:")) { playing=true; if(account is { SignedIn: true } && !watchTimer.IsEnabled) watchTimer.Start(); }
+        else if(state is "paused" or "ended" or "loading" or "error" or "initializing") playing=false;
+    }
+    async Task WatchTick()
+    {
+        if(closed) return;
+        if(watchedEpisode!=current.Id) { watchedEpisode=current.Id; watchedSeconds=0; awardSent=false; }
+        if(playing) watchedSeconds++;
+        if(account is not { SignedIn: true } || awardSent || DateTime.Now<awardRetryAt || TimeSpan.FromSeconds(watchedSeconds)<Rewards.Threshold(null)) return;
+        awardSent=true; var episode=current;
+        try
+        {
+            var result=await account.Award(anime.Id,episode.Id,episode.Number,watchedSeconds);
+            if(closed) return;
+            if(result["awarded"]?.GetValue<bool>()==true) PlayerStatus.Text=$"+{AccountClient.Int(result,"points")} очков за {episode.Label} · баланс ◆ {Rewards.Points(AccountClient.Int(result,"balance"))}";
+            else if(Rewards.SkipReason(AccountClient.Text(result,"reason")) is { Length: > 0 } reason && AccountClient.Text(result,"reason")!="already") PlayerStatus.Text=reason;
+        }
+        catch(Exception e) when (e is AccountException or System.Net.Http.HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException)
+        { if(watchedEpisode==episode.Id) { awardSent=false; awardRetryAt=DateTime.Now.AddMinutes(1); } }
     }
     async Task InitializePlayer()
     {

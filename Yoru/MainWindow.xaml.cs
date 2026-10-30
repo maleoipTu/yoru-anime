@@ -43,7 +43,12 @@ public partial class MainWindow : Window
         }
         SearchBox.TextChanged += (_, _) => SearchHint.Visibility = SearchBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
         Loaded += (_, _) => { ready = true; CatalogNav.IsChecked = true; if (store.LoadWarning != null) StatusText.Text = store.LoadWarning; };
-        Closed += (_, _) => { request?.Cancel(); api.Dispose(); };
+        Loaded += async (_, _) =>
+        {
+            AccountClient.Shared.Changed += UpdateProfileCard; UpdateProfileCard();
+            if (AccountClient.Shared.SignedIn) try { await AccountClient.Shared.Refresh(); } catch (Exception e) when (e is AccountException or HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException) { UpdateProfileCard(); }
+        };
+        Closed += (_, _) => { request?.Cancel(); api.Dispose(); AccountClient.Shared.Changed -= UpdateProfileCard; };
     }
     async void Navigate(object sender, RoutedEventArgs e)
     {
@@ -167,6 +172,24 @@ public partial class MainWindow : Window
         { SettingsResult.Text = ex is HttpRequestException or TaskCanceledException ? "Не удалось проверить ключ: сервер недоступен. Проверь подключение и повтори попытку." : ex.Message; }
         finally { ConnectButton.IsEnabled = true; }
     }
+    /// <summary>Карточка профиля в боковой панели: аватар с рамкой, ник и очки — или приглашение войти.</summary>
+    void UpdateProfileCard()
+    {
+        var account = AccountClient.Shared;
+        if (!account.SignedIn)
+        {
+            ProfileAvatar.Content = Decor.Avatar(44, new System.Text.Json.Nodes.JsonObject(), "☾", "");
+            ProfileName.Text = account.Config.Configured ? "Войти в аккаунт" : "Профиль";
+            ProfilePoints.Text = "Очки и украшения профиля";
+            return;
+        }
+        var p = account.Profile;
+        ProfileAvatar.Content = Decor.Avatar(44, account.Style(AccountClient.Text(p, "equipped_frame") is { Length: > 0 } f ? f : "frame_moon"), account.DisplayName, AccountClient.Text(p, "avatar_url"));
+        ProfileName.Text = account.DisplayName;
+        ProfileName.Foreground = Decor.NameBrush(account.Style(AccountClient.Text(p, "equipped_color") is { Length: > 0 } c ? c : "color_default"));
+        ProfilePoints.Text = $"◆ {Rewards.Points(AccountClient.Int(p, "points"))} · уровень {Rewards.Level(AccountClient.Int(p, "total_earned"))}";
+    }
+    void ProfileClick(object sender, RoutedEventArgs e) { new ProfileWindow(AccountClient.Shared, store) { Owner = this }.ShowDialog(); UpdateProfileCard(); }
     void CardClick(object sender, RoutedEventArgs e) { if (((Button)sender).DataContext is Anime anime) OpenAnime(anime); }
     void HeroClick(object sender, RoutedEventArgs e) { if (featured != null) OpenAnime(featured); }
     void ContinueClick(object sender, RoutedEventArgs e) { var recent = store.Data.History.FirstOrDefault(); if (recent != null) OpenAnime(recent.Anime); }

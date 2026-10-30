@@ -15,7 +15,7 @@ public final class MainActivity extends Activity {
  TextView status,sectionTitle,subtitle,emptyTitle,emptyHint,errorText;
  EditText search; GridView grid; Button more,order,filter,retry,clear;
  static final int GAP=12;
- ProgressBar spinner;
+ ProgressBar spinner;FrameLayout profileButton;Decor.AvatarView avatar;ImageView guestIcon;
  Library library; List<Anime> shown=new ArrayList<>();
  String page="catalog",query="",sort="random",state="";
  List<Integer> pages=new ArrayList<>(); static final int RANDOM_PAGES=50;
@@ -32,7 +32,11 @@ public final class MainActivity extends Activity {
   LinearLayout heading=Ui.column(this);LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(0,-2,1);hp.leftMargin=Ui.dp(this,12);brand.addView(heading,hp);
   sectionTitle=Ui.title(this,"Каталог",22);sectionTitle.setMaxLines(1);sectionTitle.setEllipsize(TextUtils.TruncateAt.END);if(android.os.Build.VERSION.SDK_INT>=28)sectionTitle.setAccessibilityHeading(true);heading.addView(sectionTitle);
   subtitle=Ui.text(this,"Найди свою следующую историю",13,Ui.MUTED);subtitle.setMaxLines(1);subtitle.setEllipsize(TextUtils.TruncateAt.END);Ui.add(heading,subtitle,3);
-  status=Ui.text(this,"",12,Ui.MUTED);status.setTypeface(Ui.MEDIUM);status.setPadding(Ui.dp(this,10),Ui.dp(this,5),Ui.dp(this,10),Ui.dp(this,5));status.setBackground(Ui.shape(this,Ui.RAISED,12));status.setVisibility(View.GONE);LinearLayout.LayoutParams stp=new LinearLayout.LayoutParams(-2,-2);stp.leftMargin=Ui.dp(this,8);brand.addView(status,stp);header.addView(brand);
+  status=Ui.text(this,"",12,Ui.MUTED);status.setTypeface(Ui.MEDIUM);status.setPadding(Ui.dp(this,10),Ui.dp(this,5),Ui.dp(this,10),Ui.dp(this,5));status.setBackground(Ui.shape(this,Ui.RAISED,12));status.setVisibility(View.GONE);LinearLayout.LayoutParams stp=new LinearLayout.LayoutParams(-2,-2);stp.leftMargin=Ui.dp(this,8);brand.addView(status,stp);
+  // Профиль: аватар с надетой рамкой, если вход выполнен, иначе значок человека.
+  profileButton=new FrameLayout(this);profileButton.setBackground(Ui.ripple(this,android.graphics.Color.TRANSPARENT,24));profileButton.setClickable(true);profileButton.setFocusable(true);profileButton.setOnClickListener(v->startActivity(new Intent(this,ProfileActivity.class)));
+  avatar=new Decor.AvatarView(this);profileButton.addView(avatar,new FrameLayout.LayoutParams(Ui.dp(this,40),Ui.dp(this,40),Gravity.CENTER));guestIcon=new ImageView(this);guestIcon.setImageDrawable(new Ui.AppIcon(this,"user",Ui.TEXT,22));guestIcon.setScaleType(ImageView.ScaleType.CENTER);guestIcon.setBackground(Ui.shape(this,Ui.RAISED,20));guestIcon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);profileButton.addView(guestIcon,new FrameLayout.LayoutParams(Ui.dp(this,40),Ui.dp(this,40),Gravity.CENTER));
+  LinearLayout.LayoutParams pbp=new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48));pbp.leftMargin=Ui.dp(this,6);brand.addView(profileButton,pbp);updateProfileButton();header.addView(brand);
   LinearLayout searchRow=Ui.row(this);searchRow.setPadding(Ui.dp(this,16),0,Ui.dp(this,2),0);searchRow.setBackground(Ui.outlined(this,Ui.PANEL,24));
   ImageView magnifier=new ImageView(this);magnifier.setImageDrawable(new Ui.AppIcon(this,"search",Ui.MUTED,20));magnifier.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);searchRow.addView(magnifier,new LinearLayout.LayoutParams(Ui.dp(this,22),Ui.dp(this,22)));
   search=new EditText(this);search.setTextColor(Ui.TEXT);search.setTextSize(15);search.setHint("Поиск аниме");search.setContentDescription("Поиск аниме по названию");search.setHintTextColor(Ui.MUTED);search.setSingleLine(true);search.setBackgroundColor(android.graphics.Color.TRANSPARENT);search.setPadding(Ui.dp(this,10),0,Ui.dp(this,4),0);search.setInputType(android.text.InputType.TYPE_CLASS_TEXT);search.setImeOptions(EditorInfo.IME_ACTION_SEARCH);search.setText(query);search.setMinHeight(Ui.dp(this,48));search.setPadding(Ui.dp(this,10),Ui.dp(this,8),Ui.dp(this,4),Ui.dp(this,8));searchRow.addView(search,new LinearLayout.LayoutParams(0,-2,1));
@@ -65,7 +69,13 @@ public final class MainActivity extends Activity {
  String stateLabel(){return state.equals("released")?"Вышедшие":state.equals("ongoing")?"Онгоинги":state.equals("announcement")?"Анонсы":"Все статусы";}
  int columns(){int width=getResources().getConfiguration().screenWidthDp;return width>=700?4:width>=520?3:2;}
  @Override protected void onSaveInstanceState(Bundle stateBundle){stateBundle.putString("page",page);stateBundle.putString("query",query);stateBundle.putString("sort",sort);stateBundle.putString("state",state);stateBundle.putInt("scroll",grid.getFirstVisiblePosition());super.onSaveInstanceState(stateBundle);}
- @Override protected void onResume(){super.onResume();if(firstResume){firstResume=false;return;}if(library!=null&&(page.equals("favorites")||page.equals("history")))load(false);}
+ @Override protected void onResume(){super.onResume();updateProfileButton();if(firstResume){firstResume=false;return;}if(library!=null&&(page.equals("favorites")||page.equals("history")))load(false);}
+ void updateProfileButton(){
+  Account account=new Account(this);boolean signed=account.signedIn();JSONObject profile=account.cachedProfile();
+  avatar.setVisibility(signed?View.VISIBLE:View.GONE);guestIcon.setVisibility(signed?View.GONE:View.VISIBLE);
+  if(signed){java.util.Map<String,JSONObject> decor=Decor.index(account.cachedDecorations());avatar.frame(Decor.style(decor,profile.optString("equipped_frame","frame_moon")));avatar.person(Decor.name(profile),profile.optString("avatar_url"));}
+  profileButton.setContentDescription(signed?"Профиль "+Decor.name(profile)+", очков: "+profile.optInt("points"):"Войти в профиль");
+ }
  void performSearch(){query=search.getText().toString().trim();if(page.equals("schedule"))page="catalog";load(false);InputMethodManager keyboard=(InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);if(keyboard!=null)keyboard.hideSoftInputFromWindow(search.getWindowToken(),0);search.clearFocus();}
  void updateChrome(){filters.setVisibility(page.equals("catalog")?View.VISIBLE:View.GONE);((View)filters.getParent()).setVisibility(page.equals("catalog")?View.VISIBLE:View.GONE);sectionTitle.setText(page.equals("favorites")?"Избранное":page.equals("history")?"История":page.equals("schedule")?"Расписание":query.isEmpty()?"Каталог":"Результаты поиска");subtitle.setText(!query.isEmpty()&&!page.equals("schedule")?"По запросу «"+query+"»":page.equals("schedule")?"Новые серии и ближайшие премьеры":page.equals("favorites")?"Истории, к которым хочется вернуться":page.equals("history")?"Продолжай с того места, где остановился":"Найди свою следующую историю");for(int i=0;i<nav.getChildCount();i++){Button b=(Button)nav.getChildAt(i);boolean active=keys[i].equals(page);b.setSelected(active);b.setTextColor(active?Ui.TEXT:Ui.MUTED);b.setTypeface(active?android.graphics.Typeface.create("sans-serif-medium",android.graphics.Typeface.BOLD):Ui.MEDIUM);b.setCompoundDrawablesWithIntrinsicBounds(null,new Ui.NavIcon(this,(String)b.getTag(),active),null,null);b.setBackground(Ui.ripple(this,android.graphics.Color.TRANSPARENT,16));b.setContentDescription(b.getText()+(active?", выбранный раздел":""));}}
  void updateChips(){Ui.chipState(order,!sort.equals("random"));Ui.chipState(filter,!state.isEmpty());}

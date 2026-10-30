@@ -1,4 +1,10 @@
 plugins { id 'com.android.application' }
+// Адрес и публичный anon-ключ Supabase: из переменных окружения или из supabase.properties в корне репозитория.
+def supabase = new Properties()
+def supabaseFile = rootProject.file('../supabase.properties')
+if (supabaseFile.exists()) supabaseFile.withReader('UTF-8') { supabase.load(it) }
+def supabaseUrl = System.getenv('YORU_SUPABASE_URL') ?: supabase.getProperty('url', '')
+def supabaseKey = System.getenv('YORU_SUPABASE_ANON_KEY') ?: supabase.getProperty('anon_key', '')
 android {
     namespace 'app.yoru.anime'
     compileSdk 35
@@ -6,9 +12,11 @@ android {
         applicationId 'app.yoru.anime'
         minSdk 26
         targetSdk 35
-        versionCode 6
-        versionName '0.5.1'
+        versionCode 7
+        versionName '0.6.0'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+        buildConfigField 'String', 'SUPABASE_URL', '"' + supabaseUrl.trim() + '"'
+        buildConfigField 'String', 'SUPABASE_ANON_KEY', '"' + supabaseKey.trim() + '"'
     }
     signingConfigs {
         personal {
@@ -26,6 +34,7 @@ android {
             if (System.getenv('YORU_STORE_FILE')) signingConfig signingConfigs.personal
         }
     }
+    buildFeatures { buildConfig true }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
     lint { abortOnError true; checkReleaseBuilds true }
 }

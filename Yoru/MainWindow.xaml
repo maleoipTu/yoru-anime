@@ -8,9 +8,9 @@
      <TextBlock Text="ТВОЙ ВЕЧЕР. ТВОЁ АНИМЕ." FontSize="9" Foreground="#848196" Margin="1,8,0,0"/>
     </StackPanel>
     <StackPanel DockPanel.Dock="Bottom">
-     <Border Background="#201D2D" CornerRadius="12" Padding="14" Margin="0,0,0,20"><StackPanel><TextBlock Text="Устройся поудобнее" FontWeight="SemiBold" FontSize="13"/><TextBlock Text="Хорошая история уже ждёт." Foreground="{StaticResource Muted}" FontSize="11" Margin="0,7,0,0"/></StackPanel></Border>
+     <Button x:Name="ProfileCard" Click="ProfileClick" Background="#201D2D" Padding="12" Margin="0,0,0,20" HorizontalContentAlignment="Stretch" AutomationProperties.Name="Профиль"><DockPanel><ContentControl x:Name="ProfileAvatar" DockPanel.Dock="Left" Width="44" Height="44" Focusable="False"/><StackPanel Margin="12,0,0,0" VerticalAlignment="Center"><TextBlock x:Name="ProfileName" Text="Войти в аккаунт" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/><TextBlock x:Name="ProfilePoints" Text="Очки и украшения профиля" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,5,0,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/></StackPanel></DockPanel></Button>
      <RadioButton x:Name="SettingsNav" GroupName="Navigation" Style="{StaticResource Nav}" Content="⚙    Настройки" Tag="settings" Checked="Navigate"/>
-     <TextBlock Text="Yoru 0.2 · Windows" Foreground="#9990AA" FontSize="12" Margin="16,17,0,0"/>
+     <TextBlock Text="Yoru 0.3 · Windows" Foreground="#9990AA" FontSize="12" Margin="16,17,0,0"/>
     </StackPanel>
     <StackPanel>
      <TextBlock Text="ОБЗОР" Foreground="#767286" FontSize="10" FontWeight="SemiBold" Margin="16,0,0,12"/>
