@@ -21,7 +21,10 @@ public sealed record Anime
     public int EpisodeCount { get; init; }
     public long NextEpisode { get; init; }
     public string DisplayNote { get; init; } = "";
-    public string Meta => string.Join("  ·  ", new[] { Year > 0 ? Year.ToString() : "", Type, Status }.Where(x => x.Length > 0));
+    public string Meta => string.Join("  ·  ", new[] { Year > 0 ? Year.ToString() : "", Type, StatusLabel }.Where(x => x.Length > 0));
+    /** Статус с заглавной буквы: «Онгоинг», «Вышел». */
+    public string StatusLabel => Status.Length > 0 ? char.ToUpper(Status[0], CultureInfo.GetCultureInfo("ru-RU")) + Status[1..] : "";
+    public int AgeValue { get; init; } = -1;
     public string Score => Rating > 0 ? "★ " + Rating.ToString("0.0", CultureInfo.InvariantCulture) : "Новинка";
     public string ImagePath => File.Exists(Path.Combine(AppContext.BaseDirectory, "Assets", $"{Id}.jpg"))
         ? Path.Combine(AppContext.BaseDirectory, "Assets", $"{Id}.jpg") : Poster;
@@ -50,6 +53,7 @@ public static class ApiParser
         Year = (int)Number(Field(e, "year")), Rating = Number(Field(Field(e, "rating"), "average")),
         Type = Text(Field(Field(e, "type"), "name")), Status = Text(Field(Field(e, "anime_status"), "title")),
         StatusAlias = Text(Field(Field(e, "anime_status"), "alias")), Age = Text(Field(Field(e, "min_age"), "title_long")),
+        AgeValue = Field(Field(e, "min_age"), "value").ValueKind == JsonValueKind.Number ? Field(Field(e, "min_age"), "value").GetInt32() : -1,
         Genres = string.Join(" · ", Array(Field(e, "genres")).Select(g => Text(Field(g, "title")))),
         EpisodeCount = (int)Number(Field(Field(e, "episodes"), "count")), NextEpisode = (long)Number(Field(Field(e, "episodes"), "next_date"))
     };

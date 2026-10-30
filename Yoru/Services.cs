@@ -32,10 +32,11 @@ public sealed class YummyClient : IDisposable
             throw new InvalidOperationException("API вернул ошибку. Проверьте ключ приложения и повторите запрос.");
         return doc.RootElement.Clone();
     }
-    public async Task<List<Anime>> Catalog(string query, string sort, string status, int offset, CancellationToken ct)
+    public async Task<List<Anime>> Catalog(string query, string sort, string status, int offset, CancellationToken ct, string filters = "")
     {
         var path = $"anime?limit=24&offset={offset}&sort={Uri.EscapeDataString(sort)}&sort_forward=false&q={Uri.EscapeDataString(query)}";
         if (status.Length > 0) path += "&status=" + Uri.EscapeDataString(status);
+        path += filters;
         return ApiParser.Catalog(await Get(path, ct));
     }
     public async Task<(Anime Anime, List<Episode> Videos)> Detail(long id, CancellationToken ct)
@@ -44,6 +45,20 @@ public sealed class YummyClient : IDisposable
         var e = ApiParser.Field(root, "response");
         if (e.ValueKind != JsonValueKind.Object) throw new InvalidOperationException("API не вернул карточку аниме.");
         return (ApiParser.Anime(e), ApiParser.Videos(ApiParser.Field(e, "videos")));
+    }
+    /// <summary>Быстрый поиск для подсказок: /search, при пустом ответе — обычный каталог.</summary>
+    public async Task<List<Anime>> Suggest(string query, CancellationToken ct)
+    {
+        var found = ApiParser.Catalog(await Get($"search?q={Uri.EscapeDataString(query)}&limit=6", ct));
+        if (found.Count == 0) found = ApiParser.Catalog(await Get($"anime?limit=6&q={Uri.EscapeDataString(query)}", ct));
+        return found.Take(6).ToList();
+    }
+    /// <summary>Жанры для фильтра: (id, название).</summary>
+    public async Task<List<(int Id, string Title)>> Genres(CancellationToken ct)
+    {
+        var root = ApiParser.Field(await Get("anime/genres", ct), "response");
+        return ApiParser.Array(ApiParser.Field(root, "genres")).Select(g => ((int)ApiParser.Number(ApiParser.Field(g, "value")), ApiParser.Text(ApiParser.Field(g, "title"))))
+            .Where(g => g.Item1 > 0 && g.Item2.Length > 0).ToList();
     }
     public async Task<List<Anime>> Schedule(CancellationToken ct) => ApiParser.Catalog(await Get("anime/schedule", ct));
     public void Dispose() => http.Dispose();

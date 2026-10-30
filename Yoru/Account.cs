@@ -193,12 +193,13 @@ public sealed class AccountClient : IDisposable
         if (result["access_token"] == null) return false;
         Store(result); return true;
     }
+    public Task Recover(string email) => Send(HttpMethod.Post, "/auth/v1/recover", new JsonObject { ["email"] = email }, null);
     public async Task SignIn(string email, string password) =>
         Store(JsonNode.Parse(await Send(HttpMethod.Post, "/auth/v1/token?grant_type=password", new JsonObject { ["email"] = email, ["password"] = password }, null))!);
     public void SignOut()
     {
         var access = session.Access;
-        session = new(); Profile = new(); Owned = [];
+        session = new(); Profile = new(); Owned = []; IsAdmin = false;
         try { File.Delete(Path.Combine(root, "account.session")); File.Delete(Path.Combine(root, "account.cache.json")); } catch (IOException) { }
         if (access.Length > 0) _ = Send(HttpMethod.Post, "/auth/v1/logout", new JsonObject(), access).ContinueWith(_ => { });
         Changed?.Invoke();
@@ -306,6 +307,39 @@ public sealed class AccountClient : IDisposable
 
     public static long Long(JsonNode? node, string key) => node?[key] is JsonValue v && v.TryGetValue<long>(out var l) ? l : 0;
     public static bool Bool(JsonNode? node, string key) => node?[key] is JsonValue v && v.TryGetValue<bool>(out var b) && b;
+    // ───── Хранилище аватаров и баннеров (бакет media, папка пользователя) ─────
+    public async Task<string> Upload(string name, byte[] data, string mime)
+    {
+        var path = $"{UserId}/{name}";
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{Config.Url}/storage/v1/object/media/{path}");
+        request.Headers.Add("apikey", Config.AnonKey);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await Token());
+        request.Headers.Add("x-upsert", "true");
+        request.Headers.CacheControl = new CacheControlHeaderValue { MaxAge = TimeSpan.FromDays(365) };
+        request.Content = new ByteArrayContent(data);
+        request.Content.Headers.ContentType = new MediaTypeHeaderValue(mime);
+        using var response = await http.SendAsync(request);
+        if (!response.IsSuccessStatusCode) throw new AccountException((int)response.StatusCode, Describe(await response.Content.ReadAsStringAsync(), (int)response.StatusCode));
+        return $"{Config.Url}/storage/v1/object/public/media/{path}";
+    }
+    /// <summary>Удаляет свой прежний файл, если адрес указывает на хранилище Yoru.</summary>
+    public async Task DeleteOwn(string url)
+    {
+        var prefix = $"{Config.Url}/storage/v1/object/public/media/";
+        if (!url.StartsWith(prefix + UserId + "/")) return;
+        try { await Send(HttpMethod.Delete, "/storage/v1/object/media/" + url[prefix.Length..], null, await Token()); }
+        catch (Exception e) when (e is AccountException or HttpRequestException or TaskCanceledException) { }
+    }
+
+    // ───── Админ-панель (доступ выдаётся только через таблицу admins в базе) ─────
+    public bool IsAdmin { get; private set; }
+    public async Task<bool> CheckAdmin()
+    {
+        try { IsAdmin = (await Rpc("is_admin", new JsonObject()))?.GetValue<bool>() == true; }
+        catch (Exception e) when (e is AccountException or HttpRequestException or TaskCanceledException or InvalidOperationException or FormatException) { IsAdmin = false; }
+        return IsAdmin;
+    }
+
     public static string Text(JsonNode? node, string key) => node?[key] is JsonValue v && v.TryGetValue<string>(out var s) ? s : "";
     public static int Int(JsonNode? node, string key) => node?[key] is JsonValue v && v.TryGetValue<int>(out var i) ? i : 0;
     public string DisplayName => Text(Profile, "display_name").Trim() is { Length: > 0 } name ? name : Text(Profile, "username") is { Length: > 0 } nick ? nick : "Гость";

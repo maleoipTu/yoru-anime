@@ -8,7 +8,7 @@ using System.Windows.Media.Imaging;
 namespace Yoru;
 
 /// <summary>Друзья: поиск по нику, заявки, список друзей и лента «что смотрят друзья».</summary>
-public sealed class FriendsWindow : Window
+public sealed class FriendsPage : UserControl
 {
     readonly AccountClient account;
     readonly LocalStore store;
@@ -17,16 +17,14 @@ public sealed class FriendsWindow : Window
     readonly TextBox search = new() { MinWidth = 320, Margin = new Thickness(0, 0, 10, 0) };
     readonly TextBlock status = new() { Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x9A, 0x8B)), FontSize = 12, Margin = new Thickness(0, 8, 0, 0), TextWrapping = TextWrapping.Wrap };
     static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(0x9A, 0x98, 0xB0));
-    static readonly Brush Accent = new SolidColorBrush(Color.FromRgb(0xC4, 0xB5, 0xFF));
+    static readonly Brush Accent = new SolidColorBrush(Color.FromRgb(0xFF, 0x8A, 0x9B));
 
-    public FriendsWindow(AccountClient client, LocalStore local)
+    public FriendsPage(AccountClient client, LocalStore local)
     {
         account = client; store = local;
-        Style = (Style)Application.Current.Resources[typeof(Window)];
-        Title = "Друзья · Yoru"; Width = 760; Height = 760; MinWidth = 560; MinHeight = 480; WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        WindowTheme.Apply(this);
         var root = new DockPanel { Margin = new Thickness(28, 24, 28, 18) };
         var header = new StackPanel();
+        var back = new Button { Content = "←  Назад", HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 0, 12) }; back.Click += (_, _) => Shell.Back(); header.Children.Add(back);
         header.Children.Add(new TextBlock { Text = "Друзья", FontSize = 26, FontWeight = FontWeights.SemiBold });
         var searchRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 16, 0, 0) };
         System.Windows.Automation.AutomationProperties.SetName(search, "Найти по нику");
@@ -38,6 +36,7 @@ public sealed class FriendsWindow : Window
         root.Children.Add(new ScrollViewer { Content = body, Margin = new Thickness(0, 12, 0, 0) });
         Content = root;
         Loaded += async (_, _) => await Load();
+        IsVisibleChanged += async (_, e) => { if (e.NewValue is true && IsLoaded) await Load(); };
     }
 
     async Task Run(Func<Task> job)
@@ -116,7 +115,7 @@ public sealed class FriendsWindow : Window
         }
         var open = new Button { Content = Decor.Person(p, account, subtitle), Background = Brushes.Transparent, Padding = new Thickness(4, 0, 4, 0), HorizontalContentAlignment = HorizontalAlignment.Left };
         var username = AccountClient.Text(p, "username");
-        open.Click += (_, _) => { new ProfileWindow(account, store, username) { Owner = this }.ShowDialog(); _ = Load(); };
+        open.Click += (_, _) => Shell.Navigate(new ProfilePage(account, store, username));
         row.Children.Add(open);
         return row;
     }

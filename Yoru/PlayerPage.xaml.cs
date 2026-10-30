@@ -5,7 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using Microsoft.Web.WebView2.Core;
 namespace Yoru;
-public partial class PlayerWindow : Window
+public partial class PlayerPage : UserControl
 {
     const string Host = "player.yoru.local";
     readonly Anime anime;
@@ -15,7 +15,6 @@ public partial class PlayerWindow : Window
     List<Episode> playlist = [];
     bool initialized, initializing, closed, fullscreen, changing, sourceFailed, recreateBrowser;
     string navigationSession = "";
-    WindowState previousState;
     public event Action<string>? PlaybackStateChanged;
     // Очки за просмотр: секунды реального воспроизведения текущей серии.
     readonly AccountClient? account;
@@ -23,9 +22,9 @@ public partial class PlayerWindow : Window
     long watchedEpisode = -1; int watchedSeconds; bool playing, awardSent; DateTime awardRetryAt;
     // Нативный режим: прямой поток Kodik в собственном плеере (native.html), видео идёт через прокси приложения.
     bool nativeMode, forceSite; StreamResolver.Result? resolved; CancellationTokenSource? resolveCts; double duration; DateTime lastPositionSave;
-    public PlayerWindow(Anime item, List<Episode> list, Episode selected, LocalStore local, AccountClient? accountClient = null)
+    public PlayerPage(Anime item, List<Episode> list, Episode selected, LocalStore local, AccountClient? accountClient = null)
     {
-        InitializeComponent(); WindowTheme.Apply(this);
+        InitializeComponent();
         account=accountClient;
         watchTimer.Tick += async (_, _) => await WatchTick();
         anime=item; videos=list; current=selected; store=local;
@@ -33,7 +32,7 @@ public partial class PlayerWindow : Window
         SyncSelection(selected);
         SeriesBox.SelectionChanged += (_,_) => { if(!changing) UpdateSelectionHint(); };
         Loaded += async (_, _) => await InitializePlayer();
-        Closed += (_, _) => { closed=true; watchTimer.Stop(); resolveCts?.Cancel(); SavePrefs(); Browser.Dispose(); };
+        Unloaded += (_, _) => { if(closed) return; closed=true; watchTimer.Stop(); resolveCts?.Cancel(); SavePrefs(); if(fullscreen) Shell.Fullscreen(false); Browser.Dispose(); };
     }
     void Status(string message, string state)
     {
@@ -187,7 +186,7 @@ public partial class PlayerWindow : Window
         SyncSelection(episode);
         navigationSession=Guid.NewGuid().ToString("N");
         Browser.Visibility=Visibility.Visible; PlayerMessage.Visibility=Visibility.Collapsed;
-        Title=anime.Title+" — "+episode.Label+" · Yoru";
+        Shell.Title(anime.Title+" — "+episode.Label);
         ShowTitle.Text=anime.Title+" · "+episode.Label; TrackLabel.Text=episode.Track;
         playlist=PlaybackSources.Episodes(videos,episode.Dubbing,episode.Player);
         var index=playlist.FindIndex(v=>v.Id==episode.Id);
@@ -312,7 +311,7 @@ public partial class PlayerWindow : Window
     {
         if(!initialized) await InitializePlayer(); else NavigateEpisode(current);
     }
-    void BackClick(object sender,RoutedEventArgs e) => Close();
+    void BackClick(object sender,RoutedEventArgs e) => Shell.Back();
     void FullScreenClick(object sender,RoutedEventArgs e) => SetFullscreen(!fullscreen);
     void PlayerKey(object sender,KeyEventArgs e)
     {
@@ -323,8 +322,7 @@ public partial class PlayerWindow : Window
     {
         if(value==fullscreen) return;
         fullscreen=value;
-        if(value) { previousState=WindowState; WindowState=WindowState.Normal; WindowStyle=WindowStyle.None; ResizeMode=ResizeMode.NoResize; WindowState=WindowState.Maximized; }
-        else { WindowState=WindowState.Normal; WindowStyle=WindowStyle.SingleBorderWindow; ResizeMode=ResizeMode.CanResize; WindowState=previousState; }
+        Shell.Fullscreen(value);
         PlayerHeader.Visibility=PlayerFooter.Visibility=PlayerSidebar.Visibility=value ? Visibility.Collapsed : Visibility.Visible;
         SidebarColumn.Width=new GridLength(value ? 0 : 270);
     }

@@ -9,7 +9,7 @@ namespace Yoru;
 public sealed class SocialPanel
 {
     readonly AccountClient account = AccountClient.Shared;
-    readonly Window owner;
+    readonly FrameworkElement owner;
     readonly LocalStore store;
     public Anime Anime { get; set; }
     public Border Root { get; }
@@ -22,7 +22,7 @@ public sealed class SocialPanel
     JsonObject? mine;
     bool syncing;
 
-    public SocialPanel(Window window, Anime anime, LocalStore local)
+    public SocialPanel(FrameworkElement window, Anime anime, LocalStore local)
     {
         owner = window; Anime = anime; store = local;
         var panel = new StackPanel();
@@ -34,7 +34,7 @@ public sealed class SocialPanel
         rateButton.Click += (_, _) => ToggleEditor();
         actions.Children.Add(listBox); actions.Children.Add(rateButton);
         panel.Children.Add(actions); panel.Children.Add(editor); panel.Children.Add(message); panel.Children.Add(rating); panel.Children.Add(reviews);
-        Root = new Border { Background = new SolidColorBrush(Color.FromRgb(0x19, 0x19, 0x23)), BorderBrush = new SolidColorBrush(Color.FromRgb(0x2C, 0x2D, 0x3A)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(14), Padding = new Thickness(20), Margin = new Thickness(0, 0, 0, 18), Child = panel };
+        Root = new Border { Background = new SolidColorBrush(Color.FromRgb(0x16, 0x16, 0x1B)), BorderBrush = new SolidColorBrush(Color.FromRgb(0x2C, 0x2D, 0x3A)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(14), Padding = new Thickness(20), Margin = new Thickness(0, 0, 0, 18), Child = panel };
         if (!account.Config.Configured) Root.Visibility = Visibility.Collapsed;
     }
 
@@ -69,7 +69,7 @@ public sealed class SocialPanel
                 var person = Decor.Person(r["profiles"], account, $"★ {AccountClient.Int(r, "score")} из 10", 36);
                 var username = AccountClient.Text(r["profiles"], "username");
                 var open = new Button { Content = person, Background = Brushes.Transparent, Padding = new Thickness(0), HorizontalContentAlignment = HorizontalAlignment.Left, HorizontalAlignment = HorizontalAlignment.Left };
-                open.Click += (_, _) => new ProfileWindow(account, store, username) { Owner = owner }.ShowDialog();
+                open.Click += (_, _) => Shell.Navigate(new ProfilePage(account, store, username));
                 box.Children.Add(open);
                 box.Children.Add(new TextBlock { Text = AccountClient.Text(r, "body"), Foreground = new SolidColorBrush(Color.FromRgb(0xCF, 0xCD, 0xDC)), FontSize = 14, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(48, 2, 0, 0) });
                 reviews.Children.Add(box);
@@ -95,7 +95,7 @@ public sealed class SocialPanel
         var score = mine == null ? 0 : AccountClient.Int(mine, "score");
         var buttons = new List<Button>();
         var row = new StackPanel { Orientation = Orientation.Horizontal };
-        void Paint() { for (var i = 0; i < buttons.Count; i++) { buttons[i].Background = i + 1 == score ? new SolidColorBrush(Color.FromRgb(0xB3, 0xA2, 0xFF)) : new SolidColorBrush(Color.FromRgb(0x25, 0x24, 0x30)); buttons[i].Foreground = i + 1 == score ? new SolidColorBrush(Color.FromRgb(0x17, 0x11, 0x26)) : Brushes.WhiteSmoke; } }
+        void Paint() { for (var i = 0; i < buttons.Count; i++) { buttons[i].Background = i + 1 == score ? new SolidColorBrush(Color.FromRgb(0xFF, 0x4D, 0x67)) : new SolidColorBrush(Color.FromRgb(0x1F, 0x1F, 0x26)); buttons[i].Foreground = i + 1 == score ? new SolidColorBrush(Colors.White) : Brushes.WhiteSmoke; } }
         for (var i = 1; i <= 10; i++)
         {
             var value = i;

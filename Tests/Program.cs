@@ -36,9 +36,9 @@ internal static class Program
                 var dictionary = new XElement(ns + "ResourceDictionary", new XAttribute(XNamespace.Xmlns + "x", "http://schemas.microsoft.com/winfx/2006/xaml"), xaml.Root!.Element(ns + "Application.Resources")!.Elements());
                 app.Resources = (ResourceDictionary)XamlReader.Parse(dictionary.ToString());
                 var local = new LocalStore(Path.Combine(Environment.CurrentDirectory, "work", "player-test"));
-                var player = new PlayerWindow(anime, videos, first, local);
+                var player = new PlayerPage(anime, videos, first, local);
                 player.PlaybackStateChanged += state => Console.WriteLine(DateTime.Now.ToString("HH:mm:ss") + " " + state);
-                app.Run(player);
+                app.Run(new Window { Content = player, Width = 1220, Height = 790, Title = "Yoru player test" });
                 return 0;
             }
             Run().GetAwaiter().GetResult();

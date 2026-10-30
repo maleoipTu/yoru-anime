@@ -4,8 +4,21 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Controls.Primitives;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 namespace Yoru;
+
+/// <summary>Навигация внутри одного окна: страницы открываются поверх каталога и закрываются кнопкой «Назад».</summary>
+public static class Shell
+{
+    public static MainWindow? Main { get; set; }
+    public static void Navigate(FrameworkElement page) => Main?.PushPage(page);
+    public static void Back() => Main?.PopPage();
+    public static void Home(string section = "catalog") => Main?.GoHome(section);
+    public static void Title(string text) { if (Main != null) Main.Title = text.Length > 0 ? text + " · Yoru" : "Yoru"; }
+    public static void Fullscreen(bool value) => Main?.SetFullscreen(value);
+}
 
 public partial class MainWindow : Window
 {
@@ -23,7 +36,7 @@ public partial class MainWindow : Window
     bool IsPreview => string.IsNullOrWhiteSpace(api.Token);
     public MainWindow()
     {
-        InitializeComponent(); WindowTheme.Apply(this);
+        InitializeComponent(); WindowTheme.Apply(this); Shell.Main = this;
         var savedToken = store.ReadToken();
         api.Token = string.IsNullOrWhiteSpace(savedToken) ? AppConfig.DefaultApplicationToken : savedToken;
         TokenBox.Password = api.Token;
@@ -41,18 +54,22 @@ public partial class MainWindow : Window
             HeroDescription.Text = featured.Description;
             if (Uri.TryCreate(featured.ImagePath, UriKind.Absolute, out var uri)) HeroImage.Source = new BitmapImage(uri);
         }
-        SearchBox.TextChanged += (_, _) => SearchHint.Visibility = SearchBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        SearchBox.TextChanged += (_, _) => { SearchHint.Visibility = SearchBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed; ScheduleSuggestions(); };
+        suggestTimer.Tick += async (_, _) => { suggestTimer.Stop(); await ShowSuggestions(); };
+        AccountClient.Shared.Changed += UpdateAuthGate; UpdateAuthGate();
         Loaded += (_, _) => { ready = true; CatalogNav.IsChecked = true; if (store.LoadWarning != null) StatusText.Text = store.LoadWarning; };
+        Loaded += async (_, _) => await CheckUpdates();
         Loaded += async (_, _) =>
         {
             AccountClient.Shared.Changed += UpdateProfileCard; UpdateProfileCard();
             if (AccountClient.Shared.SignedIn) try { await AccountClient.Shared.Refresh(); } catch (Exception e) when (e is AccountException or HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException) { UpdateProfileCard(); }
         };
-        Closed += (_, _) => { request?.Cancel(); api.Dispose(); AccountClient.Shared.Changed -= UpdateProfileCard; };
+        Closed += (_, _) => { request?.Cancel(); api.Dispose(); AccountClient.Shared.Changed -= UpdateProfileCard; AccountClient.Shared.Changed -= UpdateAuthGate; };
     }
     async void Navigate(object sender, RoutedEventArgs e)
     {
         if (!ready) return;
+        ClearPages();
         page = (string)((RadioButton)sender).Tag;
         query = ""; SearchBox.Text = "";
         await LoadPage();
@@ -121,10 +138,12 @@ public partial class MainWindow : Window
             }
             else
             {
-                items = await api.Catalog(query, (string)((ComboBoxItem)SortBox.SelectedItem).Tag, (string)((ComboBoxItem)StatusBox.SelectedItem).Tag, offset, ct);
+                var rawItems = await api.Catalog(query, (string)((ComboBoxItem)SortBox.SelectedItem).Tag, (string)((ComboBoxItem)StatusBox.SelectedItem).Tag, offset, ct, FilterQuery());
+                items = filterAge >= 0 ? rawItems.Where(a => a.AgeValue == filterAge).ToList() : rawItems;
+                MoreButton.Visibility = rawItems.Count == 24 ? Visibility.Visible : Visibility.Collapsed;
+                offset += rawItems.Count - items.Count;
                 ct.ThrowIfCancellationRequested();
                 offset += items.Count;
-                MoreButton.Visibility = items.Count == 24 ? Visibility.Visible : Visibility.Collapsed;
             }
             ct.ThrowIfCancellationRequested();
             if (page is "favorites" or "history") items = items.Where(a => a.Title.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -153,6 +172,7 @@ public partial class MainWindow : Window
     async void SearchKey(object sender, KeyEventArgs e) { if (e.Key == Key.Enter) { e.Handled = true; await Search(); } }
     async Task Search()
     {
+        SuggestPopup.IsOpen = false; suggestTimer.Stop(); suggestCts?.Cancel();
         var requestedQuery = SearchBox.Text.Trim();
         if (page is "settings" or "schedule") { page = "catalog"; CatalogNav.IsChecked = true; }
         query = requestedQuery; SearchBox.Text = requestedQuery; await LoadPage();
@@ -199,16 +219,162 @@ public partial class MainWindow : Window
         ProfileName.Foreground = Decor.NameBrush(account.Style(AccountClient.Text(p, "equipped_color") is { Length: > 0 } c ? c : "color_default"));
         ProfilePoints.Text = $"◆ {Rewards.Points(AccountClient.Int(p, "points"))} · уровень {Rewards.Level(AccountClient.Int(p, "total_earned"))}";
     }
-    void ProfileClick(object sender, RoutedEventArgs e) { new ProfileWindow(AccountClient.Shared, store) { Owner = this }.ShowDialog(); UpdateProfileCard(); }
+    void ProfileClick(object sender, RoutedEventArgs e) { ClearPages(); PushPage(new ProfilePage(AccountClient.Shared, store)); }
     void CardClick(object sender, RoutedEventArgs e) { if (((Button)sender).DataContext is Anime anime) OpenAnime(anime); }
     void HeroClick(object sender, RoutedEventArgs e) { if (featured != null) OpenAnime(featured); }
     void ContinueClick(object sender, RoutedEventArgs e) { var recent = store.Data.History.FirstOrDefault(); if (recent != null) OpenAnime(recent.Anime); }
-    void OpenAnime(Anime anime)
+    void OpenAnime(Anime anime) { SuggestPopup.IsOpen = false; PushPage(new DetailPage(anime, api, store)); }
+
+    // ───── Страницы внутри окна ─────
+    readonly List<FrameworkElement> pages = [];
+    public void PushPage(FrameworkElement page)
     {
-        var detail = new DetailWindow(anime, api, store) { Owner = this };
-        detail.ShowDialog();
+        if (pages.Count > 0) pages[^1].Visibility = Visibility.Collapsed;
+        pages.Add(page); PageHost.Children.Add(page);
+        PageHost.Visibility = Visibility.Visible; BrowseRoot.Visibility = Visibility.Collapsed;
+        page.Focus();
+    }
+    public void PopPage()
+    {
+        if (pages.Count == 0) return;
+        var top = pages[^1]; pages.RemoveAt(pages.Count - 1); PageHost.Children.Remove(top);
+        if (pages.Count > 0) { pages[^1].Visibility = Visibility.Visible; return; }
+        PageHost.Visibility = Visibility.Collapsed; BrowseRoot.Visibility = Visibility.Visible; Title = "Yoru — аниме для Windows";
+        UpdateProfileCard();
         if (page == "favorites") _ = LoadPage();
         if (page == "history") { displayed = store.Data.History.Select(h => h.Anime with { DisplayNote = $"Серия {h.Number} · {h.Track}" }).ToList(); ShowCards(displayed); }
-        if (detail.WantsSettings) SettingsNav.IsChecked = true;
     }
+    void ClearPages() { while (pages.Count > 0) PopPage(); }
+    public void GoHome(string section) { ClearPages(); if (section == "settings") SettingsNav.IsChecked = true; else CatalogNav.IsChecked = true; }
+    WindowState stateBeforeFullscreen;
+    public void SetFullscreen(bool value)
+    {
+        Sidebar.Visibility = value ? Visibility.Collapsed : Visibility.Visible;
+        SideColumn.Width = new GridLength(value ? 0 : 232);
+        if (value) { stateBeforeFullscreen = WindowState; WindowState = WindowState.Normal; WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize; WindowState = WindowState.Maximized; }
+        else { WindowState = WindowState.Normal; WindowStyle = WindowStyle.SingleBorderWindow; ResizeMode = ResizeMode.CanResize; WindowState = stateBeforeFullscreen; }
+    }
+
+    // ───── Вход обязателен ─────
+    AuthView? auth;
+    void UpdateAuthGate()
+    {
+        var account = AccountClient.Shared;
+        var locked = account.Config.Configured && !account.SignedIn;
+        if (locked)
+        {
+            ClearPages();
+            auth ??= new AuthView(account, async () => { UpdateAuthGate(); UpdateProfileCard(); try { await account.Refresh(); } catch (Exception e) when (e is AccountException or HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException) { } });
+            AuthHost.Content = auth; AuthHost.Visibility = Visibility.Visible; auth.FocusFirst();
+        }
+        else { AuthHost.Visibility = Visibility.Collapsed; AuthHost.Content = null; auth = null; }
+    }
+
+    // ───── Подсказки при вводе ─────
+    readonly System.Windows.Threading.DispatcherTimer suggestTimer = new() { Interval = TimeSpan.FromMilliseconds(300) };
+    CancellationTokenSource? suggestCts;
+    void ScheduleSuggestions()
+    {
+        suggestTimer.Stop();
+        if (SearchBox.Text.Trim().Length < 2 || IsPreview || !SearchBox.IsKeyboardFocusWithin) { SuggestPopup.IsOpen = false; return; }
+        suggestTimer.Start();
+    }
+    async Task ShowSuggestions()
+    {
+        var text = SearchBox.Text.Trim(); if (text.Length < 2 || text == query) return;
+        suggestCts?.Cancel(); var cts = suggestCts = new CancellationTokenSource();
+        try
+        {
+            var found = await api.Suggest(text, cts.Token);
+            if (cts.IsCancellationRequested || SearchBox.Text.Trim() != text) return;
+            SuggestList.Children.Clear();
+            foreach (var anime in found)
+            {
+                var row = new DockPanel();
+                var poster = new Border { Width = 40, Height = 56, CornerRadius = new CornerRadius(6), ClipToBounds = true, Background = new SolidColorBrush(Color.FromRgb(0x1F, 0x1F, 0x26)) };
+                if (Uri.TryCreate(anime.ImagePath, UriKind.Absolute, out var uri)) poster.Child = new Image { Source = new BitmapImage(uri), Stretch = Stretch.UniformToFill };
+                DockPanel.SetDock(poster, Dock.Left); row.Children.Add(poster);
+                var text2 = new StackPanel { Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+                text2.Children.Add(new TextBlock { Text = anime.Title, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap });
+                text2.Children.Add(new TextBlock { Text = (anime.Rating > 0 ? anime.Score + "  ·  " : "") + anime.Meta, FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0x9C, 0x9C, 0xA8)), Margin = new Thickness(0, 3, 0, 0), TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis });
+                row.Children.Add(text2);
+                var button = new Button { Content = row, Background = Brushes.Transparent, HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(8, 6, 8, 6) };
+                System.Windows.Automation.AutomationProperties.SetName(button, anime.Title);
+                button.Click += (_, _) => OpenAnime(anime);
+                SuggestList.Children.Add(button);
+            }
+            SuggestPopup.IsOpen = SuggestList.Children.Count > 0 && SearchBox.IsKeyboardFocusWithin;
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or InvalidOperationException or JsonException) { SuggestPopup.IsOpen = false; }
+    }
+
+    // ───── Фильтры: жанры, годы, возрастной рейтинг ─────
+    readonly HashSet<int> filterGenres = []; int filterFrom, filterTo, filterAge = -1; List<(int Id, string Title)>? genreList;
+    string FilterQuery() => (filterGenres.Count > 0 ? "&genres=" + string.Join(",", filterGenres) : "") + (filterFrom > 0 ? $"&from_year={filterFrom}" : "") + (filterTo > 0 ? $"&to_year={filterTo}" : "");
+    async void FiltersClick(object sender, RoutedEventArgs e)
+    {
+        if (genreList == null) try { genreList = await api.Genres(default); } catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidOperationException or JsonException) { genreList = []; }
+        var chosen = new HashSet<int>(filterGenres);
+        var panel = new StackPanel { Width = 560 };
+        panel.Children.Add(new TextBlock { Text = "Жанры", FontSize = 15, FontWeight = FontWeights.SemiBold });
+        var wrap = new WrapPanel { Margin = new Thickness(0, 10, 0, 0) };
+        foreach (var (id, title) in genreList)
+        {
+            var toggle = new ToggleButton { Content = title, IsChecked = chosen.Contains(id), Margin = new Thickness(0, 0, 6, 6), Padding = new Thickness(12, 6, 12, 6), Style = (Style)FindResource("Chip") };
+            toggle.Checked += (_, _) => chosen.Add(id); toggle.Unchecked += (_, _) => chosen.Remove(id);
+            wrap.Children.Add(toggle);
+        }
+        if (genreList.Count == 0) wrap.Children.Add(new TextBlock { Text = "Жанры не загрузились — годы и рейтинг работают.", Foreground = new SolidColorBrush(Color.FromRgb(0x9C, 0x9C, 0xA8)) });
+        panel.Children.Add(new ScrollViewer { Content = wrap, MaxHeight = 220 });
+        var years = Enumerable.Range(1960, DateTime.Now.Year - 1958).Reverse().Select(y => y.ToString()).Prepend("Любой").ToList();
+        var from = new ComboBox { ItemsSource = years, SelectedItem = filterFrom > 0 ? filterFrom.ToString() : "Любой", Margin = new Thickness(0, 0, 12, 0) };
+        var to = new ComboBox { ItemsSource = years, SelectedItem = filterTo > 0 ? filterTo.ToString() : "Любой" };
+        var ages = new[] { "Любой", "0+", "6+", "12+", "16+", "18+" };
+        var age = new ComboBox { ItemsSource = ages, SelectedItem = filterAge < 0 ? "Любой" : filterAge + "+" , Margin = new Thickness(12, 0, 0, 0) };
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 16, 0, 0) };
+        foreach (var (label, box) in new (string, ComboBox)[] { ("С года", from), ("По год", to), ("Рейтинг", age) })
+        { var col = new StackPanel(); col.Children.Add(new TextBlock { Text = label, FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0x9C, 0x9C, 0xA8)), Margin = new Thickness(0, 0, 0, 6) }); col.Children.Add(box); row.Children.Add(col); }
+        panel.Children.Add(row);
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 18, 0, 0) };
+        var apply = new Button { Content = "Показать", Style = (Style)FindResource("Primary") }; var reset = new Button { Content = "Сбросить", Margin = new Thickness(10, 0, 0, 0) };
+        actions.Children.Add(apply); actions.Children.Add(reset); panel.Children.Add(actions);
+        var popup = new Popup { PlacementTarget = FilterButton, Placement = PlacementMode.Bottom, StaysOpen = false, AllowsTransparency = true,
+            Child = new Border { Background = new SolidColorBrush(Color.FromRgb(0x16, 0x16, 0x1B)), BorderBrush = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x33)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(14), Padding = new Thickness(18), Margin = new Thickness(0, 8, 16, 16), Child = panel, Effect = (System.Windows.Media.Effects.Effect)FindResource("Shadow") } };
+        int Parse(object? v) => int.TryParse(v as string, out var y) ? y : 0;
+        apply.Click += async (_, _) =>
+        {
+            filterGenres.Clear(); filterGenres.UnionWith(chosen); filterFrom = Parse(from.SelectedItem); filterTo = Parse(to.SelectedItem);
+            if (filterFrom > 0 && filterTo > 0 && filterFrom > filterTo) (filterFrom, filterTo) = (filterTo, filterFrom);
+            filterAge = age.SelectedItem is string a && a.EndsWith('+') ? int.Parse(a.TrimEnd('+')) : -1;
+            popup.IsOpen = false; UpdateFilterButton(); await LoadPage();
+        };
+        reset.Click += async (_, _) => { filterGenres.Clear(); filterFrom = filterTo = 0; filterAge = -1; popup.IsOpen = false; UpdateFilterButton(); await LoadPage(); };
+        popup.IsOpen = true;
+    }
+    void UpdateFilterButton()
+    {
+        var n = (filterGenres.Count > 0 ? 1 : 0) + (filterFrom > 0 || filterTo > 0 ? 1 : 0) + (filterAge >= 0 ? 1 : 0);
+        FilterButton.Content = n == 0 ? "⚲  Фильтры" : $"⚲  Фильтры · {n}";
+        FilterButton.Background = n == 0 ? (Brush)FindResource("ButtonBackground") : new SolidColorBrush(Color.FromRgb(0x3A, 0x18, 0x20));
+    }
+
+    // ───── Автообновление ─────
+    Updater.Release? update;
+    async Task CheckUpdates()
+    {
+        update = await Updater.Check();
+        if (update == null) return;
+        UpdateTitle.Text = $"Доступна версия {update.Version}";
+        UpdateText.Text = Updater.Installed ? "Обновление установится и Yoru перезапустится." : "Установим Yoru с автообновлением; переносная папка останется как есть.";
+        UpdateBanner.Visibility = Visibility.Visible;
+    }
+    async void UpdateClick(object sender, RoutedEventArgs e)
+    {
+        if (update == null) return;
+        UpdateButton.IsEnabled = false; UpdateText.Text = "Скачиваем установщик…";
+        try { await Updater.Install(update, p => UpdateText.Text = $"Скачиваем установщик… {p:P0}"); Application.Current.Shutdown(); }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidOperationException or IOException or System.ComponentModel.Win32Exception)
+        { UpdateText.Text = ex is InvalidOperationException ? ex.Message : "Не получилось скачать обновление. Попробуйте позже."; UpdateButton.IsEnabled = true; }
+    }
+    void UpdateLaterClick(object sender, RoutedEventArgs e) { if (update != null) Updater.Skip(update.Version); UpdateBanner.Visibility = Visibility.Collapsed; }
 }

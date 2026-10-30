@@ -7,27 +7,28 @@ using System.Windows.Media.Imaging;
 namespace Yoru;
 
 /// <summary>Вход и регистрация, профиль с уровнем и очками, витрина любимых аниме и магазин украшений.</summary>
-public partial class ProfileWindow : Window
+public partial class ProfilePage : UserControl
 {
     readonly AccountClient account;
     readonly LocalStore store;
     string tab = "frame";
     bool registering, busy, closed;
     static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(0x9A, 0x98, 0xB0));
-    static readonly Brush Panel = new SolidColorBrush(Color.FromRgb(0x19, 0x19, 0x23));
+    static readonly Brush Panel = new SolidColorBrush(Color.FromRgb(0x16, 0x16, 0x1B));
     static readonly Brush Line = new SolidColorBrush(Color.FromRgb(0x2C, 0x2D, 0x3A));
     static readonly Brush Warm = new SolidColorBrush(Color.FromRgb(0xFF, 0xC7, 0x68));
-    static readonly Brush AccentBrush = new SolidColorBrush(Color.FromRgb(0xC4, 0xB5, 0xFF));
+    static readonly Brush AccentBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0x8A, 0x9B));
 
     readonly string viewing;
-    public ProfileWindow(AccountClient client, LocalStore local, string username = "")
+    public ProfilePage(AccountClient client, LocalStore local, string username = "")
     {
-        InitializeComponent(); WindowTheme.Apply(this);
+        InitializeComponent();
         account = client; store = local; viewing = username;
-        Closed += (_, _) => closed = true;
+        Unloaded += (_, _) => closed = true;
         Loaded += async (_, _) => await Reload();
+        IsVisibleChanged += async (_, e) => { if (e.NewValue is true && IsLoaded && !busy) await Reload(); };
     }
-    void CloseClick(object sender, RoutedEventArgs e) => Close();
+    void CloseClick(object sender, RoutedEventArgs e) => Shell.Back();
 
     async Task Reload()
     {
@@ -41,7 +42,7 @@ public partial class ProfileWindow : Window
         }
         if (!account.SignedIn) { AuthForm(); return; }
         if (account.Profile.ContainsKey("username")) RenderProfile();
-        await Run(async () => { await account.Refresh(); await account.LoadAchievements(); }, RenderProfile);
+        await Run(async () => { await account.Refresh(); await account.LoadAchievements(); await account.CheckAdmin(); }, RenderProfile);
     }
 
     /// <summary>Выполняет запрос, показывает ошибку понятным текстом и перерисовывает экран.</summary>
@@ -85,8 +86,8 @@ public partial class ProfileWindow : Window
         var panel = new StackPanel { MaxWidth = 460, HorizontalAlignment = HorizontalAlignment.Left };
         panel.Children.Add(Text("Смотри аниме, получай очки и укрась профиль рамками, значками и цветом ника.", 14, Muted));
         var modes = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 18, 0, 18) };
-        var signIn = new Button { Content = "Вход", Padding = new Thickness(18, 8, 18, 8), Background = registering ? Brushes.Transparent : new SolidColorBrush(Color.FromRgb(0x2D, 0x28, 0x43)) };
-        var signUp = new Button { Content = "Регистрация", Padding = new Thickness(18, 8, 18, 8), Margin = new Thickness(8, 0, 0, 0), Background = registering ? new SolidColorBrush(Color.FromRgb(0x2D, 0x28, 0x43)) : Brushes.Transparent };
+        var signIn = new Button { Content = "Вход", Padding = new Thickness(18, 8, 18, 8), Background = registering ? Brushes.Transparent : new SolidColorBrush(Color.FromRgb(0x3A, 0x18, 0x20)) };
+        var signUp = new Button { Content = "Регистрация", Padding = new Thickness(18, 8, 18, 8), Margin = new Thickness(8, 0, 0, 0), Background = registering ? new SolidColorBrush(Color.FromRgb(0x3A, 0x18, 0x20)) : Brushes.Transparent };
         signIn.Click += (_, _) => { if (registering) { registering = false; AuthForm(); } };
         signUp.Click += (_, _) => { if (!registering) { registering = true; AuthForm(); } };
         modes.Children.Add(signIn); modes.Children.Add(signUp); panel.Children.Add(modes);
@@ -126,25 +127,20 @@ public partial class ProfileWindow : Window
         int points = AccountClient.Int(p, "points"), total = AccountClient.Int(p, "total_earned"), level = Rewards.Level(total);
         Heading.Text = account.DisplayName;
 
-        // Шапка профиля.
-        var hero = new DockPanel();
-        var avatar = Decor.Avatar(104, account.Style(Frame), account.DisplayName, AccountClient.Text(p, "avatar_url"));
-        DockPanel.SetDock(avatar, Dock.Left); hero.Children.Add(avatar);
-        var who = new StackPanel { Margin = new Thickness(22, 4, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-        var nameRow = new StackPanel { Orientation = Orientation.Horizontal };
-        nameRow.Children.Add(new TextBlock { Text = account.DisplayName, FontSize = 24, FontWeight = FontWeights.Bold, Foreground = Decor.NameBrush(account.Style(Field(p, "equipped_color", "color_default"))) });
-        var badge = Decor.Badge(account.Style(AccountClient.Text(p, "equipped_badge")), 22); badge.Margin = new Thickness(10, 0, 0, 0); nameRow.Children.Add(badge);
-        who.Children.Add(nameRow);
-        who.Children.Add(new TextBlock { Text = "@" + AccountClient.Text(p, "username"), Foreground = Muted, FontSize = 13, Margin = new Thickness(0, 4, 0, 0) });
-        var status = AccountClient.Text(p, "status");
-        who.Children.Add(new TextBlock { Text = status.Length > 0 ? $"«{status}»" : "Добавь статус — о чём сейчас твой вечер?", Foreground = status.Length > 0 ? Brushes.WhiteSmoke : Muted, FontSize = 14, Margin = new Thickness(0, 10, 0, 0), TextWrapping = TextWrapping.Wrap });
-        var edit = new Button { Content = "Редактировать профиль", HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 14, 0, 0), Foreground = AccentBrush };
+        // Шапка в стиле Discord: баннер, аватар поверх края, имя, местоимения, «Обо мне».
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 16, 0, 0) };
+        var edit = new Button { Content = "✎  Настроить профиль", Style = (Style)Application.Current.Resources["Primary"] };
         edit.Click += (_, _) => EditProfile();
-        var friends = new Button { Content = "♥  Друзья", HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(10, 14, 0, 0), Foreground = AccentBrush };
-        friends.Click += (_, _) => { new FriendsWindow(account, store) { Owner = this }.ShowDialog(); _ = Reload(); };
-        var heroActions = new StackPanel { Orientation = Orientation.Horizontal }; heroActions.Children.Add(edit); heroActions.Children.Add(friends); who.Children.Add(heroActions);
-        hero.Children.Add(who);
-        Body.Children.Add(Card(hero));
+        var friends = new Button { Content = "♥  Друзья", Margin = new Thickness(10, 0, 0, 0), Foreground = AccentBrush };
+        friends.Click += (_, _) => Shell.Navigate(new FriendsPage(account, store));
+        actions.Children.Add(edit); actions.Children.Add(friends);
+        if (account.IsAdmin)
+        {
+            var admin = new Button { Content = "⚑  Админ-панель", Margin = new Thickness(10, 0, 0, 0), Foreground = Warm };
+            admin.Click += (_, _) => Shell.Navigate(new AdminPage(account));
+            actions.Children.Add(admin);
+        }
+        Body.Children.Add(ProfileCard(p, actions));
 
         // Очки и уровень.
         var stats = new UniformGrid3();
@@ -156,7 +152,7 @@ public partial class ProfileWindow : Window
         var levelRow = new DockPanel { Margin = new Thickness(0, 20, 0, 8) };
         var next = Text($"ещё {Rewards.Points(Rewards.ToNext(total))} до уровня {level + 1}", 12, Muted); DockPanel.SetDock(next, Dock.Right); levelRow.Children.Add(next);
         levelRow.Children.Add(Text("Уровень " + level, 15, null, true)); progress.Children.Add(levelRow);
-        progress.Children.Add(new ProgressBar { Height = 6, Maximum = 1, Value = Rewards.Progress(total), Foreground = new SolidColorBrush(Color.FromRgb(0xB3, 0xA2, 0xFF)), Background = Line, BorderThickness = new Thickness(0) });
+        progress.Children.Add(new ProgressBar { Height = 6, Maximum = 1, Value = Rewards.Progress(total), Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x4D, 0x67)), Background = Line, BorderThickness = new Thickness(0) });
         var hint = Text($"Засчитано серий: {AccountClient.Int(p, "episodes_watched")}. Очки начисляются за просмотр в плеере Yoru: {Rewards.EpisodePoints} за серию, +{Rewards.NewAnimeBonus} за новое аниме и до +20 за дни подряд. Ещё очки дают достижения.", 12, Muted); hint.Margin = new Thickness(0, 12, 0, 0); progress.Children.Add(hint);
         Body.Children.Add(Card(progress));
 
@@ -194,7 +190,7 @@ public partial class ProfileWindow : Window
         var tabs = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 14, 0, 14) };
         foreach (var (kind, title) in new[] { ("frame", "Рамки"), ("badge", "Значки"), ("name_color", "Цвет ника") })
         {
-            var button = new Button { Content = title, Padding = new Thickness(16, 7, 16, 7), Margin = new Thickness(0, 0, 8, 0), Background = tab == kind ? new SolidColorBrush(Color.FromRgb(0x2D, 0x28, 0x43)) : Brushes.Transparent, Foreground = tab == kind ? AccentBrush : Brushes.WhiteSmoke };
+            var button = new Button { Content = title, Padding = new Thickness(16, 7, 16, 7), Margin = new Thickness(0, 0, 8, 0), Background = tab == kind ? new SolidColorBrush(Color.FromRgb(0x3A, 0x18, 0x20)) : Brushes.Transparent, Foreground = tab == kind ? AccentBrush : Brushes.WhiteSmoke };
             button.Click += (_, _) => { tab = kind; RenderProfile(); };
             tabs.Children.Add(button);
         }
@@ -243,7 +239,7 @@ public partial class ProfileWindow : Window
         else if (level < minLevel) { state = "С уровня " + minLevel; color = Muted; }
         else { state = "◆ " + Rewards.Points(price); color = points >= price ? Warm : Muted; }
         panel.Children.Add(new TextBlock { Text = state, FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = color, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0) });
-        var button = new Button { Content = panel, Padding = new Thickness(10, 14, 10, 12), Margin = new Thickness(0, 0, 12, 12), Background = worn ? new SolidColorBrush(Color.FromRgb(0x2D, 0x28, 0x43)) : new SolidColorBrush(Color.FromRgb(0x21, 0x22, 0x2D)), ToolTip = AccountClient.Text(d, "description") };
+        var button = new Button { Content = panel, Padding = new Thickness(10, 14, 10, 12), Margin = new Thickness(0, 0, 12, 12), Background = worn ? new SolidColorBrush(Color.FromRgb(0x3A, 0x18, 0x20)) : new SolidColorBrush(Color.FromRgb(0x21, 0x22, 0x2D)), ToolTip = AccountClient.Text(d, "description") };
         System.Windows.Automation.AutomationProperties.SetName(button, $"{AccountClient.Text(d, "title")}, {Rewards.Rarity(rarity)}. {state.Replace("◆", "цена")}");
         button.Click += async (_, _) =>
         {
@@ -253,10 +249,66 @@ public partial class ProfileWindow : Window
             if (exclusive) { StatusText.Text = AccountClient.Text(d, "description"); return; }
             if (level < minLevel) { StatusText.Text = $"«{AccountClient.Text(d, "title")}» откроется на уровне {minLevel}."; return; }
             if (points < price) { StatusText.Text = $"Не хватает {Rewards.Points(price - points)} очков."; return; }
-            if (MessageBox.Show(this, $"Купить «{AccountClient.Text(d, "title")}» за {Rewards.Points(price)} очков и сразу надеть?\nОстанется: {Rewards.Points(points - price)}.", "Украшение", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            if (MessageBox.Show(Window.GetWindow(this)!, $"Купить «{AccountClient.Text(d, "title")}» за {Rewards.Points(price)} очков и сразу надеть?\nОстанется: {Rewards.Points(points - price)}.", "Украшение", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
             await Run(async () => { await account.Buy(id, kind); if (account.Owned.Count >= 5) { await account.Refresh(); await account.LoadAchievements(); } }, RenderProfile);
         };
         return button;
+    }
+
+    /// <summary>Карточка профиля: баннер (картинка, GIF, WebM или градиент темы), аватар с рамкой, имя, местоимения, статус и «Обо мне».</summary>
+    FrameworkElement ProfileCard(JsonNode p, UIElement? actions)
+    {
+        var primary = Decor.Parse(AccountClient.Text(p, "theme_primary"), Color.FromRgb(0xFF, 0x4D, 0x67));
+        var accent = Decor.Parse(AccountClient.Text(p, "theme_accent"), Color.FromRgb(0xFF, 0x8A, 0x3D));
+        var name = AccountClient.Text(p, "display_name").Trim() is { Length: > 0 } dn ? dn : AccountClient.Text(p, "username");
+        var root = new StackPanel();
+        var banner = new Grid { Height = 190, ClipToBounds = true };
+        banner.Children.Add(new Border { Background = new LinearGradientBrush(primary, accent, 20) });
+        var bannerUrl = AccountClient.Text(p, "banner_url");
+        if (bannerUrl.Length > 0) banner.Children.Add(Media.View(bannerUrl));
+        banner.Children.Add(new Border { Background = new LinearGradientBrush(Colors.Transparent, Color.FromArgb(0x99, 0x0E, 0x0E, 0x11), 90) });
+        root.Children.Add(new Border { CornerRadius = new CornerRadius(20, 20, 0, 0), ClipToBounds = true, Child = banner });
+        var body = new StackPanel { Margin = new Thickness(26, -58, 26, 24) };
+        var avatarHolder = new Border { Width = 124, Height = 124, CornerRadius = new CornerRadius(62), Background = new SolidColorBrush(Color.FromRgb(0x16, 0x16, 0x1B)), HorizontalAlignment = HorizontalAlignment.Left, Padding = new Thickness(6),
+            Child = Decor.Avatar(112, account.Style(Field(p, "equipped_frame", "frame_moon")), name, AccountClient.Text(p, "avatar_url")) };
+        body.Children.Add(avatarHolder);
+        var nameRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 10, 0, 0) };
+        nameRow.Children.Add(new TextBlock { Text = name, FontSize = 26, FontWeight = FontWeights.Bold, Foreground = Decor.NameBrush(account.Style(Field(p, "equipped_color", "color_default"))) });
+        var badge = Decor.Badge(account.Style(AccountClient.Text(p, "equipped_badge")), 22); badge.Margin = new Thickness(10, 0, 0, 0); nameRow.Children.Add(badge);
+        body.Children.Add(nameRow);
+        var pronouns = AccountClient.Text(p, "pronouns");
+        body.Children.Add(new TextBlock { Text = "@" + AccountClient.Text(p, "username") + (pronouns.Length > 0 ? "  ·  " + pronouns : ""), Foreground = Muted, FontSize = 13, Margin = new Thickness(0, 4, 0, 0) });
+        var status = AccountClient.Text(p, "status");
+        if (status.Length > 0) body.Children.Add(new Border { Background = new SolidColorBrush(Color.FromArgb(0x22, 0xFF, 0xFF, 0xFF)), CornerRadius = new CornerRadius(10), Padding = new Thickness(12, 8, 12, 8), Margin = new Thickness(0, 12, 0, 0), HorizontalAlignment = HorizontalAlignment.Left,
+            Child = new TextBlock { Text = "💬  " + status, FontSize = 13, TextWrapping = TextWrapping.Wrap } });
+        var bio = AccountClient.Text(p, "bio");
+        if (bio.Length > 0)
+        {
+            body.Children.Add(new TextBlock { Text = "ОБО МНЕ", FontSize = 11, FontWeight = FontWeights.Bold, Foreground = Muted, Margin = new Thickness(0, 16, 0, 6) });
+            body.Children.Add(new TextBlock { Text = bio, FontSize = 14, TextWrapping = TextWrapping.Wrap, LineHeight = 21 });
+        }
+        if (actions != null) body.Children.Add(actions);
+        root.Children.Add(body);
+        return new Border { CornerRadius = new CornerRadius(22), Margin = new Thickness(0, 0, 0, 16), BorderThickness = new Thickness(2), Child = root,
+            BorderBrush = new LinearGradientBrush(primary, accent, 45),
+            Background = new LinearGradientBrush(Color.FromArgb(0x40, primary.R, primary.G, primary.B), Color.FromRgb(0x14, 0x14, 0x18), 90),
+            Effect = (System.Windows.Media.Effects.Effect)Application.Current.Resources["Shadow"] };
+    }
+
+    /// <summary>Выбор файла и загрузка аватара или баннера с проверкой размера и разрешения.</summary>
+    async Task UploadMedia(bool banner)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog { Title = banner ? "Баннер профиля" : "Аватар", Filter = "Картинки и анимации|*.png;*.jpg;*.jpeg;*.webp;*.gif;*.webm" };
+        if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
+        var path = dialog.FileName;
+        await Run(async () =>
+        {
+            var prepared = await Task.Run(() => Media.Prepare(path, banner));
+            var old = AccountClient.Text(account.Profile, banner ? "banner_url" : "avatar_url");
+            var url = await account.Upload($"{(banner ? "banner" : "avatar")}-{DateTime.UtcNow.Ticks}.{prepared.Extension}", prepared.Data, prepared.Mime);
+            await account.UpdateProfile(new JsonObject { [banner ? "p_banner_url" : "p_avatar_url"] = url });
+            await account.DeleteOwn(old);
+        }, EditProfile);
     }
 
     void EditProfile()
@@ -267,14 +319,43 @@ public partial class ProfileWindow : Window
         panel.Children.Add(Label("Имя")); var display = Input("Имя", AccountClient.Text(p, "display_name"), 32); panel.Children.Add(display);
         panel.Children.Add(Label("Ник — латиница, цифры и _")); var nick = Input("Ник", AccountClient.Text(p, "username"), 20); panel.Children.Add(nick);
         panel.Children.Add(Label("Статус")); var status = Input("Статус", AccountClient.Text(p, "status"), 80); panel.Children.Add(status);
+        panel.Children.Add(Label("Местоимения — например, он/его")); var pronouns = Input("Местоимения", AccountClient.Text(p, "pronouns"), 20); panel.Children.Add(pronouns);
+        panel.Children.Add(Label("Обо мне — до 190 символов")); var bio = Input("Обо мне", AccountClient.Text(p, "bio"), 190); bio.AcceptsReturn = true; bio.TextWrapping = TextWrapping.Wrap; bio.MinHeight = 80; panel.Children.Add(bio);
+        panel.Children.Add(Label("Аватар и баннер"));
+        var media = new WrapPanel { Margin = new Thickness(0, 6, 0, 6) };
+        var uploadAvatar = new Button { Content = "⇪  Загрузить аватар", Margin = new Thickness(0, 0, 8, 8) }; uploadAvatar.Click += async (_, _) => await UploadMedia(false);
+        var uploadBanner = new Button { Content = "⇪  Загрузить баннер", Margin = new Thickness(0, 0, 8, 8) }; uploadBanner.Click += async (_, _) => await UploadMedia(true);
+        var removeBanner = new Button { Content = "Убрать баннер", Margin = new Thickness(0, 0, 8, 8), Visibility = AccountClient.Text(p, "banner_url").Length > 0 ? Visibility.Visible : Visibility.Collapsed };
+        removeBanner.Click += async (_, _) => { var old = AccountClient.Text(account.Profile, "banner_url"); await Run(async () => { await account.UpdateProfile(new JsonObject { ["p_banner_url"] = "" }); await account.DeleteOwn(old); }, EditProfile); };
+        media.Children.Add(uploadAvatar); media.Children.Add(uploadBanner); media.Children.Add(removeBanner);
+        panel.Children.Add(media);
+        panel.Children.Add(Text("PNG, JPEG, WebP — обрежутся и сожмутся автоматически. GIF и WebM: аватар до 4 МБ и 640×640 (почти квадрат), баннер до 8 МБ и 1920×1080, видео до 15 секунд.", 12, Muted));
+        panel.Children.Add(Label("Цвета профиля"));
+        var palette = new (string A, string B)[] { ("#FF4D67", "#FF8A3D"), ("#7C5CFF", "#3EC6FF"), ("#16C784", "#0E7C66"), ("#FF6FB5", "#B388FF"), ("#FFC768", "#FF6A3D"), ("#3E7BFA", "#1C1530"), ("#E4E6F0", "#5A5F73") };
+        var primary = Input("Основной цвет", AccountClient.Text(p, "theme_primary"), 7); var accent = Input("Акцент", AccountClient.Text(p, "theme_accent"), 7);
+        var swatches = new WrapPanel { Margin = new Thickness(0, 6, 0, 6) };
+        foreach (var (a, b) in palette)
+        {
+            var swatch = new Button { Width = 44, Height = 30, Margin = new Thickness(0, 0, 8, 8), Background = new LinearGradientBrush(Decor.Parse(a, Colors.Gray), Decor.Parse(b, Colors.Gray), 0), ToolTip = $"{a} → {b}" };
+            System.Windows.Automation.AutomationProperties.SetName(swatch, $"Тема {a} {b}");
+            swatch.Click += (_, _) => { primary.Text = a; accent.Text = b; };
+            swatches.Children.Add(swatch);
+        }
+        var clearTheme = new Button { Content = "По умолчанию", Height = 30, Margin = new Thickness(0, 0, 8, 8) }; clearTheme.Click += (_, _) => { primary.Text = ""; accent.Text = ""; };
+        swatches.Children.Add(clearTheme);
+        panel.Children.Add(swatches);
+        var colorRow = new System.Windows.Controls.Primitives.UniformGrid { Columns = 2 }; accent.Margin = new Thickness(8, 6, 0, 14); colorRow.Children.Add(primary); colorRow.Children.Add(accent); panel.Children.Add(colorRow);
         panel.Children.Add(Label("Аватар"));
         var avatarBox = new ComboBox { Margin = new Thickness(0, 6, 0, 14), HorizontalAlignment = HorizontalAlignment.Left, MinWidth = 320 };
-        var choices = new List<(string Title, string Url)> { ("Первая буква ника", "") };
+        var current = AccountClient.Text(p, "avatar_url");
+        var choices = new List<(string Title, string Url)>();
+        if (current.Contains("/storage/v1/object/public/media/")) choices.Add(("Загруженный аватар", current));
+        choices.Add(("Первая буква ника", ""));
         foreach (var item in p["showcase"] as JsonArray ?? new JsonArray()) if (AccountClient.Text(item, "poster").StartsWith("https://")) choices.Add((AccountClient.Text(item, "title"), AccountClient.Text(item, "poster")));
         foreach (var c in choices) avatarBox.Items.Add(c.Title);
         avatarBox.SelectedIndex = Math.Max(0, choices.FindIndex(c => c.Url == AccountClient.Text(p, "avatar_url")));
         panel.Children.Add(avatarBox);
-        if (choices.Count == 1) panel.Children.Add(Text("Добавь аниме в витрину, чтобы поставить постер на аватар.", 12, Muted));
+        panel.Children.Add(Text("Или поставь постер из витрины «Любимое аниме».", 12, Muted));
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 18, 0, 0) };
         var save = Primary("Сохранить"); var cancel = new Button { Content = "Отмена", Margin = new Thickness(12, 0, 0, 0) };
         cancel.Click += (_, _) => RenderProfile();
@@ -286,12 +367,17 @@ public partial class ProfileWindow : Window
             await Run(async () =>
             {
                 if (renamed) await account.Rpc("change_username", new JsonObject { ["p_username"] = newNick });
-                await account.UpdateProfile(new JsonObject { ["p_display_name"] = display.Text.Trim(), ["p_status"] = status.Text.Trim(), ["p_avatar_url"] = choices[Math.Max(0, avatarBox.SelectedIndex)].Url });
+                var fields = new JsonObject { ["p_display_name"] = display.Text.Trim(), ["p_status"] = status.Text.Trim(), ["p_pronouns"] = pronouns.Text.Trim(), ["p_bio"] = bio.Text.Trim(),
+                    ["p_theme_primary"] = HexOrEmpty(primary.Text), ["p_theme_accent"] = HexOrEmpty(accent.Text) };
+                fields["p_avatar_url"] = choices[Math.Max(0, avatarBox.SelectedIndex)].Url;
+                await account.UpdateProfile(fields);
             }, RenderProfile);
         };
         actions.Children.Add(save); actions.Children.Add(cancel); panel.Children.Add(actions);
         Body.Children.Add(Card(panel));
     }
+
+    static string HexOrEmpty(string text) { var t = text.Trim(); if (t.Length == 6 && !t.StartsWith('#')) t = "#" + t; return System.Text.RegularExpressions.Regex.IsMatch(t, "^#[0-9A-Fa-f]{6}$") ? t.ToUpperInvariant() : ""; }
 
     void EditShowcase()
     {
@@ -346,7 +432,7 @@ public partial class ProfileWindow : Window
             cell.Children.Add(new TextBlock { Text = AccountClient.Text(a, "title"), FontSize = 11, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, Foreground = open ? Brushes.WhiteSmoke : Muted, Margin = new Thickness(0, 6, 0, 0) });
             var reward = AccountClient.Text(a, "reward").Length > 0 ? " · украшение в награду" : "";
             var tip = $"{AccountClient.Text(a, "description")}" + (AccountClient.Int(a, "points") > 0 ? $" · +{AccountClient.Int(a, "points")} очков" : "") + reward + (open ? " · получено" : "");
-            var border = new Border { Child = cell, Padding = new Thickness(6, 10, 6, 10), Margin = new Thickness(0, 0, 8, 8), CornerRadius = new CornerRadius(12), Background = open ? new SolidColorBrush(Color.FromRgb(0x2D, 0x28, 0x43)) : new SolidColorBrush(Color.FromRgb(0x21, 0x22, 0x2D)), ToolTip = tip };
+            var border = new Border { Child = cell, Padding = new Thickness(6, 10, 6, 10), Margin = new Thickness(0, 0, 8, 8), CornerRadius = new CornerRadius(12), Background = open ? new SolidColorBrush(Color.FromRgb(0x3A, 0x18, 0x20)) : new SolidColorBrush(Color.FromRgb(0x21, 0x22, 0x2D)), ToolTip = tip };
             System.Windows.Automation.AutomationProperties.SetName(border, AccountClient.Text(a, "title") + ". " + tip);
             wrap.Children.Add(border);
         }
@@ -362,7 +448,6 @@ public partial class ProfileWindow : Window
         var name = AccountClient.Text(p, "display_name").Trim() is { Length: > 0 } n ? n : AccountClient.Text(p, "username");
         Heading.Text = name;
         var hero = new StackPanel();
-        hero.Children.Add(Decor.Person(p, account, "@" + AccountClient.Text(p, "username") + (AccountClient.Text(p, "status") is { Length: > 0 } st ? $"  ·  «{st}»" : ""), 96));
         var state = AccountClient.Text(data, "friendship");
         if (state != "self")
         {
@@ -380,7 +465,7 @@ public partial class ProfileWindow : Window
             };
             hero.Children.Add(friend);
         }
-        Body.Children.Add(Card(hero));
+        Body.Children.Add(ProfileCard(p, hero));
         var stats = new UniformGrid3();
         stats.Add(Rewards.Level(AccountClient.Int(p, "total_earned")).ToString(), "уровень", AccentBrush);
         stats.Add(AccountClient.Int(p, "episodes_watched").ToString(), "серий", new SolidColorBrush(Color.FromRgb(0x7E, 0xDC, 0xA9)));

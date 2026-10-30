@@ -1,0 +1,11 @@
+<UserControl x:Class="Yoru.ProfilePage" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" UseLayoutRounding="True">
+ <Grid Margin="28,24,28,18">
+  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+  <DockPanel Margin="0,0,0,18">
+   <Button DockPanel.Dock="Right" Content="Закрыть" IsCancel="True" Click="CloseClick"/>
+   <StackPanel><TextBlock Text="☾  ПРОФИЛЬ YORU" FontSize="11" FontWeight="SemiBold" Foreground="#FF8A9B"/><TextBlock x:Name="Heading" Text="Твой профиль" FontSize="26" FontWeight="SemiBold" Margin="0,6,0,0"/></StackPanel>
+  </DockPanel>
+  <ScrollViewer x:Name="Scroll" Grid.Row="1"><StackPanel x:Name="Body" Margin="0,0,10,10"/></ScrollViewer>
+  <StackPanel Grid.Row="2" Margin="0,10,0,0"><ProgressBar x:Name="BusyBar" Height="2" IsIndeterminate="True" Foreground="#FF4D67" Background="#1F1F26" Visibility="Collapsed"/><TextBlock x:Name="StatusText" Foreground="#FF9A8B" FontSize="12" Margin="0,8,0,0"/></StackPanel>
+ </Grid>
+</UserControl>

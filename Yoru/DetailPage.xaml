@@ -1,11 +1,11 @@
-<Window x:Class="Yoru.DetailWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Style="{StaticResource {x:Type Window}}" Title="Об аниме · Yoru" Width="1030" Height="760" MinWidth="780" MinHeight="620" WindowStartupLocation="CenterOwner">
+<UserControl x:Class="Yoru.DetailPage" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
  <Grid Margin="28">
   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
   <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="90"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
    <Border Background="#252131" Height="118" CornerRadius="12" ClipToBounds="True"><Image x:Name="PosterImage" Stretch="UniformToFill"/></Border>
-   <StackPanel Grid.Column="1" Margin="22,0,0,0"><TextBlock Text="АНИМЕ" FontSize="11" Foreground="#B8A3F1" FontWeight="SemiBold"/><TextBlock x:Name="AnimeTitle" FontSize="26" FontWeight="SemiBold" MaxHeight="74" TextTrimming="CharacterEllipsis" Margin="0,6,0,9"/><WrapPanel><TextBlock x:Name="ScoreText" Foreground="#E4D78F" FontWeight="SemiBold" Margin="0,0,18,0"/><TextBlock x:Name="MetaText" Foreground="{StaticResource Muted}" FontSize="13"/></WrapPanel></StackPanel>
+   <StackPanel Grid.Column="1" Margin="22,0,0,0"><TextBlock Text="АНИМЕ" FontSize="11" Foreground="#FF8A9B" FontWeight="SemiBold"/><TextBlock x:Name="AnimeTitle" FontSize="26" FontWeight="SemiBold" MaxHeight="74" TextTrimming="CharacterEllipsis" Margin="0,6,0,9"/><WrapPanel><TextBlock x:Name="ScoreText" Foreground="#FFC14D" FontWeight="SemiBold" Margin="0,0,18,0"/><TextBlock x:Name="MetaText" Foreground="{StaticResource Muted}" FontSize="13"/></WrapPanel></StackPanel>
   </Grid>
-  <Border Grid.Row="1" Background="#211B30" BorderBrush="#3C3154" BorderThickness="1" CornerRadius="14" Padding="22" Margin="0,22,0,22"><StackPanel>
+  <Border Grid.Row="1" Background="#1A1418" BorderBrush="#3A2028" BorderThickness="1" CornerRadius="14" Padding="22" Margin="0,22,0,22"><StackPanel>
    <DockPanel><TextBlock Text="Выбери, как смотреть" FontSize="19" FontWeight="SemiBold"/><TextBlock x:Name="VideoStatus" Foreground="{StaticResource Muted}" FontSize="12" Margin="16,0,0,0" VerticalAlignment="Center"/></DockPanel>
    <Grid x:Name="Selectors" Margin="0,18,0,0" Visibility="Collapsed"><Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="1.3*"/><ColumnDefinition Width="1*"/></Grid.ColumnDefinitions>
     <StackPanel Margin="0,0,12,0"><TextBlock Text="Озвучка" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,0,0,7"/><ComboBox x:Name="TrackBox" MinWidth="0" MaxDropDownHeight="280" SelectionChanged="TrackChanged" AutomationProperties.Name="Озвучка"/></StackPanel>
@@ -17,12 +17,12 @@
    <Button x:Name="RetryButton" Content="Повторить загрузку" HorizontalAlignment="Left" Visibility="Collapsed" Click="RetryClick"/>
   </StackPanel></Border>
   <ScrollViewer Grid.Row="2"><StackPanel x:Name="ScrollBody" Margin="0,0,8,0">
-   <TextBlock x:Name="GenresText" Foreground="#BCACE4" FontSize="13" Margin="0,0,0,15"/>
+   <TextBlock x:Name="GenresText" Foreground="#FF9AA8" FontSize="13" Margin="0,0,0,15"/>
    <TextBlock Text="О чём эта история" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
-   <TextBlock x:Name="DescriptionText" Foreground="#BDB6CD" FontSize="14" LineHeight="24" MaxHeight="96" TextTrimming="CharacterEllipsis"/>
-   <Button x:Name="ExpandButton" Content="Развернуть описание ↓" Background="Transparent" Foreground="#C4B2FF" Padding="0,10" Click="ExpandClick" HorizontalAlignment="Left"/>
+   <TextBlock x:Name="DescriptionText" Foreground="#C9C9D2" FontSize="14" LineHeight="24" MaxHeight="96" TextTrimming="CharacterEllipsis"/>
+   <Button x:Name="ExpandButton" Content="Развернуть описание ↓" Background="Transparent" Foreground="#FF8A9B" Padding="0,10" Click="ExpandClick" HorizontalAlignment="Left"/>
    <TextBlock x:Name="AgeText" Foreground="{StaticResource Muted}" FontSize="12" Margin="0,12,0,0"/>
   </StackPanel></ScrollViewer>
   <DockPanel Grid.Row="3" Margin="0,20,0,0"><StackPanel Orientation="Horizontal"><Button x:Name="FavoriteButton" Click="FavoriteClick"/><Button Content="Открыть на сайте ↗" Margin="12,0,0,0" Click="SiteClick"/></StackPanel><Button Content="Закрыть" HorizontalAlignment="Right" IsCancel="True" Click="CloseClick"/></DockPanel>
  </Grid>
-</Window>
+</UserControl>

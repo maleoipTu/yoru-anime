@@ -12,7 +12,7 @@ namespace Yoru;
 /// <summary>Отрисовка украшений профиля по стилю из таблицы decorations.</summary>
 public static class Decor
 {
-    static readonly Color Accent = Color.FromRgb(0xBF, 0xAE, 0xFF);
+    static readonly Color Accent = Color.FromRgb(0xFF, 0x4D, 0x67);
     public static Color Parse(string? hex, Color fallback)
     {
         if (hex is not { Length: 7 or 9 } || hex[0] != '#') return fallback;
@@ -49,9 +49,16 @@ public static class Decor
         var ringSize = size - (glow ? size * 0.08 : 0);
         var innerSize = ringSize - stroke * 2 - size * 0.06;
         var grid = new Grid { Width = size, Height = size };
-        var inner = new Ellipse { Width = innerSize, Height = innerSize, Fill = new SolidColorBrush(Color.FromRgb(0x2D, 0x28, 0x43)) };
+        var inner = new Ellipse { Width = innerSize, Height = innerSize, Fill = new SolidColorBrush(Color.FromRgb(0x3A, 0x18, 0x20)) };
         grid.Children.Add(inner);
-        if (Uri.TryCreate(avatarUrl, UriKind.Absolute, out var uri) && uri.Scheme == "https")
+        if (Media.IsAnimated(avatarUrl))
+        {
+            var view = Media.View(avatarUrl); view.Width = view.Height = innerSize;
+            view.Clip = new EllipseGeometry(new Point(innerSize / 2, innerSize / 2), innerSize / 2, innerSize / 2);
+            view.HorizontalAlignment = HorizontalAlignment.Center; view.VerticalAlignment = VerticalAlignment.Center;
+            grid.Children.Add(view);
+        }
+        else if (Uri.TryCreate(avatarUrl, UriKind.Absolute, out var uri) && uri.Scheme == "https")
         {
             try { inner.Fill = new ImageBrush(new BitmapImage(uri)) { Stretch = Stretch.UniformToFill }; }
             catch (Exception e) when (e is NotSupportedException or System.IO.IOException) { }
