@@ -230,7 +230,9 @@ public sealed class AccountClient : IDisposable
     }
     public async Task<JsonNode?> Rpc(string name, JsonObject arguments)
     {
-        var result = JsonNode.Parse(await Send(HttpMethod.Post, "/rest/v1/rpc/" + name, arguments, await Token()));
+        var text = await Send(HttpMethod.Post, "/rest/v1/rpc/" + name, arguments, await Token());
+        // Функции без результата (void) отвечают пустым телом — это успех.
+        var result = string.IsNullOrWhiteSpace(text) ? null : JsonNode.Parse(text);
         if (result is JsonObject o && o.ContainsKey("equipped_frame")) { Profile = (JsonObject)o.DeepClone(); SaveCache(); }
         return result;
     }
@@ -260,7 +262,7 @@ public sealed class AccountClient : IDisposable
 
     // ───── Публичные данные (работают и без входа) ─────
     async Task<string?> Bearer() => SignedIn ? await Token() : null;
-    public async Task<JsonNode?> PublicRpc(string name, JsonObject arguments) => JsonNode.Parse(await Send(HttpMethod.Post, "/rest/v1/rpc/" + name, arguments, await Bearer()));
+    public async Task<JsonNode?> PublicRpc(string name, JsonObject arguments) { var text = await Send(HttpMethod.Post, "/rest/v1/rpc/" + name, arguments, await Bearer()); return string.IsNullOrWhiteSpace(text) ? null : JsonNode.Parse(text); }
     public async Task<JsonArray> Get(string path) => JsonNode.Parse(await Send(HttpMethod.Get, path, null, await Bearer()))!.AsArray();
 
     // ───── Списки ─────

@@ -71,7 +71,9 @@ final class Account {
  /** Меняет только разрешённые поля (p_display_name, p_status, p_avatar_url, p_showcase); отсутствующие остаются прежними. */
  JSONObject update(JSONObject fields) throws Exception {return (JSONObject)rpc("update_profile",fields);}
  Object rpc(String name,JSONObject arguments) throws Exception {
-  Object result=new JSONTokener(call("POST","/rest/v1/rpc/"+name,arguments.toString(),token(),null)).nextValue();
+  String text=call("POST","/rest/v1/rpc/"+name,arguments.toString(),token(),null).trim();
+  // Функции без результата (void) отвечают пустым телом — это успех, а не ошибка.
+  Object result=text.isEmpty()?JSONObject.NULL:new JSONTokener(text).nextValue();
   if(result instanceof JSONObject&&((JSONObject)result).has("equipped_frame"))prefs.edit().putString("profile",result.toString()).apply();
   return result;
  }
@@ -86,7 +88,7 @@ final class Account {
 
  // ───── Публичные данные (работают и без входа) ─────
  String bearer() throws Exception {return signedIn()?token():null;}
- Object anonRpc(String name,JSONObject arguments) throws Exception {return new JSONTokener(call("POST","/rest/v1/rpc/"+name,arguments.toString(),bearer(),null)).nextValue();}
+ Object anonRpc(String name,JSONObject arguments) throws Exception {String text=call("POST","/rest/v1/rpc/"+name,arguments.toString(),bearer(),null).trim();return text.isEmpty()?JSONObject.NULL:new JSONTokener(text).nextValue();}
  JSONArray get(String path) throws Exception {return new JSONArray(call("GET",path,null,bearer(),null));}
 
  // ───── Списки ─────
