@@ -108,6 +108,67 @@ internal static class Program
         File.WriteAllText(Path.Combine(root, "library.json"), "corrupted fixture");
         var damaged = new LocalStore(root); damaged.Save();
         Check(Directory.GetFiles(root, "library.recovery-*.json").Any(), "damaged library backed up before replacement");
+        await Accounts(root);
+    }
+    static async Task Accounts(string root)
+    {
+        Check(Rewards.Level(0) == 1 && Rewards.Level(49) == 1 && Rewards.Level(50) == 2 && Rewards.Level(800) == 5, "levels match database formula");
+        Check(Rewards.ToNext(50) == 150 && Math.Abs(Rewards.Progress(125) - 0.5) < 1e-9, "level progress");
+        Check(Rewards.Threshold(null) == TimeSpan.FromMinutes(10) && Rewards.Threshold(TimeSpan.FromMinutes(24)) == TimeSpan.FromMinutes(12) && Rewards.Threshold(TimeSpan.FromMinutes(3)) == TimeSpan.FromMinutes(5), "watch threshold between 5 and 12 minutes");
+        Check(Rewards.ValidUsername("haruka_01") && !Rewards.ValidUsername("Haruka") && !Rewards.ValidUsername("ab"), "username rules");
+        Check(Rewards.Error("not_enough_points") == "Не хватает очков." && Rewards.Error("Invalid login credentials").StartsWith("Неверная"), "server errors explained in Russian");
+        Check(Decor.Parse("#BFAEFF", System.Windows.Media.Colors.Black) == System.Windows.Media.Color.FromRgb(0xBF, 0xAE, 0xFF) && Decor.Parse("oops", System.Windows.Media.Colors.Black) == System.Windows.Media.Colors.Black, "decoration colors parse");
+        var properties = Path.Combine(root, "supabase.properties");
+        File.WriteAllText(properties, "# comment\nurl=https://demo.supabase.co/\nanon_key=public-anon\n");
+        var config = SupabaseConfig.Load(properties);
+        Check(config.Configured && config.Url == "https://demo.supabase.co" && config.AnonKey == "public-anon", "supabase.properties parsed");
+        Check(!SupabaseConfig.Load(Path.Combine(root, "missing.properties")).Configured || Environment.GetEnvironmentVariable("YORU_SUPABASE_URL") != null, "missing config disables accounts");
+
+        var server = new FakeSupabase();
+        var accountRoot = Path.Combine(root, "account");
+        using (var account = new AccountClient(config, accountRoot, server))
+        {
+            Check(!account.SignedIn, "signed out by default");
+            await account.SignIn("me@yoru.app", "secret1");
+            Check(account.SignedIn && account.UserId == "u1" && server.Calls[0] == "POST /auth/v1/token?grant_type=password", "sign in stores session");
+            Check(!File.ReadAllText(Path.Combine(accountRoot, "account.session")).Contains("refresh-1"), "session protected with DPAPI");
+            await account.Refresh();
+            Check(account.DisplayName == "Харука" && account.Owned.Contains("frame_sakura") && account.Decorations.Count == 2, "profile, decorations and inventory load");
+            Check(server.LastAuthorization == "Bearer access-1" && server.LastApiKey == "public-anon", "requests use session token and anon key");
+            var award = await account.Award(10, 100, "1", 650);
+            Check(award["awarded"]!.GetValue<bool>() && AccountClient.Int(account.Profile, "points") == 165 && server.LastBody.Contains("\"p_episode\":\"1\""), "award updates balance");
+            var failed = false; try { await account.Rpc("buy_decoration", new System.Text.Json.Nodes.JsonObject { ["p_id"] = "frame_gold" }); } catch (AccountException e) { failed = Rewards.Error(e.Message) == "Не хватает очков."; }
+            Check(failed, "purchase errors surface as readable messages");
+        }
+        using (var restored = new AccountClient(config, accountRoot, server))
+        {
+            Check(restored.SignedIn && AccountClient.Int(restored.Profile, "points") == 165, "session and profile cache survive restart");
+            restored.SignOut();
+            Check(!restored.SignedIn && !File.Exists(Path.Combine(accountRoot, "account.session")), "sign out removes session");
+        }
+    }
+    sealed class FakeSupabase : HttpMessageHandler
+    {
+        public List<string> Calls = []; public string LastAuthorization = "", LastApiKey = "", LastBody = "";
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            var path = request.RequestUri!.PathAndQuery;
+            Calls.Add(request.Method + " " + path);
+            LastAuthorization = request.Headers.Authorization?.ToString() ?? ""; LastApiKey = request.Headers.GetValues("apikey").Single();
+            LastBody = request.Content == null ? "" : await request.Content.ReadAsStringAsync(ct);
+            var (status, body) = path switch
+            {
+                "/auth/v1/token?grant_type=password" => (200, "{\"access_token\":\"access-1\",\"refresh_token\":\"refresh-1\",\"expires_in\":3600,\"user\":{\"id\":\"u1\",\"email\":\"me@yoru.app\"}}"),
+                "/auth/v1/logout" => (204, ""),
+                _ when path.StartsWith("/rest/v1/profiles") => (200, "{\"id\":\"u1\",\"username\":\"haruka\",\"display_name\":\"Харука\",\"points\":150,\"total_earned\":300,\"episodes_watched\":20,\"equipped_frame\":\"frame_sakura\",\"showcase\":[]}"),
+                _ when path.StartsWith("/rest/v1/decorations") => (200, "[{\"id\":\"frame_moon\",\"kind\":\"frame\",\"price\":0,\"style\":{\"colors\":[\"#BFAEFF\"]}},{\"id\":\"frame_sakura\",\"kind\":\"frame\",\"price\":150,\"style\":{\"colors\":[\"#FFB7D5\",\"#FF8FB8\"]}}]"),
+                _ when path.StartsWith("/rest/v1/inventory") => (200, "[{\"decoration_id\":\"frame_sakura\"}]"),
+                "/rest/v1/rpc/award_watch" => (200, "{\"awarded\":true,\"reason\":\"ok\",\"points\":15,\"balance\":165,\"total\":315,\"level\":3}"),
+                "/rest/v1/rpc/buy_decoration" => (400, "{\"code\":\"42501\",\"message\":\"not_enough_points\"}"),
+                _ => (404, "{}")
+            };
+            return new HttpResponseMessage((HttpStatusCode)status) { Content = new StringContent(body) };
+        }
     }
     sealed class Stub(HttpStatusCode status, string body) : HttpMessageHandler
     {

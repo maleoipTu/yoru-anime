@@ -111,6 +111,9 @@ final class Ui {
     case "external":canvas.drawRoundRect(3,8,16,21,2,2,paint);line(canvas,13,3,21,3,21,11);line(canvas,10,14,21,3);break;
     case "moon":path.moveTo(20,16);path.cubicTo(9,19,5,9,10,3);path.cubicTo(-1,5,1,21,12,21);path.cubicTo(16,21,19,19,20,16);canvas.drawPath(path,paint);break;
     case "rewind":case "forward":canvas.save();if(name.equals("rewind")){canvas.scale(-1,1,12,12);}canvas.drawArc(3,3,21,21,-80,300,false,paint);line(canvas,16,2,20,5,16,8);canvas.restore();paint.setStyle(Paint.Style.FILL);paint.setTextSize(9);paint.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));paint.setTextAlign(Paint.Align.CENTER);canvas.drawText("10",12,15,paint);break;
+    case "user":canvas.drawCircle(12,8,4,paint);path.moveTo(4,21);path.cubicTo(4,15,20,15,20,21);canvas.drawPath(path,paint);break;
+    case "gem":path.moveTo(7,4);path.lineTo(17,4);path.lineTo(21,9);path.lineTo(12,20);path.lineTo(3,9);path.close();canvas.drawPath(path,paint);line(canvas,3,9,21,9);line(canvas,9,9,12,20,15,9);break;
+    case "logout":line(canvas,10,4,4,4,4,20,10,20);line(canvas,9,12,20,12);line(canvas,16,8,20,12,16,16);break;
     default:canvas.drawCircle(12,12,8,paint);
    }canvas.restoreToCount(save);
   }

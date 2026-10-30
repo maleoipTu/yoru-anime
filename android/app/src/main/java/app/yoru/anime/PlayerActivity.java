@@ -32,12 +32,12 @@ public final class PlayerActivity extends Activity {
  List<Episode>videos=new ArrayList<>(),playlist=new ArrayList<>();Library library;StreamResolver.Result resolved;
  int rendition,generation;String voice,provider,number;Future<?>pending;
  boolean fullscreen,dragging,started,foreground,desiredPlay=true,failed,wasReady;
- long position,lastSave,hideAt;float playbackSpeed=1f;
+ long position,lastSave,hideAt,awardRetryAt;final Rewards.WatchMeter meter=new Rewards.WatchMeter();Account account;float playbackSpeed=1f;
  final Handler handler=new Handler(Looper.getMainLooper());
- final Runnable tick=new Runnable(){public void run(){if(isDestroyed())return;updateProgress();if(engine!=null&&engine.isPlaying()&&!dragging&&(settingsDialog==null||!settingsDialog.isShowing())&&SystemClock.uptimeMillis()>hideAt)overlay.setVisibility(View.GONE);handler.postDelayed(this,500);}};
+ final Runnable tick=new Runnable(){public void run(){if(isDestroyed())return;updateProgress();watchTick();if(engine!=null&&engine.isPlaying()&&!dragging&&(settingsDialog==null||!settingsDialog.isShowing())&&SystemClock.uptimeMillis()>hideAt)overlay.setVisibility(View.GONE);handler.postDelayed(this,500);}};
 
  @Override public void onCreate(Bundle saved){
-  super.onCreate(saved);library=new Library(this);
+  super.onCreate(saved);library=new Library(this);account=new Account(this);
   try{JSONObject raw=Api.cached(this,getIntent().getLongExtra("anime_id",0));anime=new Anime(raw);videos=Api.videos(raw);long id=saved==null?getIntent().getLongExtra("video_id",0):saved.getLong("video_id");for(Episode episode:videos)if(episode.id==id)current=episode;if(current==null)throw new IOException();playbackSpeed=library.prefs.getFloat("native_speed",1f);if(playbackSpeed<.5f||playbackSpeed>2f)playbackSpeed=1f;}catch(Exception exception){Toast.makeText(this,"Открой карточку аниме заново — данные серий нужно обновить.",Toast.LENGTH_LONG).show();finish();return;}
   buildUi();navigate(current);handler.post(tick);if(saved!=null&&saved.getBoolean("fullscreen"))setFullscreen(true);
  }
@@ -70,7 +70,7 @@ public final class PlayerActivity extends Activity {
  }
  void renderEpisodes(){episodeStrip.removeAllViews();int at=playlist.indexOf(current),first=Math.max(0,at-3),last=Math.min(playlist.size(),Math.max(7,at+4));for(int i=first;i<last;i++){Episode episode=playlist.get(i);Button button=Ui.button(this,episode.number,false);button.setPadding(Ui.dp(this,8),0,Ui.dp(this,8),0);button.setMinWidth(Ui.dp(this,48));button.setMaxLines(1);boolean selectedEpisode=episode.id==current.id;button.setBackground(Ui.ripple(this,selectedEpisode?Ui.SOFT:Ui.PANEL,13));button.setTextColor(selectedEpisode?Ui.ACCENT:Ui.TEXT);button.setSelected(selectedEpisode);button.setContentDescription(episode.label()+(selectedEpisode?", идёт просмотр":""));LinearLayout.LayoutParams ep=new LinearLayout.LayoutParams(-2,-2);ep.rightMargin=Ui.dp(this,8);episodeStrip.addView(button,ep);button.setOnClickListener(v->{if(episode.id!=current.id)navigate(episode);});}}
  void navigate(Episode episode){
-  savePosition();releaseEngine();if(pending!=null)pending.cancel(true);generation++;int session=generation;current=episode;resolved=null;failed=false;wasReady=false;desiredPlay=true;position=library.position(episode.id);removeError();voice=episode.voice;provider=episode.player;number=episode.number;playlist=Sources.episodes(videos,voice,provider);selection();int index=playlist.indexOf(episode);previous.setEnabled(index>0);next.setEnabled(index>=0&&index<playlist.size()-1);renderEpisodes();
+  savePosition();releaseEngine();if(pending!=null)pending.cancel(true);generation++;int session=generation;current=episode;meter.start(episode.id);awardRetryAt=0;resolved=null;failed=false;wasReady=false;desiredPlay=true;position=library.position(episode.id);removeError();voice=episode.voice;provider=episode.player;number=episode.number;playlist=Sources.episodes(videos,voice,provider);selection();int index=playlist.indexOf(episode);previous.setEnabled(index>0);next.setEnabled(index>=0&&index<playlist.size()-1);renderEpisodes();
   episodeTag.setText(episode.label());currentTitle.setText(episode.label());status.setText("Открываем видео…");clock.setText("00:00 / --:--");timeline.setProgress(0);play.setEnabled(false);play.setVisibility(View.INVISIBLE);timeline.setEnabled(false);loading.setVisibility(View.VISIBLE);refreshSettings();showControls();
   pending=Api.IO.submit(()->{try{StreamResolver.Result result=StreamResolver.resolve(episode.url);runOnUiThread(()->{if(isDestroyed()||session!=generation)return;resolved=result;rendition=0;String preferred=library.prefs.getString("native_quality","");for(int i=0;i<result.streams.size();i++)if(result.streams.get(i).label.equals(preferred))rendition=i;if(started)startEngine();});}catch(Exception exception){runOnUiThread(()->{if(isDestroyed()||session!=generation)return;showError(exception instanceof IOException?exception.getMessage():"Не получилось открыть видео. Попробуй другой источник.");});}});
  }
@@ -95,6 +95,16 @@ public final class PlayerActivity extends Activity {
  void seek(long delta){if(engine!=null&&engine.isCurrentMediaItemSeekable()){engine.seekTo(PlaybackProgress.seek(engine.getCurrentPosition(),delta,engine.getDuration()));showControls();}}
  void showControls(){if(overlay==null)return;overlay.setVisibility(View.VISIBLE);hideAt=SystemClock.uptimeMillis()+4000;}
  void updateProgress(){if(engine==null)return;long now=engine.getCurrentPosition(),duration=engine.getDuration();if(!dragging){clock.setText(PlaybackProgress.time(now)+" / "+(duration>0?PlaybackProgress.time(duration):"--:--"));timeline.setProgress(duration>0?(int)Math.min(10000,now*10000/duration):0);timeline.setSecondaryProgress(duration>0?(int)Math.min(10000,engine.getBufferedPosition()*10000/duration):0);}if(SystemClock.uptimeMillis()-lastSave>=5000){savePosition();lastSave=SystemClock.uptimeMillis();}}
+ /** Очки за серию: учитывается только реальное воспроизведение, запрос уходит один раз на серию. */
+ void watchTick(){
+  if(engine==null)return;meter.tick(engine.isPlaying(),SystemClock.uptimeMillis());
+  if(!account.signedIn()||!meter.due(engine.getDuration())||SystemClock.uptimeMillis()<awardRetryAt)return;
+  meter.sent=true;Episode episode=current;Anime item=anime;int seconds=meter.seconds();
+  Api.IO.execute(()->{try{org.json.JSONObject result=account.award(item.id,episode.id,episode.number,seconds);runOnUiThread(()->{if(isDestroyed())return;
+    if(result.optBoolean("awarded"))Toast.makeText(this,"+"+result.optInt("points")+" очков · баланс "+Rewards.points(result.optInt("balance")),Toast.LENGTH_SHORT).show();
+    else{String reason=Rewards.skipReason(result.optString("reason"));if(!reason.isEmpty()&&!result.optString("reason").equals("already"))Toast.makeText(this,reason,Toast.LENGTH_SHORT).show();}});}
+   catch(Exception exception){runOnUiThread(()->{if(meter.episode==episode.id){meter.sent=false;awardRetryAt=SystemClock.uptimeMillis()+60000;}});}});
+ }
  void savePosition(){if(engine!=null&&wasReady){position=engine.getPlaybackState()==Player.STATE_ENDED?0:PlaybackProgress.resume(engine.getCurrentPosition(),engine.getDuration());library.position(current.id,position);}}
  void releaseEngine(){if(engine!=null){ExoPlayer old=engine;engine=null;videoView.setPlayer(null);old.release();}surface.setKeepScreenOn(false);}
  void removeError(){if(error!=null){surface.removeView(error);error=null;}}
