@@ -131,6 +131,8 @@ internal static class Program
             var parsed = StreamResolver.Parse(links.RootElement, 3, "https://kodik.info/seria/1");
             Check(parsed.Streams.Count == 1 && parsed.Streams[0].Url == "https://cdn.example.net/video/720.mp4:hls:manifest.m3u8" && parsed.Streams[0].Mime == "application/x-mpegURL", "Kodik stream links decoded and deduplicated");
         }
+        var unpadded = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("//cdn.example.net/a/360.mp4:hls:manifest.m3u8")).TrimEnd('=');
+        Check(StreamResolver.Decode(unpadded, 0) == "https://cdn.example.net/a/360.mp4:hls:manifest.m3u8", "Kodik Base64 without padding decodes (regression: no video stream)");
         var unsafeRejected = false; try { StreamResolver.SafeUri("https://127.0.0.1/x"); } catch (InvalidOperationException) { unsafeRejected = true; }
         Check(unsafeRejected, "proxy refuses local addresses");
         var store2 = new LocalStore(Path.Combine(root, "positions")); store2.Data.Positions["5"] = 42; store2.Save();

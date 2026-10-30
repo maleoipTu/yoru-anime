@@ -12,8 +12,8 @@ android {
         applicationId 'app.yoru.anime'
         minSdk 26
         targetSdk 35
-        versionCode 8
-        versionName '0.7.0'
+        versionCode Integer.parseInt(System.getenv('YORU_ANDROID_VERSION_CODE') ?: '9')
+        versionName System.getenv('YORU_ANDROID_VERSION_NAME') ?: '0.8.0'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         buildConfigField 'String', 'SUPABASE_URL', '"' + supabaseUrl.trim() + '"'
         buildConfigField 'String', 'SUPABASE_ANON_KEY', '"' + supabaseKey.trim() + '"'

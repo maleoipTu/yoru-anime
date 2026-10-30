@@ -17,8 +17,8 @@ import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 final class Ui {
- // Ночная палитра Yoru: глубокий фон, три уровня поверхностей, лавандовый акцент «луны» и тёплый цвет оценки.
- static final int BG=0xFF0D0E13,PANEL=0xFF171821,RAISED=0xFF21222D,LINE=0xFF2C2D3A,TEXT=0xFFF4F2FA,MUTED=0xFFA2A3B6,ACCENT=0xFFBFAEFF,SOFT=0xFF2D2843,ON_ACCENT=0xFF1C1530,WARM=0xFFFFC768,LIVE=0xFF7EDCA9,SCRIM=0xB30D0E13;
+ // Палитра Yoru 0.8: угольный фон, поверхности с мягким градиентом и коралловый акцент с переходом в оранжевый.
+ static final int BG=0xFF0E0E11,PANEL=0xFF16161B,RAISED=0xFF1F1F26,LINE=0xFF2A2A33,TEXT=0xFFF5F5F7,MUTED=0xFF9C9CA8,ACCENT=0xFFFF4D67,ACCENT2=0xFFFF8A3D,SOFT=0xFF3A1820,ON_ACCENT=0xFFFFFFFF,WARM=0xFFFFC14D,LIVE=0xFF4ADE80,SCRIM=0xB30E0E11;
  static final Typeface MEDIUM=Typeface.create("sans-serif-medium",Typeface.NORMAL);
  static int dp(Context c,float value){return Math.round(value*c.getResources().getDisplayMetrics().density);}
  static LinearLayout column(Context c){LinearLayout result=new LinearLayout(c);result.setOrientation(LinearLayout.VERTICAL);return result;}
@@ -26,18 +26,26 @@ final class Ui {
  static TextView text(Context c,String value,int size,int color){TextView result=new TextView(c);result.setText(value);result.setTextSize(size);result.setTextColor(color);result.setIncludeFontPadding(false);result.setLineSpacing(dp(c,3),1);return result;}
  static TextView title(Context c,String value,int size){TextView result=text(c,value,size,TEXT);result.setTypeface(null,Typeface.BOLD);result.setLetterSpacing(size>=20?-.01f:0);return result;}
  static GradientDrawable shape(Context c,int color,int radius){GradientDrawable result=new GradientDrawable();result.setColor(color);result.setCornerRadius(dp(c,radius));return result;}
- static GradientDrawable outlined(Context c,int color,int radius){GradientDrawable result=shape(c,color,radius);result.setStroke(dp(c,1),LINE);return result;}
+ /** Поверхность с обводкой; панели получают лёгкий вертикальный градиент, чтобы не выглядеть плоско. */
+ static GradientDrawable outlined(Context c,int color,int radius){GradientDrawable result=color==PANEL?gradient(c,0xFF1C1C23,0xFF141418,radius,GradientDrawable.Orientation.TOP_BOTTOM):shape(c,color,radius);result.setStroke(dp(c,1),LINE);return result;}
+ static GradientDrawable gradient(Context c,int from,int to,int radius,GradientDrawable.Orientation orientation){GradientDrawable result=new GradientDrawable(orientation,new int[]{from,to});result.setCornerRadius(dp(c,radius));return result;}
+ /** Фирменный градиент акцента: коралловый → оранжевый. */
+ static GradientDrawable accent(Context c,int radius){return gradient(c,ACCENT,ACCENT2,radius,GradientDrawable.Orientation.TL_BR);}
+ /** Мягкая тень под элементом: высота + контур по фону. */
+ static void lift(View view,float elevation){view.setElevation(dp(view.getContext(),elevation));view.setOutlineProvider(ViewOutlineProvider.BACKGROUND);if(Build.VERSION.SDK_INT>=28){view.setOutlineAmbientShadowColor(0xFF000000);view.setOutlineSpotShadowColor(0xFF000000);}}
  static RippleDrawable ripple(Context c,int color,int radius){return new RippleDrawable(ColorStateList.valueOf(0x24FFFFFF),shape(c,color,radius),shape(c,Color.WHITE,radius));}
  static Button button(Context c,String value,boolean primary){
   Button result=new Button(c);result.setText(value);result.setTextSize(14);result.setTypeface(MEDIUM);result.setAllCaps(false);result.setIncludeFontPadding(false);result.setMinWidth(0);result.setMinimumWidth(0);result.setMinHeight(dp(c,48));result.setMinimumHeight(dp(c,48));result.setPadding(dp(c,16),dp(c,10),dp(c,16),dp(c,10));result.setStateListAnimator(null);result.setMaxLines(2);result.setEllipsize(TextUtils.TruncateAt.END);
   result.setTextColor(new ColorStateList(new int[][]{new int[]{-android.R.attr.state_enabled},new int[]{}},new int[]{0xFF60616F,primary?ON_ACCENT:TEXT}));
-  StateListDrawable backgrounds=new StateListDrawable();backgrounds.addState(new int[]{-android.R.attr.state_enabled},shape(c,primary?RAISED:PANEL,16));backgrounds.addState(new int[]{},ripple(c,primary?ACCENT:RAISED,16));result.setBackground(backgrounds);return result;
+  StateListDrawable backgrounds=new StateListDrawable();backgrounds.addState(new int[]{-android.R.attr.state_enabled},shape(c,primary?RAISED:PANEL,16));backgrounds.addState(new int[]{},primary?new RippleDrawable(ColorStateList.valueOf(0x33FFFFFF),accent(c,16),shape(c,Color.WHITE,16)):ripple(c,RAISED,16));result.setBackground(backgrounds);
+  if(primary){result.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));lift(result,6);}
+  return result;
  }
  /** Заметная, но вторичная кнопка: акцентный текст на приглушённой подложке. */
  static Button tonal(Context c,String value){Button result=button(c,value,false);result.setTextColor(new ColorStateList(new int[][]{new int[]{-android.R.attr.state_enabled},new int[]{}},new int[]{0xFF60616F,ACCENT}));StateListDrawable backgrounds=new StateListDrawable();backgrounds.addState(new int[]{-android.R.attr.state_enabled},shape(c,PANEL,16));backgrounds.addState(new int[]{},ripple(c,SOFT,16));result.setBackground(backgrounds);return result;}
  /** Фильтр-«пилюля»: касание 48dp, видимая форма 36dp. */
  static Button chip(Context c,String value){Button result=button(c,value,false);result.setTextSize(13);result.setMaxLines(1);result.setPadding(dp(c,14),dp(c,10),dp(c,10),dp(c,10));result.setCompoundDrawablePadding(dp(c,4));result.setCompoundDrawablesRelativeWithIntrinsicBounds(null,null,new AppIcon(c,"down",MUTED,16),null);chipState(result,false);return result;}
- static void chipState(Button chip,boolean active){Context c=chip.getContext();GradientDrawable face=shape(c,active?SOFT:Color.TRANSPARENT,18);face.setStroke(dp(c,1),active?0xFF4A4170:LINE);chip.setBackground(new InsetDrawable(new RippleDrawable(ColorStateList.valueOf(0x24FFFFFF),face,shape(c,Color.WHITE,18)),0,dp(c,6),0,dp(c,6)));chip.setTextColor(active?ACCENT:TEXT);chip.setCompoundDrawablesRelativeWithIntrinsicBounds(null,null,new AppIcon(c,"down",active?ACCENT:MUTED,16),null);}
+ static void chipState(Button chip,boolean active){Context c=chip.getContext();GradientDrawable face=active?gradient(c,0xFF4A1A26,0xFF3A1820,18,GradientDrawable.Orientation.LEFT_RIGHT):shape(c,RAISED,18);face.setStroke(dp(c,1),active?0xFF7A2A3A:LINE);chip.setBackground(new InsetDrawable(new RippleDrawable(ColorStateList.valueOf(0x24FFFFFF),face,shape(c,Color.WHITE,18)),0,dp(c,6),0,dp(c,6)));chip.setTextColor(active?ACCENT:TEXT);chip.setCompoundDrawablesRelativeWithIntrinsicBounds(null,null,new AppIcon(c,"down",active?ACCENT:MUTED,16),null);}
  static Button iconButton(Context c,String icon,String description){Button result=button(c,"",false);result.setPadding(dp(c,12),dp(c,12),dp(c,12),dp(c,12));result.setBackground(ripple(c,Color.TRANSPARENT,24));result.setCompoundDrawablesWithIntrinsicBounds(new AppIcon(c,icon,TEXT,24),null,null,null);result.setContentDescription(description);result.setLayoutParams(new LinearLayout.LayoutParams(dp(c,48),dp(c,48)));return result;}
  static void icon(Button button,String icon,int color){button.setCompoundDrawablesWithIntrinsicBounds(new AppIcon(button.getContext(),icon,color,24),null,null,null);}
  static Button textButton(Context c,String text){Button result=button(c,text,false);result.setBackground(ripple(c,Color.TRANSPARENT,12));result.setTextColor(ACCENT);return result;}
@@ -79,8 +87,8 @@ final class Ui {
  static void poster(Activity activity,ImageView target,String url){target.setScaleType(ImageView.ScaleType.CENTER_CROP);target.setTag(url);target.setImageDrawable(new PosterPlaceholder(activity));Bitmap known=CACHE.get(url);if(known!=null){target.setImageBitmap(known);return;}if(!url.startsWith("https://"))return;IMAGES.execute(()->{HttpURLConnection connection=null;try{connection=(HttpURLConnection)new URL(url).openConnection();connection.setConnectTimeout(12000);connection.setReadTimeout(15000);byte[] data;try(InputStream input=connection.getInputStream();ByteArrayOutputStream out=new ByteArrayOutputStream()){byte[] buffer=new byte[8192];int count;while((count=input.read(buffer))!=-1){if(out.size()+count>8*1024*1024)throw new IOException();out.write(buffer,0,count);}data=out.toByteArray();}BitmapFactory.Options bounds=new BitmapFactory.Options();bounds.inJustDecodeBounds=true;BitmapFactory.decodeByteArray(data,0,data.length,bounds);BitmapFactory.Options options=new BitmapFactory.Options();options.inSampleSize=1;while(bounds.outWidth/options.inSampleSize>500||bounds.outHeight/options.inSampleSize>700)options.inSampleSize*=2;Bitmap bitmap=BitmapFactory.decodeByteArray(data,0,data.length,options);if(bitmap!=null){CACHE.put(url,bitmap);activity.runOnUiThread(()->{if(!activity.isDestroyed()&&url.equals(target.getTag()))target.setImageBitmap(bitmap);});}}catch(Exception ignored){}finally{if(connection!=null)connection.disconnect();}});}
  static final class PosterPlaceholder extends Drawable {
   final Paint paint=new Paint(3);final AppIcon moon;
-  PosterPlaceholder(Context c){moon=new AppIcon(c,"moon",0xFF5E596F,36);}
-  @Override public void draw(Canvas canvas){Rect b=getBounds();paint.setShader(new LinearGradient(0,b.top,b.right,b.bottom,new int[]{0xFF262338,0xFF171821},null,Shader.TileMode.CLAMP));canvas.drawRect(b,paint);int size=Math.min(b.width()/3,b.height()/3);moon.setBounds(b.centerX()-size/2,b.centerY()-size/2,b.centerX()+size/2,b.centerY()+size/2);moon.draw(canvas);}
+  PosterPlaceholder(Context c){moon=new AppIcon(c,"moon",0xFF5A3A44,36);}
+  @Override public void draw(Canvas canvas){Rect b=getBounds();paint.setShader(new LinearGradient(0,b.top,b.right,b.bottom,new int[]{0xFF2A1A22,0xFF16161B},null,Shader.TileMode.CLAMP));canvas.drawRect(b,paint);int size=Math.min(b.width()/3,b.height()/3);moon.setBounds(b.centerX()-size/2,b.centerY()-size/2,b.centerX()+size/2,b.centerY()+size/2);moon.draw(canvas);}
   @Override public void setAlpha(int alpha){paint.setAlpha(alpha);}@Override public void setColorFilter(ColorFilter filter){paint.setColorFilter(filter);}@Override public int getOpacity(){return PixelFormat.TRANSLUCENT;}
  }
  static final class AppIcon extends Drawable {
@@ -111,6 +119,13 @@ final class Ui {
     case "external":canvas.drawRoundRect(3,8,16,21,2,2,paint);line(canvas,13,3,21,3,21,11);line(canvas,10,14,21,3);break;
     case "moon":path.moveTo(20,16);path.cubicTo(9,19,5,9,10,3);path.cubicTo(-1,5,1,21,12,21);path.cubicTo(16,21,19,19,20,16);canvas.drawPath(path,paint);break;
     case "rewind":case "forward":canvas.save();if(name.equals("rewind")){canvas.scale(-1,1,12,12);}canvas.drawArc(3,3,21,21,-80,300,false,paint);line(canvas,16,2,20,5,16,8);canvas.restore();paint.setStyle(Paint.Style.FILL);paint.setTextSize(9);paint.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));paint.setTextAlign(Paint.Align.CENTER);canvas.drawText("10",12,15,paint);break;
+    case "mail":canvas.drawRoundRect(3,5,21,19,2.5f,2.5f,paint);line(canvas,3.5f,6.5f,12,13,20.5f,6.5f);break;
+    case "lock":canvas.drawRoundRect(5,10,19,21,2.5f,2.5f,paint);path.moveTo(8,10);path.lineTo(8,7);path.cubicTo(8,2,16,2,16,7);path.lineTo(16,10);canvas.drawPath(path,paint);break;
+    case "eye":path.moveTo(2,12);path.cubicTo(6,5,18,5,22,12);path.cubicTo(18,19,6,19,2,12);canvas.drawPath(path,paint);canvas.drawCircle(12,12,3,paint);break;
+    case "filter":line(canvas,4,6,20,6);line(canvas,7,12,17,12);line(canvas,10,18,14,18);break;
+    case "shield":path.moveTo(12,3);path.lineTo(20,6);path.lineTo(20,12);path.cubicTo(20,17,16,20,12,21);path.cubicTo(8,20,4,17,4,12);path.lineTo(4,6);path.close();canvas.drawPath(path,paint);line(canvas,9,12,11,14,15,10);break;
+    case "upload":line(canvas,12,16,12,4);line(canvas,7,9,12,4,17,9);line(canvas,4,16,4,20,20,20,20,16);break;
+    case "download":line(canvas,12,4,12,16);line(canvas,7,11,12,16,17,11);line(canvas,4,16,4,20,20,20,20,16);break;
     case "user":canvas.drawCircle(12,8,4,paint);path.moveTo(4,21);path.cubicTo(4,15,20,15,20,21);canvas.drawPath(path,paint);break;
     case "gem":path.moveTo(7,4);path.lineTo(17,4);path.lineTo(21,9);path.lineTo(12,20);path.lineTo(3,9);path.close();canvas.drawPath(path,paint);line(canvas,3,9,21,9);line(canvas,9,9,12,20,15,9);break;
     case "logout":line(canvas,10,4,4,4,4,20,10,20);line(canvas,9,12,20,12);line(canvas,16,8,20,12,16,16);break;
@@ -120,6 +135,12 @@ final class Ui {
   @Override public void setAlpha(int alpha){paint.setAlpha(alpha);}@Override public void setColorFilter(ColorFilter filter){paint.setColorFilter(filter);}@Override public int getOpacity(){return PixelFormat.TRANSLUCENT;}
  }
  /** Иконка нижней навигации: у выбранного раздела под иконкой появляется «пилюля». */
+ /** Простая «плавающая» раскладка: дети идут строками и переносятся по ширине (для чипов жанров). */
+ static final class Flow extends ViewGroup {
+  final int gap;Flow(Context c,int gapDp){super(c);gap=dp(c,gapDp);}
+  @Override protected void onMeasure(int w,int h){int width=MeasureSpec.getSize(w),x=0,y=0,row=0;for(int i=0;i<getChildCount();i++){View v=getChildAt(i);if(v.getVisibility()==GONE)continue;v.measure(MeasureSpec.makeMeasureSpec(width,MeasureSpec.AT_MOST),MeasureSpec.UNSPECIFIED);if(x>0&&x+v.getMeasuredWidth()>width){x=0;y+=row+gap;row=0;}x+=v.getMeasuredWidth()+gap;row=Math.max(row,v.getMeasuredHeight());}setMeasuredDimension(width,y+row);}
+  @Override protected void onLayout(boolean changed,int l,int t,int r,int b){int width=r-l,x=0,y=0,row=0;for(int i=0;i<getChildCount();i++){View v=getChildAt(i);if(v.getVisibility()==GONE)continue;if(x>0&&x+v.getMeasuredWidth()>width){x=0;y+=row+gap;row=0;}v.layout(x,y,x+v.getMeasuredWidth(),y+v.getMeasuredHeight());x+=v.getMeasuredWidth()+gap;row=Math.max(row,v.getMeasuredHeight());}}
+ }
  static final class NavIcon extends Drawable {
   final AppIcon icon;final boolean active;final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);final int width,height;
   NavIcon(Context c,String name,boolean active){icon=new AppIcon(c,name,active?ACCENT:MUTED,22);this.active=active;width=dp(c,56);height=dp(c,30);paint.setColor(SOFT);setBounds(0,0,width,height);}

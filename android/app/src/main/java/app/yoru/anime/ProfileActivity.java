@@ -16,7 +16,8 @@ public final class ProfileActivity extends Activity {
  LinearLayout root,content;ScrollView scroll;ProgressBar busyBar;TextView message;
  JSONObject profile=new JSONObject();JSONArray decorations=new JSONArray();Map<String,JSONObject> byId=new HashMap<>();Set<String> owned=new HashSet<>();
  String tab="frame";boolean registering,busy;int generation;
- JSONArray achievements=new JSONArray();Set<String> unlocked=new HashSet<>();String viewing="";
+ JSONArray achievements=new JSONArray();Set<String> unlocked=new HashSet<>();String viewing="";boolean isAdmin;
+ static final int PICK_AVATAR=41,PICK_BANNER=42;Runnable afterUpload;
 
  @Override public void onCreate(Bundle saved){
   super.onCreate(saved);account=new Account(this);library=new Library(this);
@@ -51,11 +52,11 @@ public final class ProfileActivity extends Activity {
    catch(Exception exception){runOnUiThread(()->{if(isDestroyed()||session!=generation)return;setBusy(false);failed(exception);});}});
  }
  void failed(Exception exception){
-  String text=Rewards.error(exception.getMessage());
+  String text=exception instanceof java.io.IOException&&!(exception instanceof Account.Failure)&&exception.getMessage()!=null&&exception.getMessage().matches(".*[А-Яа-я].*")?exception.getMessage():Rewards.error(exception.getMessage());
   if(!account.signedIn()&&Account.configured()){authForm(text);return;}
   if(message!=null&&message.isAttachedToWindow()){message.setText(text);message.setVisibility(View.VISIBLE);}else Toast.makeText(this,text,Toast.LENGTH_LONG).show();
  }
- void refresh(){background(()->new Object[]{account.profile(),account.decorations(),account.inventory(),account.achievements(),account.unlocked()},result->{profile=(JSONObject)result[0];decorations=(JSONArray)result[1];byId=Decor.index(decorations);@SuppressWarnings("unchecked")Set<String> inventory=(Set<String>)result[2];owned=inventory;achievements=(JSONArray)result[3];@SuppressWarnings("unchecked")Set<String> got=(Set<String>)result[4];unlocked=got;renderProfile();});}
+ void refresh(){background(()->new Object[]{account.profile(),account.decorations(),account.inventory(),account.achievements(),account.unlocked(),account.isAdmin()},result->{profile=(JSONObject)result[0];decorations=(JSONArray)result[1];byId=Decor.index(decorations);@SuppressWarnings("unchecked")Set<String> inventory=(Set<String>)result[2];owned=inventory;achievements=(JSONArray)result[3];@SuppressWarnings("unchecked")Set<String> got=(Set<String>)result[4];unlocked=got;isAdmin=Boolean.TRUE.equals(result[5]);renderProfile();});}
 
  // ───── Чужой профиль ─────
  void loadPublic(){background(()->{JSONObject data=account.publicProfile(viewing);if(account.cachedDecorations().length()==0)account.decorations();if(account.cachedAchievements().length()==0)account.achievements();return data==null?new JSONObject():data;},data->{decorations=account.cachedDecorations();byId=Decor.index(decorations);achievements=account.cachedAchievements();renderPublic(data);});}
@@ -63,8 +64,7 @@ public final class ProfileActivity extends Activity {
   content.removeAllViews();JSONObject p=data.optJSONObject("profile");
   if(p==null){LinearLayout card=card();card.addView(Ui.title(this,"Профиль не найден",18));Ui.add(card,Ui.text(this,"Пользователя @"+viewing+" нет — возможно, он сменил ник.",14,Ui.MUTED),8);content.addView(card);return;}
   int total=p.optInt("total_earned"),level=Rewards.level(total);
-  LinearLayout hero=card();hero.addView(Social.person(this,p,byId,"@"+p.optString("username"),88));
-  String statusText=p.optString("status");if(!statusText.isEmpty())Ui.add(hero,Ui.text(this,"«"+statusText+"»",14,Ui.TEXT),10);
+  LinearLayout hero=hero(p,false);
   String state=data.optString("friendship");
   if(!state.equals("self")){Button friend=Ui.tonal(this,state.equals("friend")?"✓ Друзья · удалить":state.equals("outgoing")?"Заявка отправлена":state.equals("incoming")?"Принять заявку в друзья":"Добавить в друзья");friend.setEnabled(!state.equals("outgoing"));
    friend.setOnClickListener(v->{if(!account.signedIn()){startActivity(new Intent(this,ProfileActivity.class));return;}
@@ -72,7 +72,7 @@ public final class ProfileActivity extends Activity {
     else if(state.equals("incoming"))background(()->(JSONObject)account.rpc("respond_friend_request",new JSONObject().put("p_requester",p.optString("id")).put("p_accept",true)),r->{Social.announce(this,r);loadPublic();});
     else background(()->(JSONObject)account.rpc("send_friend_request",new JSONObject().put("p_username",p.optString("username"))),r->{Social.announce(this,r);loadPublic();});});
    Ui.add(hero,friend,14);}
-  content.addView(hero,new LinearLayout.LayoutParams(-1,-2));
+  content.addView((View)hero.getTag(),new LinearLayout.LayoutParams(-1,-2));
   LinearLayout stats=Ui.row(this);
   stats.addView(stat("moon",String.valueOf(level),"уровень",Ui.ACCENT),new LinearLayout.LayoutParams(0,-1,1));
   stats.addView(stat("play",String.valueOf(p.optInt("episodes_watched")),"серий",Ui.LIVE),margin(new LinearLayout.LayoutParams(0,-1,1)));
@@ -110,50 +110,17 @@ public final class ProfileActivity extends Activity {
  }
 
  // ───── Вход и регистрация ─────
- void authForm(String error){
-  content.removeAllViews();LinearLayout card=card();
-  card.addView(icon("moon"));
-  TextView title=Ui.title(this,registering?"Создай аккаунт Yoru":"С возвращением",21);Ui.add(card,title,16);
-  Ui.add(card,Ui.text(this,"Смотри аниме, получай очки и укрась свой профиль рамками, значками и цветом ника.",14,Ui.MUTED),8);
-  LinearLayout modes=Ui.row(this);Button signIn=Ui.chip(this,"Вход"),signUp=Ui.chip(this,"Регистрация");
-  for(Button b:new Button[]{signIn,signUp})b.setCompoundDrawablesRelativeWithIntrinsicBounds(null,null,null,null);
-  Ui.chipState(signIn,!registering);Ui.chipState(signUp,registering);signIn.setCompoundDrawablesRelativeWithIntrinsicBounds(null,null,null,null);signUp.setCompoundDrawablesRelativeWithIntrinsicBounds(null,null,null,null);
-  modes.addView(signIn,new LinearLayout.LayoutParams(0,-2,1));LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(0,-2,1);sp.leftMargin=Ui.dp(this,8);modes.addView(signUp,sp);Ui.add(card,modes,16);
-  signIn.setOnClickListener(v->{if(registering){registering=false;authForm("");}});signUp.setOnClickListener(v->{if(!registering){registering=true;authForm("");}});
-  EditText email=input("Почта",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);email.setText(account.email());Ui.add(card,email,12);
-  EditText username=input("Ник: латиница, цифры и _",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);username.setVisibility(registering?View.VISIBLE:View.GONE);Ui.add(card,username,10);
-  EditText password=input("Пароль",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);Ui.add(card,password,10);
-  message=Ui.text(this,error,13,0xFFFF9A8B);message.setVisibility(error.isEmpty()?View.GONE:View.VISIBLE);Ui.add(card,message,12);
-  Button submit=Ui.button(this,registering?"Создать аккаунт":"Войти",true);Ui.add(card,submit,16);
-  submit.setOnClickListener(v->{
-   String mail=email.getText().toString().trim(),pass=password.getText().toString(),nick=username.getText().toString().trim().toLowerCase(Locale.ROOT);
-   String problem=!Rewards.validEmail(mail)?"Проверь адрес почты.":pass.length()<6?"Пароль — минимум 6 символов.":registering&&!Rewards.validUsername(nick)?"Ник: 3–20 символов, латиница, цифры и _.":"";
-   if(!problem.isEmpty()){message.setText(problem);message.setVisibility(View.VISIBLE);return;}
-   message.setVisibility(View.GONE);hideKeyboard();
-   if(registering)background(()->{
-     if(!"true".equals(Account.call("POST","/rest/v1/rpc/username_available",new JSONObject().put("p_username",nick).toString(),null,null).trim()))throw new Account.Failure(409,"username_taken");
-     return account.signUp(mail,pass,nick);},
-    signedIn->{if(signedIn)show();else{registering=false;authForm("");message.setTextColor(Ui.LIVE);message.setText("Мы отправили письмо на "+mail+". Подтверди почту и войди.");message.setVisibility(View.VISIBLE);}});
-   else background(()->{account.signIn(mail,pass);return true;},ok->show());
-  });
-  content.addView(card,new LinearLayout.LayoutParams(-1,-2));
- }
+ /** Вход теперь на отдельном экране: без аккаунта приложение туда и возвращает. */
+ void authForm(String error){startActivity(new Intent(this,AuthActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK));finish();}
 
  // ───── Профиль ─────
  void renderProfile(){
   int y=scroll.getScrollY();content.removeAllViews();
   int points=profile.optInt("points"),total=profile.optInt("total_earned"),level=Rewards.level(total);
-  LinearLayout hero=card();LinearLayout top=Ui.row(this);
-  Decor.AvatarView avatar=new Decor.AvatarView(this);avatar.frame(Decor.style(byId,profile.optString("equipped_frame","frame_moon")));avatar.person(Decor.name(profile),profile.optString("avatar_url"));top.addView(avatar,new LinearLayout.LayoutParams(Ui.dp(this,92),Ui.dp(this,92)));
-  LinearLayout who=Ui.column(this);LinearLayout.LayoutParams wp=new LinearLayout.LayoutParams(0,-2,1);wp.leftMargin=Ui.dp(this,16);top.addView(who,wp);
-  LinearLayout nameRow=Ui.row(this);TextView name=Ui.title(this,Decor.name(profile),21);name.setMaxLines(2);name.setEllipsize(TextUtils.TruncateAt.END);Decor.nameColor(name,Decor.style(byId,profile.optString("equipped_color","color_default")));nameRow.addView(name,new LinearLayout.LayoutParams(0,-2,1));
-  CharSequence badge=Decor.badge(Decor.style(byId,profile.optString("equipped_badge")));if(badge.length()>0){TextView glyph=Ui.text(this,"",20,Ui.TEXT);glyph.setText(badge);glyph.setPadding(Ui.dp(this,6),0,0,0);JSONObject d=byId.get(profile.optString("equipped_badge"));glyph.setContentDescription("Значок: "+(d==null?"":d.optString("title")));nameRow.addView(glyph);}
-  who.addView(nameRow);
-  Ui.add(who,Ui.text(this,"@"+profile.optString("username"),13,Ui.MUTED),4);
-  String statusText=profile.optString("status");TextView status=Ui.text(this,statusText.isEmpty()?"Добавь статус — о чём сейчас твой вечер?":"«"+statusText+"»",14,statusText.isEmpty()?0xFF60616F:Ui.TEXT);Ui.add(who,status,10);
-  hero.addView(top);
+  LinearLayout hero=hero(profile,true);
   LinearLayout heroActions=Ui.row(this);Button edit=Ui.tonal(this,"Изменить");edit.setOnClickListener(v->editProfile());heroActions.addView(edit,new LinearLayout.LayoutParams(0,-2,1));Button friends=Ui.tonal(this,"Друзья");friends.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"user",Ui.ACCENT,18),null,null,null);friends.setCompoundDrawablePadding(Ui.dp(this,6));friends.setOnClickListener(v->startActivity(new Intent(this,FriendsActivity.class)));LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(0,-2,1);fp.leftMargin=Ui.dp(this,8);heroActions.addView(friends,fp);Ui.add(hero,heroActions,16);
-  content.addView(hero,new LinearLayout.LayoutParams(-1,-2));
+  if(isAdmin){Button admin=Ui.tonal(this,"Админ-панель");admin.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"shield",Ui.ACCENT,18),null,null,null);admin.setCompoundDrawablePadding(Ui.dp(this,6));admin.setOnClickListener(v->startActivity(new Intent(this,AdminActivity.class)));Ui.add(hero,admin,8);}
+  content.addView((View)hero.getTag(),new LinearLayout.LayoutParams(-1,-2));
 
   // Очки, уровень, серии.
   LinearLayout stats=Ui.row(this);
@@ -192,6 +159,7 @@ public final class ProfileActivity extends Activity {
   message=Ui.text(this,"",13,0xFFFF9A8B);message.setVisibility(View.GONE);Ui.add(content,message,12);
   Ui.add(content,Ui.text(this,"Аккаунт: "+account.email(),12,Ui.MUTED),26);
   Button logout=Ui.textButton(this,"Выйти из аккаунта");logout.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);logout.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"logout",Ui.ACCENT,20),null,null,null);logout.setCompoundDrawablePadding(Ui.dp(this,8));logout.setOnClickListener(v->{generation++;setBusy(false);account.signOut();registering=false;authForm("");});Ui.add(content,logout,4);
+  Button updates=Ui.textButton(this,"Проверить обновления · версия "+BuildConfig.VERSION_NAME);updates.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);updates.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"download",Ui.ACCENT,20),null,null,null);updates.setCompoundDrawablePadding(Ui.dp(this,8));updates.setOnClickListener(v->Updater.check(this,true));Ui.add(content,updates,0);
   scroll.post(()->scroll.scrollTo(0,y));
  }
 
@@ -212,7 +180,7 @@ public final class ProfileActivity extends Activity {
   String until=d.isNull("available_until")?"":d.optString("available_until");
   String equippedId=profile.optString(kind.equals("frame")?"equipped_frame":kind.equals("badge")?"equipped_badge":"equipped_color");boolean worn=id.equals(equippedId);
   LinearLayout tile=Ui.column(this);tile.setPadding(Ui.dp(this,12),Ui.dp(this,14),Ui.dp(this,12),Ui.dp(this,12));tile.setGravity(Gravity.CENTER_HORIZONTAL);
-  android.graphics.drawable.GradientDrawable face=Ui.shape(this,worn?Ui.SOFT:Ui.PANEL,18);face.setStroke(Ui.dp(this,1),worn?0xFF4A4170:Ui.LINE);
+  android.graphics.drawable.GradientDrawable face=Ui.shape(this,worn?Ui.SOFT:Ui.PANEL,18);face.setStroke(Ui.dp(this,1),worn?0xFF7A2A3A:Ui.LINE);
   tile.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x24FFFFFF),face,Ui.shape(this,android.graphics.Color.WHITE,18)));
   FrameLayout preview=new FrameLayout(this);tile.addView(preview,new LinearLayout.LayoutParams(-1,Ui.dp(this,72)));
   if(kind.equals("frame")){Decor.AvatarView a=new Decor.AvatarView(this);a.frame(style);a.person(Decor.name(profile),profile.optString("avatar_url"));preview.addView(a,new FrameLayout.LayoutParams(Ui.dp(this,68),Ui.dp(this,68),Gravity.CENTER));}
@@ -251,26 +219,96 @@ public final class ProfileActivity extends Activity {
     result->{profile=result;owned.add(id);if(owned.size()>=5)refresh();else renderProfile();Toast.makeText(this,"«"+d.optString("title")+"» теперь твоё",Toast.LENGTH_SHORT).show();});});
  }
 
+ /** Шапка профиля в стиле Discord: баннер, аватар поверх него с рамкой, ник, местоимения, статус и «Обо мне» на фоне цветов темы. */
+ LinearLayout hero(JSONObject p,boolean own){
+  int primary=Rewards.color(p.optString("theme_primary"),0xFF22222A),accent=Rewards.color(p.optString("theme_accent"),0xFF16161B);boolean themed=!p.optString("theme_primary").isEmpty()||!p.optString("theme_accent").isEmpty();
+  LinearLayout card=Ui.column(this);android.graphics.drawable.GradientDrawable bg=themed?Ui.gradient(this,primary,accent,24,android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM):Ui.outlined(this,Ui.PANEL,24);if(themed)bg.setStroke(Ui.dp(this,1),0x33FFFFFF);card.setBackground(bg);card.setClipToOutline(true);Ui.lift(card,10);
+  FrameLayout top=new FrameLayout(this);card.addView(top,new LinearLayout.LayoutParams(-1,Ui.dp(this,176)));
+  Media.Banner banner=new Media.Banner(this);top.addView(banner,new FrameLayout.LayoutParams(-1,Ui.dp(this,128)));banner.show(this,p.optString("banner_url"),themed?primary:Ui.ACCENT,themed?accent:Ui.ACCENT2);
+  Decor.AvatarView avatar=new Decor.AvatarView(this);avatar.frame(Decor.style(byId,p.optString("equipped_frame","frame_moon")));avatar.person(Decor.name(p),p.optString("avatar_url"));
+  FrameLayout.LayoutParams ap=new FrameLayout.LayoutParams(Ui.dp(this,96),Ui.dp(this,96),Gravity.BOTTOM|Gravity.START);ap.leftMargin=Ui.dp(this,16);top.addView(avatar,ap);
+  LinearLayout body=Ui.column(this);body.setPadding(Ui.dp(this,18),Ui.dp(this,8),Ui.dp(this,18),Ui.dp(this,18));card.addView(body);
+  LinearLayout nameRow=Ui.row(this);TextView name=Ui.title(this,Decor.name(p),22);name.setMaxLines(2);name.setEllipsize(TextUtils.TruncateAt.END);Decor.nameColor(name,Decor.style(byId,p.optString("equipped_color","color_default")));nameRow.addView(name,new LinearLayout.LayoutParams(-2,-2));
+  CharSequence badge=Decor.badge(Decor.style(byId,p.optString("equipped_badge")));if(badge.length()>0){TextView glyph=Ui.text(this,"",20,Ui.TEXT);glyph.setText(badge);glyph.setPadding(Ui.dp(this,8),0,0,0);JSONObject d=byId.get(p.optString("equipped_badge"));glyph.setContentDescription("Значок: "+(d==null?"":d.optString("title")));nameRow.addView(glyph);}
+  body.addView(nameRow);
+  String handle="@"+p.optString("username")+(p.optString("pronouns").isEmpty()?"":"  ·  "+p.optString("pronouns"));Ui.add(body,Ui.text(this,handle,13,0xCCFFFFFF),4);
+  if(p.optBoolean("banned")){TextView ban=Ui.badge(this,0x55FF4D67,Ui.TEXT);ban.setText("Аккаунт заблокирован");Ui.add(body,ban,8);}
+  String statusText=p.optString("status");
+  if(!statusText.isEmpty()||own){TextView status=Ui.text(this,statusText.isEmpty()?"Добавь статус — о чём сейчас твой вечер?":statusText,14,statusText.isEmpty()?0x99FFFFFF:Ui.TEXT);status.setPadding(Ui.dp(this,12),Ui.dp(this,10),Ui.dp(this,12),Ui.dp(this,10));status.setBackground(Ui.shape(this,0x33000000,14));Ui.add(body,status,12);}
+  String bio=p.optString("bio");
+  if(!bio.isEmpty()){LinearLayout about=Ui.column(this);about.setPadding(Ui.dp(this,12),Ui.dp(this,10),Ui.dp(this,12),Ui.dp(this,12));about.setBackground(Ui.shape(this,0x33000000,14));TextView head=Ui.text(this,"ОБО МНЕ",11,0xBBFFFFFF);head.setTypeface(Ui.MEDIUM);head.setLetterSpacing(.08f);about.addView(head);Ui.add(about,Ui.text(this,bio,14,Ui.TEXT),6);Ui.add(body,about,10);}
+  body.setTag(card);return body;
+ }
+
  void editProfile(){
   LinearLayout panel=Ui.column(this);
-  EditText display=input("Имя в профиле",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);display.setText(profile.optString("display_name"));display.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(32)});Ui.add(panel,label("Имя"),8);Ui.add(panel,display,6);
-  EditText nick=input("Ник",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);nick.setText(profile.optString("username"));nick.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(20)});Ui.add(panel,label("Ник — латиница, цифры и _"),14);Ui.add(panel,nick,6);
-  EditText status=input("О чём сейчас твой вечер?",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);status.setText(profile.optString("status"));status.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(80)});Ui.add(panel,label("Статус"),14);Ui.add(panel,status,6);
-  // Аватар: буква ника или постер одного из аниме витрины.
+  // Аватар и баннер: загрузка файлов (PNG/JPEG/WebP/GIF/WebM) или прежние варианты.
+  String[] avatar={profile.optString("avatar_url")},bannerUrl={profile.optString("banner_url")};
+  Ui.add(panel,label("Аватар и баннер"),4);
+  Ui.add(panel,Ui.text(this,"Картинки обрезаются и сжимаются автоматически. GIF и WebM — аватар до 4 МБ и 640×640, баннер до 8 МБ и 1920×1080, видео до 15 секунд.",12,Ui.MUTED),4);
+  LinearLayout uploads=Ui.row(this);Button upAvatar=Ui.tonal(this,"Аватар…"),upBanner=Ui.tonal(this,"Баннер…");for(Button b:new Button[]{upAvatar,upBanner}){b.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"upload",Ui.ACCENT,18),null,null,null);b.setCompoundDrawablePadding(Ui.dp(this,6));}
+  uploads.addView(upAvatar,new LinearLayout.LayoutParams(0,-2,1));LinearLayout.LayoutParams ubp=new LinearLayout.LayoutParams(0,-2,1);ubp.leftMargin=Ui.dp(this,8);uploads.addView(upBanner,ubp);Ui.add(panel,uploads,10);
   List<String> labels=new ArrayList<>();List<String> urls=new ArrayList<>();labels.add("Первая буква ника");urls.add("");
-  JSONArray showcase=profile.optJSONArray("showcase");if(showcase!=null)for(int i=0;i<showcase.length();i++){JSONObject item=showcase.optJSONObject(i);if(item!=null&&item.optString("poster").startsWith("https://")){labels.add(item.optString("title"));urls.add(item.optString("poster"));}}
-  String[] avatar={profile.optString("avatar_url")};Button avatarField=Ui.field(this,"Аватар");int known=urls.indexOf(avatar[0]);Ui.fieldValue(avatarField,"Аватар",labels.get(Math.max(0,known)));
-  avatarField.setOnClickListener(v->Ui.choose(this,"Аватар",labels,labels.get(Math.max(0,urls.indexOf(avatar[0]))),choice->{avatar[0]=urls.get(labels.indexOf(choice));Ui.fieldValue(avatarField,"Аватар",choice);}));Ui.add(panel,avatarField,14);
-  if(labels.size()==1)Ui.add(panel,Ui.text(this,"Добавь аниме в витрину, чтобы поставить постер на аватар.",12,Ui.MUTED),6);
-  TextView error=Ui.text(this,"",13,0xFFFF9A8B);error.setVisibility(View.GONE);Ui.add(panel,error,10);
+  if(avatar[0].contains("/storage/v1/object/public/media/")){labels.add("Загруженный аватар");urls.add(avatar[0]);}
+  JSONArray showcase=profile.optJSONArray("showcase");if(showcase!=null)for(int i=0;i<showcase.length();i++){JSONObject item=showcase.optJSONObject(i);if(item!=null&&item.optString("poster").startsWith("https://")){labels.add("Постер: "+item.optString("title"));urls.add(item.optString("poster"));}}
+  Button avatarField=Ui.field(this,"Аватар");Ui.fieldValue(avatarField,"Аватар",labels.get(Math.max(0,urls.indexOf(avatar[0]))));
+  avatarField.setOnClickListener(v->Ui.choose(this,"Аватар",labels,labels.get(Math.max(0,urls.indexOf(avatar[0]))),choice->{avatar[0]=urls.get(labels.indexOf(choice));Ui.fieldValue(avatarField,"Аватар",choice);}));Ui.add(panel,avatarField,8);
+  Button bannerField=Ui.field(this,"Баннер");Ui.fieldValue(bannerField,"Баннер",bannerUrl[0].isEmpty()?"Градиент цветов темы":"Загруженный баннер");
+  bannerField.setOnClickListener(v->Ui.choose(this,"Баннер",bannerUrl[0].isEmpty()?Arrays.asList("Градиент цветов темы"):Arrays.asList("Загруженный баннер","Убрать баннер"),bannerUrl[0].isEmpty()?"Градиент цветов темы":"Загруженный баннер",choice->{if(choice.equals("Убрать баннер")){bannerUrl[0]="";Ui.fieldValue(bannerField,"Баннер","Градиент цветов темы");}}));Ui.add(panel,bannerField,8);
+  // Тексты.
+  EditText display=input("Имя в профиле",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);display.setText(profile.optString("display_name"));display.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(32)});Ui.add(panel,label("Имя"),18);Ui.add(panel,display,6);
+  EditText nick=input("Ник",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);nick.setText(profile.optString("username"));nick.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(20)});Ui.add(panel,label("Ник — латиница, цифры и _"),14);Ui.add(panel,nick,6);
+  EditText pronouns=input("например: он/его",InputType.TYPE_CLASS_TEXT);pronouns.setText(profile.optString("pronouns"));pronouns.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(20)});Ui.add(panel,label("Местоимения"),14);Ui.add(panel,pronouns,6);
+  EditText status=input("О чём сейчас твой вечер?",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);status.setText(profile.optString("status"));status.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(80)});Ui.add(panel,label("Статус"),14);Ui.add(panel,status,6);
+  EditText bio=input("Пара слов о себе",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_MULTI_LINE|InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);bio.setSingleLine(false);bio.setMinLines(3);bio.setMaxLines(6);bio.setGravity(Gravity.TOP|Gravity.START);bio.setText(profile.optString("bio"));bio.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(190)});Ui.add(panel,label("Обо мне · до 190 символов"),14);Ui.add(panel,bio,6);
+  // Цвета темы профиля, как в Discord: основной сверху, акцент снизу.
+  String[] theme={profile.optString("theme_primary"),profile.optString("theme_accent")};
+  Ui.add(panel,label("Цвета темы профиля"),18);
+  Ui.add(panel,swatches(theme,0,"Верх"),8);Ui.add(panel,swatches(theme,1,"Низ"),8);
+  TextView error=Ui.text(this,"",13,0xFFFF8A8A);error.setVisibility(View.GONE);Ui.add(panel,error,10);
   Button save=Ui.button(this,"Сохранить",true);Ui.add(panel,save,16);
   Dialog dialog=Ui.sheet(this,"Профиль",panel,"Закрыть редактирование");
+  upAvatar.setOnClickListener(v->{dialog.dismiss();pick(PICK_AVATAR);});upBanner.setOnClickListener(v->{dialog.dismiss();pick(PICK_BANNER);});
   save.setOnClickListener(v->{
    String newNick=nick.getText().toString().trim().toLowerCase(Locale.ROOT);
    if(!Rewards.validUsername(newNick)){error.setText("Ник: 3–20 символов, латиница, цифры и _.");error.setVisibility(View.VISIBLE);return;}
-   boolean renamed=!newNick.equals(profile.optString("username"));dialog.dismiss();
-   background(()->{if(renamed)account.rpc("change_username",new JSONObject().put("p_username",newNick));return account.update(new JSONObject().put("p_display_name",display.getText().toString().trim()).put("p_status",status.getText().toString().trim()).put("p_avatar_url",avatar[0]));},result->{profile=result;renderProfile();});
+   boolean renamed=!newNick.equals(profile.optString("username"));dialog.dismiss();String oldAvatar=profile.optString("avatar_url"),oldBanner=profile.optString("banner_url");
+   background(()->{if(renamed)account.rpc("change_username",new JSONObject().put("p_username",newNick));
+     JSONObject result=account.update(new JSONObject().put("p_display_name",display.getText().toString().trim()).put("p_status",status.getText().toString().trim()).put("p_avatar_url",avatar[0])
+      .put("p_bio",bio.getText().toString().trim()).put("p_pronouns",pronouns.getText().toString().trim()).put("p_banner_url",bannerUrl[0]).put("p_theme_primary",theme[0]).put("p_theme_accent",theme[1]));
+     if(!oldAvatar.equals(avatar[0]))account.deleteOwn(oldAvatar);if(!oldBanner.equals(bannerUrl[0]))account.deleteOwn(oldBanner);return result;},
+    result->{profile=result;renderProfile();});
   });
+ }
+ static final String[] THEME_COLORS={"","#FF4D67","#FF8A3D","#FFC14D","#4ADE80","#22D3EE","#3B82F6","#8B5CF6","#EC4899","#F5F5F7","#2A2A33","#0E0E11"};
+ /** Ряд образцов цвета; первый — «без цвета». */
+ View swatches(String[] theme,int index,String title){
+  LinearLayout row=Ui.row(this);TextView name=Ui.text(this,title,13,Ui.MUTED);row.addView(name,new LinearLayout.LayoutParams(Ui.dp(this,44),-2));
+  HorizontalScrollView scroll=new HorizontalScrollView(this);scroll.setHorizontalScrollBarEnabled(false);LinearLayout list=Ui.row(this);scroll.addView(list);row.addView(scroll,new LinearLayout.LayoutParams(0,-2,1));
+  List<View> all=new ArrayList<>();
+  Runnable paint=()->{for(int i=0;i<all.size();i++){String c=THEME_COLORS[i];boolean on=c.equalsIgnoreCase(theme[index]);android.graphics.drawable.GradientDrawable d=c.isEmpty()?Ui.shape(this,Ui.RAISED,18):Ui.shape(this,Rewards.color(c,0),18);d.setStroke(Ui.dp(this,on?3:1),on?Ui.TEXT:Ui.LINE);all.get(i).setBackground(d);all.get(i).setContentDescription((c.isEmpty()?"Без цвета":"Цвет "+c)+(on?", выбран":""));}};
+  for(int i=0;i<THEME_COLORS.length;i++){String c=THEME_COLORS[i];TextView sw=Ui.text(this,c.isEmpty()?"✕":"",14,Ui.MUTED);sw.setGravity(Gravity.CENTER);sw.setClickable(true);sw.setFocusable(true);sw.setOnClickListener(v->{theme[index]=c;paint.run();});LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(Ui.dp(this,36),Ui.dp(this,36));lp.rightMargin=Ui.dp(this,8);list.addView(sw,lp);all.add(sw);}
+  paint.run();return row;
+ }
+
+ // ───── Загрузка аватара и баннера ─────
+ void pick(int request){
+  Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*").putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"image/png","image/jpeg","image/webp","image/gif","video/webm"});
+  try{startActivityForResult(intent,request);}catch(android.content.ActivityNotFoundException e){Toast.makeText(this,"Не найдено приложение для выбора файлов",Toast.LENGTH_LONG).show();}
+ }
+ @Override protected void onActivityResult(int request,int result,Intent data){
+  super.onActivityResult(request,result,data);
+  if(result!=RESULT_OK||data==null||data.getData()==null||(request!=PICK_AVATAR&&request!=PICK_BANNER))return;
+  boolean banner=request==PICK_BANNER;android.net.Uri uri=data.getData();String mime=getContentResolver().getType(uri);
+  Toast.makeText(this,banner?"Загружаем баннер…":"Загружаем аватар…",Toast.LENGTH_SHORT).show();
+  String old=profile.optString(banner?"banner_url":"avatar_url");
+  background(()->{
+   byte[] bytes;try(java.io.InputStream in=getContentResolver().openInputStream(uri);java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream()){if(in==null)throw new java.io.IOException("Файл недоступен");byte[] buf=new byte[16384];int n;while((n=in.read(buf))!=-1){if(out.size()+n>12*1024*1024)throw new java.io.IOException("Файл больше 12 МБ.");out.write(buf,0,n);}bytes=out.toByteArray();}
+   Media.Prepared prepared=Media.prepare(this,bytes,mime,banner);
+   String url=account.upload((banner?"banner-":"avatar-")+System.currentTimeMillis()+"."+prepared.ext,prepared.data,prepared.mime);
+   JSONObject updated=account.update(new JSONObject().put(banner?"p_banner_url":"p_avatar_url",url));
+   account.deleteOwn(old);return updated;},
+   updated->{profile=updated;renderProfile();Toast.makeText(this,banner?"Баннер обновлён":"Аватар обновлён",Toast.LENGTH_SHORT).show();});
  }
 
  void editShowcase(){

@@ -21,6 +21,8 @@ final class Anime {
  String genres(){JSONArray all=raw.optJSONArray("genres");if(all==null)return "";List<String>result=new ArrayList<>();for(int i=0;i<all.length()&&result.size()<4;i++){Object value=all.opt(i);String name=value instanceof JSONObject?((JSONObject)value).optString("title"):value instanceof String?(String)value:"";if(!name.isEmpty())result.add(name);}return String.join(" · ",result);}
  /** Число серий из API (episodes.count), 0 — если неизвестно. */
  int totalEpisodes(){JSONObject e=raw.optJSONObject("episodes");return e==null?0:Math.max(e.optInt("count"),0);}
+ /** Возрастной рейтинг числом (0, 6, 12, 16, 18) или -1, если неизвестен. */
+ int ageValue(){JSONObject a=raw.optJSONObject("min_age");return a==null?-1:a.optInt("value",-1);}
  /** Прогресс из облачного списка, например «3 из 12». */
  String progress(){return raw.optString("yoru_progress");}
  String score(){return rating>0?String.format(Locale.US,"★ %.1f",rating):"Без оценки";}
