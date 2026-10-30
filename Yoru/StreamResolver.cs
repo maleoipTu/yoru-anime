@@ -52,7 +52,9 @@ public static class StreamResolver
         var shift = int.Parse(shiftText);
         if (shift > 25) throw Changed();
         string route;
-        try { route = Encoding.UTF8.GetString(Convert.FromBase64String(encodedRoute)); } catch (FormatException) { throw Changed(); }
+        var padded = encodedRoute.TrimEnd('=');
+        padded = padded.PadRight(padded.Length + (4 - padded.Length % 4) % 4, '=');
+        try { route = Encoding.UTF8.GetString(Convert.FromBase64String(padded)); } catch (FormatException) { throw Changed(); }
         if (!Regex.IsMatch(route, "^/[a-zA-Z0-9_/-]+$")) throw Changed();
         var endpoint = new Uri(pageUri, route);
         if (!SameOrigin(pageUri, endpoint)) throw Changed();
@@ -99,7 +101,10 @@ public static class StreamResolver
         if (!value.StartsWith("//") && !value.StartsWith("https://"))
         {
             var chars = value.Select(c => c is >= 'A' and <= 'Z' ? (char)('A' + (c - 'A' + shift) % 26) : c is >= 'a' and <= 'z' ? (char)('a' + (c - 'a' + shift) % 26) : c).ToArray();
-            try { result = Encoding.UTF8.GetString(Convert.FromBase64String(new string(chars))); } catch (FormatException) { throw Changed(); }
+            // Kodik отдаёт Base64 без «=» на конце (Java это допускает, .NET — нет): дополняем до кратности 4.
+            var text = new string(chars).TrimEnd('=');
+            text = text.PadRight(text.Length + (4 - text.Length % 4) % 4, '=');
+            try { result = Encoding.UTF8.GetString(Convert.FromBase64String(text)); } catch (FormatException) { throw Changed(); }
         }
         return result.StartsWith("//") ? "https:" + result : result;
     }

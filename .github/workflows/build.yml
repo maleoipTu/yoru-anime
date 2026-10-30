@@ -6,6 +6,11 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  # Версии сборок: основная версия + номер запуска CI (по ним работает автообновление).
+  YORU_WINDOWS_VERSION: 0.5.0.${{ github.run_number }}
+  YORU_ANDROID_VERSION_NAME: 0.8.0.${{ github.run_number }}
+  YORU_ANDROID_VERSION_CODE: ${{ github.run_number }}
 jobs:
   windows:
     runs-on: windows-latest
@@ -19,11 +24,21 @@ jobs:
       - name: Test desktop client
         run: dotnet run --project Tests/Tests.csproj -c Release -r win-x64 --self-contained true
       - name: Build Windows app
-        run: dotnet publish Yoru/Yoru.csproj -c Release -r win-x64 --self-contained true -p:DebugType=None -p:DebugSymbols=false -o outputs/Yoru
+        run: dotnet publish Yoru/Yoru.csproj -c Release -r win-x64 --self-contained true -p:DebugType=None -p:DebugSymbols=false -p:Version=${{ env.YORU_WINDOWS_VERSION }} -o outputs/Yoru
+      - name: Build installer (Inno Setup)
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress | Out-Null
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /Qp "/DAppVersion=$env:YORU_WINDOWS_VERSION" "/DSourceDir=$PWD\outputs\Yoru" "/DOutputDir=$PWD\outputs\setup" installer\yoru.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed' }
       - uses: actions/upload-artifact@v4
         with:
           name: Yoru-Windows
           path: outputs/Yoru
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Yoru-Setup
+          path: outputs/setup/Yoru-Setup.exe
   android:
     runs-on: ubuntu-latest
     steps:
@@ -39,13 +54,35 @@ jobs:
           log-accepted-android-sdk-licenses: false
       - name: Prepare Android SDK
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      # Подпись постоянным ключом из секретов репозитория (если они заданы): только так обновления ставятся поверх.
+      - name: Signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.YORU_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/yoru.jks"
+            echo "YORU_STORE_FILE=$RUNNER_TEMP/yoru.jks" >> "$GITHUB_ENV"
+            echo "YORU_SIGNED=true" >> "$GITHUB_ENV"
+          else
+            echo "YORU_SIGNED=false" >> "$GITHUB_ENV"
+          fi
       - name: Build, test and lint Android
         working-directory: android
-        run: bash gradlew assembleDebug testDebugUnitTest lintDebug --console plain
+        env:
+          YORU_STORE_PASSWORD: ${{ secrets.YORU_STORE_PASSWORD }}
+          YORU_KEY_PASSWORD: ${{ secrets.YORU_KEY_PASSWORD }}
+        run: |
+          if [ "$YORU_SIGNED" = "true" ]; then tasks="assembleRelease lintRelease"; else tasks="assembleDebug lintDebug"; fi
+          bash gradlew $tasks testDebugUnitTest --console plain
+          mkdir -p ../outputs
+          if [ "$YORU_SIGNED" = "true" ]; then cp app/build/outputs/apk/release/app-release.apk ../outputs/Yoru-Android.apk; else cp app/build/outputs/apk/debug/app-debug.apk ../outputs/Yoru-Android.apk; fi
+          echo "$YORU_SIGNED" > ../outputs/signed.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: Yoru-Android-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: Yoru-Android
+          path: |
+            outputs/Yoru-Android.apk
+            outputs/signed.txt
   database:
     runs-on: ubuntu-latest
     services:
@@ -62,11 +99,12 @@ jobs:
       PGPASSWORD: postgres
     steps:
       - uses: actions/checkout@v4
-      - name: Check Supabase migration and account rules
+      - name: Check Supabase migrations and account rules
         run: bash Tests/database.sh
-  # Последняя сборка из main как pre-release «nightly»: постоянные прямые ссылки, скачиваются без входа в GitHub.
-  #   https://github.com/maleoipTu/yoru-anime/releases/download/nightly/Yoru-Windows.zip
-  #   https://github.com/maleoipTu/yoru-anime/releases/download/nightly/Yoru-Android-debug.apk
+  # Последняя сборка из main как pre-release «nightly» с latest.json для автообновления:
+  #   https://github.com/maleoipTu/yoru-anime/releases/download/nightly/latest.json
+  #   https://github.com/maleoipTu/yoru-anime/releases/download/nightly/Yoru-Setup.exe
+  #   https://github.com/maleoipTu/yoru-anime/releases/download/nightly/Yoru-Android.apk
   nightly:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [windows, android, database]
@@ -81,11 +119,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          SHORT_SHA: ${{ github.sha }}
         run: |
           (cd artifacts/Yoru-Windows && zip -qr ../../Yoru-Windows.zip .)
-          cp artifacts/Yoru-Android-debug/app-debug.apk Yoru-Android-debug.apk
-          sha256sum Yoru-Windows.zip Yoru-Android-debug.apk > SHA256SUMS.txt
+          cp artifacts/Yoru-Setup/Yoru-Setup.exe Yoru-Setup.exe
+          cp artifacts/Yoru-Android/Yoru-Android.apk Yoru-Android.apk
+          signed=$(cat artifacts/Yoru-Android/signed.txt)
+          base="https://github.com/$GH_REPO/releases/download/nightly"
+          jq -n --arg wv "$YORU_WINDOWS_VERSION" --arg ws "$(sha256sum Yoru-Setup.exe | cut -d' ' -f1)" \
+                --arg an "$YORU_ANDROID_VERSION_NAME" --argjson ac "$YORU_ANDROID_VERSION_CODE" --arg as "$(sha256sum Yoru-Android.apk | cut -d' ' -f1)" \
+                --argjson signed "$signed" --arg base "$base" --arg commit "${SHORT_SHA::7}" \
+            '{commit: $commit, windows: {version: $wv, url: ($base + "/Yoru-Setup.exe"), sha256: $ws},
+              android: {version_name: $an, version_code: $ac, url: ($base + "/Yoru-Android.apk"), sha256: $as, signed: $signed}}' > latest.json
+          sha256sum Yoru-Setup.exe Yoru-Windows.zip Yoru-Android.apk latest.json > SHA256SUMS.txt
           gh release delete nightly --yes --cleanup-tag || true
-          gh release create nightly Yoru-Windows.zip Yoru-Android-debug.apk SHA256SUMS.txt --prerelease --target "$GITHUB_SHA" \
-            --title "Последняя сборка (nightly)" \
-            --notes "Автоматическая сборка из main, коммит ${GITHUB_SHA::7}. Windows — переносная версия (распаковать и запустить Yoru.exe). Android — отладочная подпись: ставится поверх только отладочной версии. Подписанные релизы — в версиях без пометки pre-release."
+          gh release create nightly Yoru-Setup.exe Yoru-Windows.zip Yoru-Android.apk latest.json SHA256SUMS.txt --prerelease --target "$GITHUB_SHA" \
+            --title "Последняя сборка (Windows $YORU_WINDOWS_VERSION, Android $YORU_ANDROID_VERSION_NAME)" \
+            --notes "Автоматическая сборка из main, коммит ${SHORT_SHA::7}. Windows: Yoru-Setup.exe — установщик с автообновлением, Yoru-Windows.zip — переносная версия. Android: Yoru-Android.apk."

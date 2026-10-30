@@ -18,9 +18,9 @@ select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
 do $$ declare r jsonb; begin
   -- Старый клиент (4 параметра) продолжает работать.
   r := award_watch(7, 1, '1', 600);
-  assert (r->>'awarded')::bool and (r->>'points')::int = 15 and (r->>'streak')::int = 1, 'first award, streak 1: ' || r;
+  assert (r->>'awarded')::bool and (r->>'points')::int = 15 and (r->>'streak')::int = 1, 'first award, streak 1: ' || r::text;
   assert r->'achievements' @> '[{"id":"first_episode"}]', 'first_episode unlocked';
-  assert (r->>'balance')::int = 25, 'achievement points added: ' || r;
+  assert (r->>'balance')::int = 25 + case when r->'achievements' @> '[{"id":"night_owl"}]' then 20 else 0 end, 'achievement points added: ' || r::text;
   assert (select status from anime_lists where user_id = auth.uid() and anime_id = 7) = 'watching', 'auto list watching';
 end $$;
 reset role;
@@ -30,7 +30,7 @@ update profiles set last_watch_date = last_watch_date - 1 where username = 'alic
 set role authenticated;
 do $$ declare r jsonb; begin
   r := award_watch(7, 2, '2', 700, 'Фрирен', 'https://p/f.jpg', 2, 180);
-  assert (r->>'streak')::int = 2 and (r->>'streak_bonus')::int = 4 and (r->>'points')::int = 14, 'streak bonus: ' || r;
+  assert (r->>'streak')::int = 2 and (r->>'streak_bonus')::int = 4 and (r->>'points')::int = 14, 'streak bonus: ' || r::text;
   assert r->>'list' = 'completed', 'last episode completes list';
   assert r->'achievements' @> '[{"id":"finisher"}]', 'finisher unlocked';
   assert exists (select 1 from inventory where user_id = auth.uid() and decoration_id = 'badge_finisher'), 'exclusive reward granted';
@@ -74,7 +74,7 @@ do $$ declare r jsonb; begin
   assert my_friends()->0->>'state' = 'friend', 'now friends';
   assert jsonb_array_length(friend_feed()) = 1 and friend_feed()->0->>'title' = 'Фрирен', 'feed shows friend lists';
   r := public_profile('alice');
-  assert r->>'friendship' = 'friend' and r->'lists'->>'completed' = '1' and r->'achievements' @> '["finisher"]', 'public profile: ' || r;
+  assert r->>'friendship' = 'friend' and r->'lists'->>'completed' = '1' and r->'achievements' @> '["finisher"]', 'public profile: ' || r::text;
   assert (anime_rating(7)->>'average')::numeric = 9 and (anime_rating(7)->>'count')::int = 1, 'rating';
 end $$;
 -- Bob не видит чужие дружбы, но видит публичные списки.

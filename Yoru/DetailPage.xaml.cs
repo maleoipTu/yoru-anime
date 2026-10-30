@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 namespace Yoru;
-public partial class DetailWindow : Window
+public partial class DetailPage : UserControl
 {
     Anime anime;
     List<Episode> videos = [];
@@ -16,18 +16,18 @@ public partial class DetailWindow : Window
     bool refreshOnActivate;
     public bool WantsSettings { get; private set; }
     readonly SocialPanel social;
-    public DetailWindow(Anime item, YummyClient client, LocalStore local)
+    public DetailPage(Anime item, YummyClient client, LocalStore local)
     {
-        InitializeComponent(); WindowTheme.Apply(this); anime = item; api = client; store = local; Render();
+        InitializeComponent(); anime = item; api = client; store = local; Render();
         social = new SocialPanel(this, anime, store); ScrollBody.Children.Insert(0, social.Root);
         Loaded += async (_, _) => await social.Refresh();
-        Activated += async (_, _) => { if (refreshOnActivate) { refreshOnActivate = false; await social.Refresh(); } };
+        IsVisibleChanged += async (_, e) => { if (e.NewValue is true && refreshOnActivate) { refreshOnActivate = false; await social.Refresh(); } };
         Loaded += async (_, _) => await LoadVideos();
-        Closed += (_, _) => cts.Cancel();
+        Unloaded += (_, _) => cts.Cancel();
     }
     void Render()
     {
-        Title = anime.Title + " · Yoru"; AnimeTitle.Text = anime.Title;
+        Shell.Title(anime.Title); AnimeTitle.Text = anime.Title;
         MetaText.Text = anime.Meta; ScoreText.Text = anime.Score; GenresText.Text = anime.Genres; AgeText.Text = anime.Age;
         DescriptionText.Text = anime.Description.Length > 0 ? anime.Description : "Описание пока не добавлено.";
         if (Uri.TryCreate(anime.ImagePath, UriKind.Absolute, out var uri)) PosterImage.Source = new BitmapImage(uri);
@@ -84,14 +84,14 @@ public partial class DetailWindow : Window
     }
     void FavoriteClick(object sender, RoutedEventArgs e) { store.ToggleFavorite(anime); UpdateFavorite(); }
     void SiteClick(object sender, RoutedEventArgs e) => MainWindow.OpenLink("https://yummyani.me/catalog/item/" + Uri.EscapeDataString(anime.Alias));
-    void SetupClick(object sender, RoutedEventArgs e) { WantsSettings = true; Close(); }
+    void SetupClick(object sender, RoutedEventArgs e) { WantsSettings = true; Shell.Home("settings"); }
     async void RetryClick(object sender, RoutedEventArgs e) => await LoadVideos();
     void WatchClick(object sender, RoutedEventArgs e)
     {
         if (EpisodeBox.SelectedItem is not Episode video) return;
-        new PlayerWindow(anime, videos, video, store, AccountClient.Shared) { Owner = this }.ShowDialog();
+        Shell.Navigate(new PlayerPage(anime, videos, video, store, AccountClient.Shared));
         refreshOnActivate = true;
     }
     void ExpandClick(object sender, RoutedEventArgs e) { expanded = !expanded; DescriptionText.MaxHeight = expanded ? double.PositiveInfinity : 96; ExpandButton.Content = expanded ? "Свернуть описание ↑" : "Развернуть описание ↓"; }
-    void CloseClick(object sender, RoutedEventArgs e) => Close();
+    void CloseClick(object sender, RoutedEventArgs e) => Shell.Back();
 }

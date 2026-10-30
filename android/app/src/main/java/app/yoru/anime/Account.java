@@ -36,6 +36,8 @@ final class Account {
   store(result);return true;
  }
  void signIn(String email,String password) throws Exception {store(new JSONObject(call("POST","/auth/v1/token?grant_type=password",new JSONObject().put("email",email).put("password",password).toString(),null,null)));}
+ /** Письмо со ссылкой для сброса пароля. */
+ void recover(String email) throws Exception {call("POST","/auth/v1/recover",new JSONObject().put("email",email).toString(),null,null);}
  void signOut(){String access=prefs.getString("access","");prefs.edit().clear().apply();if(!access.isEmpty())Api.IO.execute(()->{try{call("POST","/auth/v1/logout","{}",access,null);}catch(Exception ignored){}});}
 
  void store(JSONObject session) throws JSONException {
@@ -116,6 +118,22 @@ final class Account {
  JSONArray feed() throws Exception {return (JSONArray)rpc("friend_feed",new JSONObject());}
  JSONArray search(String query) throws Exception {String q=query.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_]","");if(q.isEmpty())return new JSONArray();return get("/rest/v1/profiles?username=ilike.*"+q+"*&select=id,username,display_name,avatar_url,status,equipped_frame,equipped_badge,equipped_color,total_earned&order=username.asc&limit=20");}
  JSONObject publicProfile(String username) throws Exception {Object result=anonRpc("public_profile",new JSONObject().put("p_username",username));return result instanceof JSONObject?(JSONObject)result:null;}
+
+ // ───── Хранилище аватаров и баннеров ─────
+ /** Загружает файл в бакет media в папку пользователя и возвращает публичный адрес. */
+ String upload(String name,byte[] data,String mime) throws Exception {
+  String path=userId()+"/"+name;
+  HttpURLConnection c=(HttpURLConnection)new URL(URL+"/storage/v1/object/media/"+path).openConnection();
+  try{c.setRequestMethod("POST");c.setConnectTimeout(15000);c.setReadTimeout(60000);c.setDoOutput(true);c.setFixedLengthStreamingMode(data.length);
+   c.setRequestProperty("apikey",KEY);c.setRequestProperty("Authorization","Bearer "+token());c.setRequestProperty("Content-Type",mime);c.setRequestProperty("x-upsert","true");c.setRequestProperty("Cache-Control","max-age=31536000");
+   try(OutputStream out=c.getOutputStream()){out.write(data);}
+   int code=c.getResponseCode();if(code>=400){InputStream e=c.getErrorStream();throw new Failure(code,message(e==null?"":Api.read(e),code));}
+  }finally{c.disconnect();}
+  return URL+"/storage/v1/object/public/media/"+path;
+ }
+ /** Удаляет свой прежний файл, если адрес указывает на хранилище Yoru. */
+ void deleteOwn(String url){String prefix=URL+"/storage/v1/object/public/media/"+userId()+"/";if(url==null||!url.startsWith(prefix))return;try{call("DELETE","/storage/v1/object/media/"+url.substring(URL.length()+"/storage/v1/object/public/media/".length()),null,token(),null);}catch(Exception ignored){}}
+ boolean isAdmin(){try{return Boolean.TRUE.equals(rpc("is_admin",new JSONObject()));}catch(Exception e){return false;}}
 
  static String call(String method,String path,String body,String bearer,String accept) throws IOException {
   HttpURLConnection c=(HttpURLConnection)new URL(URL+path).openConnection();

@@ -74,6 +74,20 @@ final class Rewards {
  static String until(String iso){if(iso==null||iso.isEmpty())return "";long t=parse(iso)-86_400_000L;return java.time.Instant.ofEpochMilli(t).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("d MMMM",Locale.forLanguageTag("ru")));}
  static String days(int n){int m=n%100,k=n%10;return n+(m>=11&&m<=14?" дней":k==1?" день":k>=2&&k<=4?" дня":" дней");}
 
+ /**
+  * Правила загрузки анимированных аватаров и баннеров (статичные картинки приложение уменьшает само).
+  * Аватар: до 4 МБ и 640×640; баннер: до 8 МБ и 1920×1080; WebM — не длиннее 15 секунд. Пустая строка — файл подходит.
+  */
+ static String mediaProblem(boolean banner,String kind,long bytes,int width,int height,long durationMs){
+  long maxBytes=banner?8L*1024*1024:4L*1024*1024;int maxW=banner?1920:640,maxH=banner?1080:640;
+  if(bytes>maxBytes)return (banner?"Баннер":"Аватар")+" больше "+(maxBytes/1024/1024)+" МБ. Сожми файл или выбери другой.";
+  if(width<=0||height<=0)return "Не получилось определить размер файла.";
+  if(width>maxW||height>maxH)return "Слишком большое разрешение: "+width+"×"+height+". Максимум для "+(banner?"баннера":"аватара")+" — "+maxW+"×"+maxH+".";
+  if(kind.equals("webm")&&durationMs>15000)return "Видео длиннее 15 секунд. Обрежь его и попробуй снова.";
+  if(!banner&&Math.abs(width-height)>Math.max(width,height)*0.35)return "Анимированный аватар должен быть почти квадратным.";
+  return "";
+ }
+
  /** Считает реальное время воспроизведения одной серии. */
  static final class WatchMeter {
   long episode=-1,watched,lastTick;boolean sent;

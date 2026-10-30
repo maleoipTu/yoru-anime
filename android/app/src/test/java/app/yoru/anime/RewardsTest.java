@@ -19,4 +19,14 @@ public class RewardsTest {
     @Test public void explainsServerErrors(){assertEquals("Не хватает очков.",Rewards.error("not_enough_points P0001"));assertEquals("Неверная почта или пароль.",Rewards.error("invalid_credentials Invalid login credentials"));assertTrue(Rewards.skipReason("cooldown").contains("4 минуты"));assertEquals("",Rewards.skipReason("ok"));}
     @Test public void seasonalWindow(){long now=java.time.OffsetDateTime.parse("2026-10-30T12:00:00+00:00").toInstant().toEpochMilli();assertTrue(Rewards.onSale("2026-10-24T00:00:00+00:00","2026-11-04T00:00:00+00:00",now));assertFalse(Rewards.onSale("2026-12-20T00:00:00+00:00","2027-01-15T00:00:00+00:00",now));assertTrue(Rewards.onSale("","",now));assertTrue(Rewards.onSale(null,null,now));}
     @Test public void russianDays(){assertEquals("1 день",Rewards.days(1));assertEquals("3 дня",Rewards.days(3));assertEquals("5 дней",Rewards.days(5));assertEquals("11 дней",Rewards.days(11));assertEquals("22 дня",Rewards.days(22));}
+    @Test public void mediaRules(){
+        assertEquals("",Rewards.mediaProblem(false,"gif",3_000_000,512,512,0));
+        assertTrue(Rewards.mediaProblem(false,"gif",5_000_000,512,512,0).contains("4 МБ"));
+        assertTrue(Rewards.mediaProblem(false,"gif",1_000_000,1024,1024,0).contains("640"));
+        assertTrue(Rewards.mediaProblem(false,"webm",1_000_000,480,480,20_000).contains("15 секунд"));
+        assertTrue(Rewards.mediaProblem(false,"gif",1_000_000,600,200,0).contains("квадратным"));
+        assertEquals("",Rewards.mediaProblem(true,"webm",7_000_000,1500,500,10_000));
+        assertTrue(Rewards.mediaProblem(true,"gif",9_000_000,1500,500,0).contains("8 МБ"));
+    }
+    @Test public void updatesOnlyForNewerBuilds(){assertTrue(Updater.newer(31,30));assertFalse(Updater.newer(30,30));assertFalse(Updater.newer(9,30));}
 }
