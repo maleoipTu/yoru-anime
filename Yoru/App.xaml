@@ -19,6 +19,9 @@
   <!-- Ночное небо для шапок и тёплая «заря» для акцентных панелей. -->
   <LinearGradientBrush x:Key="NightSky" StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#1B1528" Offset="0"/><GradientStop Color="#15121E" Offset="0.5"/><GradientStop Color="#141418" Offset="1"/></LinearGradientBrush>
   <LinearGradientBrush x:Key="DuskPanel" StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#2E1622" Offset="0"/><GradientStop Color="#21141E" Offset="0.5"/><GradientStop Color="#18141C" Offset="1"/></LinearGradientBrush>
+  <!-- Маски мягкого края: боковые панели растворяются в фон без видимого шва (плавная кривая, ~110 px из 248 / ~90 из 340). -->
+  <LinearGradientBrush x:Key="SideFade" StartPoint="0,0.5" EndPoint="1,0.5"><GradientStop Color="#FF000000" Offset="0"/><GradientStop Color="#FF000000" Offset="0.55"/><GradientStop Color="#E6000000" Offset="0.68"/><GradientStop Color="#AD000000" Offset="0.78"/><GradientStop Color="#61000000" Offset="0.87"/><GradientStop Color="#24000000" Offset="0.94"/><GradientStop Color="#00000000" Offset="1"/></LinearGradientBrush>
+  <LinearGradientBrush x:Key="SideFadeLeft" StartPoint="0,0.5" EndPoint="1,0.5"><GradientStop Color="#00000000" Offset="0"/><GradientStop Color="#24000000" Offset="0.05"/><GradientStop Color="#61000000" Offset="0.1"/><GradientStop Color="#AD000000" Offset="0.16"/><GradientStop Color="#E6000000" Offset="0.22"/><GradientStop Color="#FF000000" Offset="0.28"/><GradientStop Color="#FF000000" Offset="1"/></LinearGradientBrush>
   <LinearGradientBrush x:Key="NavActive" StartPoint="0,0.5" EndPoint="1,0.5"><GradientStop Color="#3A1820" Offset="0"/><GradientStop Color="#1A3A1820" Offset="1"/></LinearGradientBrush>
   <!-- Звёздное поле: повторяющаяся плитка с точками разной яркости. Только для шапок. -->
   <DrawingBrush x:Key="StarField" TileMode="Tile" Viewport="0,0,240,170" ViewportUnits="Absolute" Viewbox="0,0,240,170" ViewboxUnits="Absolute" Stretch="None">
