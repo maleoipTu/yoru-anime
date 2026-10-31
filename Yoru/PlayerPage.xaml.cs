@@ -8,6 +8,8 @@ namespace Yoru;
 public partial class PlayerPage : UserControl
 {
     const string Host = "player.yoru.local";
+    // Отдельный адрес для видео: запросы к адресу файлов плеера обслуживает сам WebView2 и до приложения они могут не доходить.
+    const string MediaHost = "media.yoru.local";
     readonly Anime anime;
     readonly List<Episode> videos;
     readonly LocalStore store;
@@ -91,7 +93,7 @@ public partial class PlayerPage : UserControl
             core.Settings.IsPasswordAutosaveEnabled=false;
             core.Settings.IsGeneralAutofillEnabled=false;
             core.NewWindowRequested += (_,e) => e.Handled=true;
-            core.AddWebResourceRequestedFilter($"https://{Host}/proxy*", CoreWebView2WebResourceContext.All);
+            core.AddWebResourceRequestedFilter($"https://{MediaHost}/*", CoreWebView2WebResourceContext.All);
             core.WebResourceRequested += Proxy;
             core.DownloadStarting += (_,e) => e.Cancel=true;
             core.PermissionRequested += (_,e) => e.State=CoreWebView2PermissionState.Deny;
@@ -132,6 +134,7 @@ public partial class PlayerPage : UserControl
                         try { store.Started(anime,current); } catch(IOException) { Status("Плеер загружен · не удалось сохранить историю",state); }
                     }
                     else if(state=="ready" && nativeMode) _ = StartNative(current, navigationSession);
+                    else if(state=="debug") PlayerStatus.Text="Видео: "+ApiParser.Text(ApiParser.Field(doc.RootElement,"value"));
                     else if(state=="control") RoomControl(ApiParser.Number(ApiParser.Field(doc.RootElement,"value")), ApiParser.Field(doc.RootElement,"paused").ValueKind==JsonValueKind.True);
                     else if(state=="next") Move(1);
                     else if(state=="site") { forceSite=true; NavigateEpisode(current); }
@@ -236,7 +239,7 @@ public partial class PlayerPage : UserControl
         SavePrefs();
     }
     /// <summary>
-    /// Прокси видео: страница плеера запрашивает https://player.yoru.local/proxy?u=…, приложение скачивает с CDN с нужным Referer.
+    /// Прокси видео: страница плеера запрашивает https://media.yoru.local/proxy?u=…, приложение скачивает с CDN с нужным Referer.
     /// Ответ целиком читается в память и только потом отдаётся WebView2: потоковая передача сетевого ответа
     /// в WebView2 могла зависать навсегда (бесконечная загрузка без ошибки). Открытые диапазоны MP4 режутся на куски по 8 МБ.
     /// </summary>
@@ -249,6 +252,7 @@ public partial class PlayerPage : UserControl
         {
             var source=resolved;
             if(source==null || !nativeMode) { e.Response=core.Environment.CreateWebResourceResponse(null,403,"Forbidden",""); return; }
+            if(e.Request.Method=="OPTIONS") { e.Response=core.Environment.CreateWebResourceResponse(null,204,"No Content","Access-Control-Allow-Origin: *\r\nAccess-Control-Allow-Headers: *\r\nAccess-Control-Allow-Methods: GET\r\n"); return; }
             var query=new Uri(e.Request.Uri).Query;
             var target=query.StartsWith("?u=") ? Uri.UnescapeDataString(query[3..]) : "";
             var range=LimitRange(e.Request.Headers.Contains("Range") ? e.Request.Headers.GetHeader("Range") : null);
@@ -256,6 +260,8 @@ public partial class PlayerPage : UserControl
             timeout.CancelAfter(TimeSpan.FromSeconds(40));
             using var response=await StreamResolver.Fetch(target, source.Referer, range, timeout.Token);
             var bytes=await ReadLimited(response.Content, 64*1024*1024, timeout.Token);
+            if(IsPlaylist(target, response.Content.Headers.ContentType?.MediaType)) bytes=System.Text.Encoding.UTF8.GetBytes(AbsolutePlaylist(System.Text.Encoding.UTF8.GetString(bytes), target));
+            if((int)response.StatusCode>=400) Dispatcher.BeginInvoke(() => PlayerStatus.Text=$"Источник видео ответил {(int)response.StatusCode} · {new Uri(target).Host}");
             var headers=new System.Text.StringBuilder("Access-Control-Allow-Origin: *\r\nCache-Control: no-store\r\n");
             if(response.Content.Headers.ContentType is { } type) headers.Append("Content-Type: ").Append(type).Append("\r\n");
             headers.Append("Content-Length: ").Append(bytes.Length).Append("\r\n");
@@ -263,12 +269,29 @@ public partial class PlayerPage : UserControl
             headers.Append("Accept-Ranges: bytes\r\n");
             if(!closed) e.Response=core.Environment.CreateWebResourceResponse(new MemoryStream(bytes,false),(int)response.StatusCode,response.ReasonPhrase ?? "OK",headers.ToString());
         }
-        catch(Exception)
+        catch(Exception ex)
         {
+            if(!closed) Dispatcher.BeginInvoke(() => PlayerStatus.Text="Прокси видео: "+ex.GetType().Name+" · "+ex.Message);
             // Любая ошибка сети — 502: плеер покажет понятную ошибку вместо бесконечной загрузки.
             try { if(!closed) e.Response=core.Environment.CreateWebResourceResponse(null,502,"Bad Gateway",""); } catch(Exception) { }
         }
         finally { deferral.Complete(); }
+    }
+    static bool IsPlaylist(string url, string? mime) => (mime ?? "").Contains("mpegurl", StringComparison.OrdinalIgnoreCase) || Uri.TryCreate(url, UriKind.Absolute, out var u) && u.AbsolutePath.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase);
+    /// <summary>Относительные адреса в плейлисте HLS превращаются в абсолютные адреса источника — иначе плеер считал бы их от адреса прокси.</summary>
+    public static string AbsolutePlaylist(string text, string playlistUrl)
+    {
+        var baseUri = new Uri(playlistUrl);
+        string Abs(string value) => Uri.TryCreate(baseUri, value.Trim(), out var u) ? u.AbsoluteUri : value;
+        var lines = text.Replace("\r\n", "\n").Split('\n');
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            if (line.Length == 0) continue;
+            if (!line.StartsWith('#')) lines[i] = Abs(line);
+            else if (line.Contains("URI=\"")) lines[i] = System.Text.RegularExpressions.Regex.Replace(line, "URI=\"([^\"]+)\"", m => "URI=\"" + Abs(m.Groups[1].Value) + "\"");
+        }
+        return string.Join("\n", lines);
     }
     /// <summary>«bytes=N-» превращается в «bytes=N-(N+8 МБ)», чтобы не тянуть весь фильм одним ответом.</summary>
     public static string? LimitRange(string? range)

@@ -53,7 +53,10 @@ button.primary{background:var(--accent);color:var(--on);font-weight:600}
  const session=new URLSearchParams(location.search).get('session');
  const send=(state,value,extra={})=>window.chrome?.webview?.postMessage({state,value,session,...extra});
  let intro={}, applying=0, streams=[], current=0, speed=1, hls=null, autoNext=false, hasNext=false, countdown=0, countdownTimer=0, hideTimer=0, lastReport=0, pendingStart=0;
- const proxy=u=>'https://player.yoru.local/proxy?u='+encodeURIComponent(u);
+ // Видео идёт через прокси приложения на отдельном адресе (не на адресе файлов плеера).
+ const MEDIA='https://media.yoru.local/proxy?u=';
+ const proxy=u=>MEDIA+encodeURIComponent(u);
+ let netRetries=0;
  const time=s=>{s=Math.max(0,Math.floor(s||0));const h=Math.floor(s/3600),m=Math.floor(s/60)%60,x=s%60;return (h?h+':'+String(m).padStart(2,'0'):String(m).padStart(2,'0'))+':'+String(x).padStart(2,'0');};
 
  function message(title,text,actions=[]){$('mtitle').textContent=title;$('mtext').textContent=text;const box=$('mactions');box.replaceChildren();for(const [label,fn,primary] of actions){const b=document.createElement('button');b.textContent=label;if(primary)b.className='primary';b.onclick=fn;b.style.margin='0 4px';box.appendChild(b);}$('message').style.display=title?'block':'none';}
@@ -67,8 +70,14 @@ button.primary{background:var(--accent);color:var(--on);font-weight:600}
   if(s.mime==='application/x-mpegURL'){
    if(window.Hls&&Hls.isSupported()){
     // Плейлист и сегменты запрашиваются через прокси приложения, а относительные адреса считаются от исходного URL.
-    hls=new Hls({xhrSetup:(xhr,url)=>{xhr.open('GET',url.startsWith('https://player.yoru.local/')?url:proxy(url),true);},maxBufferLength:60});
-    hls.on(Hls.Events.ERROR,(e,data)=>{if(data.fatal){if(data.type===Hls.ErrorTypes.NETWORK_ERROR&&!data.retried){data.retried=true;hls.startLoad();}else fail('Не получилось воспроизвести видео. Попробуй другое качество или источник.');}});
+    netRetries=0;
+    hls=new Hls({xhrSetup:(xhr,url)=>{xhr.open('GET',url.startsWith(MEDIA)?url:proxy(url),true);},maxBufferLength:60,manifestLoadingMaxRetry:2,levelLoadingMaxRetry:2,fragLoadingMaxRetry:3});
+    hls.on(Hls.Events.ERROR,(e,data)=>{
+     const code=data.response&&data.response.code;send('debug',(data.details||'')+(code?' '+code:''),{fatal:!!data.fatal});
+     if(!data.fatal)return;
+     if(data.type===Hls.ErrorTypes.NETWORK_ERROR&&netRetries++<2){hls.startLoad();return;}
+     fail('Не получилось загрузить видео ('+(data.details||'ошибка')+(code?', '+code:'')+'). Попробуй другое качество или источник.');
+    });
     hls.loadSource(s.url);hls.attachMedia(video);
    } else if(video.canPlayType('application/vnd.apple.mpegurl')) video.src=proxy(s.url);
    else { fail('Встроенный плеер не загрузился. Открой плеер сайта.'); return; }
@@ -77,7 +86,7 @@ button.primary{background:var(--accent);color:var(--on);font-weight:600}
   summary();
  }
  let watchdog=0;
- function watch(){clearTimeout(watchdog);watchdog=setTimeout(()=>{if(video.readyState<3&&!video.paused)fail('Видео слишком долго не загружается. Повтори или выбери другое качество.');},35000);}
+ function watch(){clearTimeout(watchdog);watchdog=setTimeout(()=>{if(video.readyState<2)fail('Видео слишком долго не загружается. Повтори или выбери другое качество.');},35000);}
  function fail(text){spinner(false);send('error',text);message('Видео недоступно',text,[['Повторить',()=>load(current,video.currentTime),true],['Плеер сайта',()=>send('site')]]);}
  function summary(){$('summary').textContent=(streams[current]?.label||'Авто')+' · '+speed+'×';}
 
@@ -90,7 +99,7 @@ button.primary{background:var(--accent);color:var(--on);font-weight:600}
  function floatEmoji(e){const s=document.createElement('div');s.textContent=e;s.style.cssText='position:absolute;right:'+(30+Math.random()*80)+'px;bottom:120px;font-size:34px;transition:transform 2.2s ease-out,opacity 2.2s ease-out;pointer-events:none;z-index:9';document.body.appendChild(s);requestAnimationFrame(()=>{s.style.transform='translateY(-180px)';s.style.opacity='0';});setTimeout(()=>s.remove(),2400);}
  video.addEventListener('waiting',()=>{spinner(true);watch();});
  video.addEventListener('canplay',()=>spinner(false));
- video.addEventListener('error',()=>fail('Не получилось воспроизвести видео. Попробуй другое качество или источник.'));
+ video.addEventListener('error',()=>{const err=video.error;send('debug','media '+(err?err.code+' '+(err.message||''):''),{fatal:true});fail('Не получилось воспроизвести видео'+(err?' (код '+err.code+')':'')+'. Попробуй другое качество или источник.');});
  video.addEventListener('timeupdate',()=>{
   const t=video.currentTime,d=video.duration||0;clock.textContent=time(t)+' / '+(d?time(d):'--:--');
   const p=d?t/d*100:0;document.querySelector('#timeline .done').style.width=p+'%';document.querySelector('#timeline .knob').style.left=p+'%';
