@@ -5,7 +5,7 @@
 *{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px "Segoe UI",system-ui,sans-serif;overflow:hidden;user-select:none}
 #stage{position:relative;width:100%;height:100%}video{width:100%;height:100%;background:#000;display:block}
 #ui{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;transition:opacity .25s}
-#ui.hidden{opacity:0;cursor:none}
+#ui.hidden{opacity:0}html.idle,html.idle *{cursor:none!important}
 .shade{position:absolute;left:0;right:0;bottom:0;height:150px;background:linear-gradient(transparent,#000c);pointer-events:none}
 .bar{position:relative;display:flex;align-items:center;gap:8px;padding:0 18px 14px}
 button{font:inherit;color:var(--text);background:#0008;border:0;border-radius:20px;padding:8px 14px;cursor:pointer;min-height:36px}
@@ -141,6 +141,11 @@ button.primary{background:var(--accent);color:var(--on);font-weight:600}
  timeline.addEventListener('pointerdown',e=>{timeline.setPointerCapture(e.pointerId);scrub(e);timeline.onpointermove=scrub;});
  timeline.addEventListener('pointerup',()=>{timeline.onpointermove=null;});
  document.addEventListener('mousemove',showUi);
+ // Курсор прячется через 15 секунд бездействия (и на паузе); любое движение мыши или клавиша возвращают его.
+ let idleTimer=0;
+ function idle(){if(menu.style.display==='block')return arm();document.documentElement.classList.add('idle');if(!video.paused)ui.classList.add('hidden');}
+ function arm(){document.documentElement.classList.remove('idle');clearTimeout(idleTimer);idleTimer=setTimeout(idle,15000);}
+ for(const ev of ['mousemove','mousedown','keydown','wheel'])document.addEventListener(ev,arm,{passive:true});arm();
  // ───── Громкость: кнопка, ползунок, ↑/↓, колесо мыши над видео, M — выключить звук. Уровень запоминается. ─────
  const vol=$('vol'),mute=$('mute');let osdTimer=0,volSave=0;
  function paintVolume(){const v=video.muted?0:Math.round(video.volume*100);vol.value=v;vol.style.setProperty('--v',v+'%');mute.textContent=v===0?'🔇':v<50?'🔉':'🔊';mute.setAttribute('aria-label',video.muted?'Включить звук':'Выключить звук');}
@@ -176,7 +181,7 @@ button.primary{background:var(--accent);color:var(--on);font-weight:600}
 
  window.chrome?.webview?.addEventListener('message',e=>{
   const m=e.data;if(!m||m.session!==session)return;
-  if(m.cmd==='load'){streams=m.streams||[];speed=m.speed||1;if(typeof m.volume==='number'){video.volume=Math.max(0,Math.min(1,m.volume));video.muted=!!m.muted;paintVolume();}autoNext=!!m.autoNext;hasNext=!!m.hasNext;let i=streams.findIndex(s=>s.label===m.quality);load(i<0?0:i,m.start||0);}
+  if(m.cmd==='idle'){idle();return;}if(m.cmd==='active'){arm();showUi();return;}if(m.cmd==='load'){streams=m.streams||[];speed=m.speed||1;if(typeof m.volume==='number'){video.volume=Math.max(0,Math.min(1,m.volume));video.muted=!!m.muted;paintVolume();}autoNext=!!m.autoNext;hasNext=!!m.hasNext;let i=streams.findIndex(s=>s.label===m.quality);load(i<0?0:i,m.start||0);}
   else if(m.cmd==='error'){spinner(false);message('Видео недоступно',m.text||'',[['Повторить',()=>send('retry'),true],['Плеер сайта',()=>send('site')]]);}
   else if(m.cmd==='pause')video.pause();
   else if(m.cmd==='intro')intro=m.intro||{};

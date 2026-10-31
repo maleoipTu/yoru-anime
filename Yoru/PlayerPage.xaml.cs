@@ -35,6 +35,7 @@ public partial class PlayerPage : UserControl
         SyncSelection(selected);
         SeriesBox.SelectionChanged += (_,_) => { if(!changing) UpdateSelectionHint(); };
         Loaded += async (_, _) => await InitializePlayer();
+        idleTimer.Tick += (_, _) => WatchCursor(); Loaded += (_, _) => idleTimer.Start(); Unloaded += (_, _) => idleTimer.Stop();
         Loaded += (_, _) => { Progress.Changed += ProgressChanged; RenderEpisodes(); };
         BuildSocial();
         Unloaded += (_, _) => { Progress.Changed -= ProgressChanged; if(closed) return; closed=true; if(lastSeconds>0) Progress.Track(store,anime,current,lastSeconds,duration,true); watchTimer.Stop(); SocialClosed(); resolveCts?.Cancel(); SavePrefs(); if(fullscreen) Shell.Fullscreen(false); Browser.Dispose(); };
@@ -368,6 +369,37 @@ public partial class PlayerPage : UserControl
         var progress=Progress.Get(store,anime.Id);
         PlayerWatchedText.Text=$"просмотрено {list.Count(v=>progress?.IsWatched(v.Number)==true)} из {list.Count}";
         PlayerEpisodes.Content=EpisodeGrid.Build(list,progress,current.Number,episode=>{ if(!initialized) { current=episode; _=InitializePlayer(); } else NavigateEpisode(episode); },episode=>Progress.Toggle(store,anime,episode.Number));
+    }
+    // ───── Курсор: прячется над видео после 15 секунд без движения мыши ─────
+    // Страница плеера сама следит за мышью, но внутрь кадра плеера сайта события не доходят — поэтому позицию курсора
+    // проверяет и приложение и сообщает странице «idle»/«active».
+    readonly DispatcherTimer idleTimer = new() { Interval = TimeSpan.FromMilliseconds(400) };
+    System.Drawing.Point lastCursor; DateTime cursorMoved = DateTime.Now; bool cursorHidden;
+    public static readonly TimeSpan CursorIdle = TimeSpan.FromSeconds(15);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] static extern IntPtr SetCursor(IntPtr cursor);
+    void WatchCursor()
+    {
+        if(closed || !initialized || Browser.CoreWebView2==null || !Browser.IsVisible) return;
+        var point=System.Windows.Forms.Cursor.Position;
+        bool inside;
+        try
+        {
+            var topLeft=Browser.PointToScreen(new Point(0,0)); var bottomRight=Browser.PointToScreen(new Point(Browser.ActualWidth,Browser.ActualHeight));
+            inside=point.X>=topLeft.X && point.X<bottomRight.X && point.Y>=topLeft.Y && point.Y<bottomRight.Y && Window.GetWindow(this)?.IsActive==true;
+        }
+        catch(InvalidOperationException) { return; }
+        if(point!=lastCursor || !inside)
+        {
+            lastCursor=point; cursorMoved=DateTime.Now;
+            if(cursorHidden) { cursorHidden=false; Post(new System.Text.Json.Nodes.JsonObject { ["cmd"]="active", ["session"]=navigationSession }); }
+            return;
+        }
+        if(!cursorHidden && DateTime.Now-cursorMoved>=CursorIdle)
+        {
+            cursorHidden=true;
+            Post(new System.Text.Json.Nodes.JsonObject { ["cmd"]="idle", ["session"]=navigationSession });
+            SetCursor(IntPtr.Zero);
+        }
     }
     void UpdateSelectionHint()
     {
