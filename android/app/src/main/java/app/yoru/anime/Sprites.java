@@ -63,6 +63,7 @@ final class Sprites {
  static String effectSheet(String type){switch(type){case "sparkles":return "fx_sparkle";case "bubbles":return "fx_bubble";case "petals":return "fx_petal";case "fireflies":return "fx_firefly";case "hearts":return "fx_heart";case "starfall":return "fx_starfall";case "bats":return "fx_bat";case "snow":return "fx_snow";default:return "";}}
  /** Частицы с глубиной: дальние мельче и бледнее, ближние крупнее. Возвращает false, если рисунка нет. */
  static boolean effect(Canvas canvas,Context c,String type,float w,float h,float density){
+  if(type.equals("night_watch"))return nightWatch(canvas,c,w,h,density);
   Sheet s=get(c,effectSheet(type),false);if(s==null)return false;
   long now=SystemClock.uptimeMillis();float sec=now/1000f*EFFECT_PACE;Random r=new Random(type.hashCode());
   int count;float base;
@@ -80,6 +81,24 @@ final class Sprites {
     case "bats":{float p=(sec*.06f*speed+phase)%1f;boolean left=i%2==1;float x=w*(left?1.15f-p*1.3f:p*1.3f-.15f),y=h*(.12f+ry*.6f)+(float)Math.sin(p*Math.PI*4+i)*14*density;int frame=s.frameAt(now+(long)(phase*1000));draw(canvas,s,frame,x,y,size*1.45f,size,(float)Math.sin(sec*2+i)*8,alpha,left,false);break;}
    }
   }
+  return true;
+ }
+
+ /** «Ночной дозор» (набор администрации): дальние звёзды, огоньки зари, размытое боке у «камеры», полумесяц и кометы; дальние слои медленнее. */
+ static boolean nightWatch(Canvas canvas,Context c,float w,float h,float density){
+  Sheet s=get(c,"fx_night",false);if(s==null)return false;Sheet comet=get(c,"fx_night_comet",false);
+  float sec=SystemClock.uptimeMillis()/1000f*EFFECT_PACE;Random r=new Random(4242);
+  for(int i=0;i<22;i++){float rx=r.nextFloat(),ry=r.nextFloat(),phase=r.nextFloat()*6.2832f,depth=.3f+r.nextFloat()*.4f;int variant=r.nextInt(2);
+   float span=w+40*density,x=(rx*span+sec*5*density*depth)%span-20*density;float tw=(float)Math.pow(.5+.5*Math.sin(sec*(1.1f+depth*1.6f)+phase),2);float size=(8+11*depth)*density*(.65f+.35f*tw);
+   draw(canvas,s,variant,x,ry*h*.9f,size,size,tw*45,(.25f+.75f*tw)*(.4f+.6f*depth),false,false);}
+  for(int i=0;i<10;i++){float rx=r.nextFloat(),speed=.6f+r.nextFloat()*.7f,phase=r.nextFloat(),depth=.55f+r.nextFloat()*.35f;int variant=2+r.nextInt(2);
+   float p=(sec*.045f*speed+phase)%1f,size=(11+14*depth)*density;
+   draw(canvas,s,variant,rx*w+(float)Math.sin(sec*.7f*speed+phase*9)*16*density*depth,h*(1.08f-p*1.2f),size,size,0,(float)Math.sin(p*Math.PI)*(.5f+.45f*depth),false,false);}
+  for(int i=0;i<3;i++){float rx=r.nextFloat(),ry=r.nextFloat(),phase=r.nextFloat(),size=(64+40*r.nextFloat())*density;float p=(sec*.02f+phase)%1f;
+   draw(canvas,s,4,w*(rx*.8f-.1f+p*.4f),h*(.15f+ry*.7f)+(float)Math.sin(sec*.3f+i)*12*density,size,size,0,.45f*(float)Math.sin(p*Math.PI),false,false);}
+  float ms=Math.min(36*density,h*.16f);draw(canvas,s,5,w-ms*1.4f+(float)Math.sin(sec*.35f)*6*density,ms*1.3f+(float)Math.cos(sec*.45f)*5*density,ms,ms,(float)Math.sin(sec*.5f)*8,.85f,false,false);
+  if(comet!=null)for(int i=0;i<2;i++){float rx=r.nextFloat(),ry=r.nextFloat(),phase=r.nextFloat();float p=(sec*.085f+phase)%1f;if(p>.32f)continue;float q=p/.32f,dx=-w*.55f,dy=h*.5f,len=Math.min(200*density,w*.34f);
+   draw(canvas,comet,0,w*(.6f+rx*.45f)+q*dx,h*(ry*.3f-.08f)+q*dy,len,len*comet.h/comet.w,(float)Math.toDegrees(Math.atan2(dy,dx)),(float)Math.sin(q*Math.PI),false,false);}
   return true;
  }
 
@@ -116,6 +135,17 @@ final class Sprites {
     float ms=Math.min(120*density,h*.7f);draw(canvas,m,0,w-ms*.55f,ms*.55f,ms,ms,(float)Math.sin(sec*.5)*3,1,false,false);
     if(cl!=null){float cw=ms*1.2f,drift=(float)Math.sin(sec*.25)*14*density;draw(canvas,cl,0,w-ms*.9f+drift,ms*.92f,cw,cw*cl.h/cl.w,0,.9f,false,false);}
     line.setStrokeWidth(1.5f*density);line.setShader(new LinearGradient(w,0,0,h,0xFFFFE9A8,0x226F7BFF,Shader.TileMode.CLAMP));canvas.drawRoundRect(box,radius,radius,line);return true;}
+   case "night_crown":{Sheet cs=get(c,"pf_night_corner",false),crest=get(c,"pf_night_crest",false);if(cs==null)return false;
+    // «Полуночная грань» (набор администрации): узорные углы, герб с полумесяцем и бегущий по краю свет зари.
+    line.setStrokeWidth(1.4f*density);line.setShader(new LinearGradient(0,0,w,h,new int[]{0xCCFFE3B8,0x55FF8A3D,0x664A3270,0x55FF8A3D,0xCCFF4D67},new float[]{0,.3f,.5f,.7f,1},Shader.TileMode.CLAMP));canvas.drawRoundRect(box,radius,radius,line);
+    float rr=Math.min(radius,Math.min(box.width(),box.height())/2),per=2*(box.width()+box.height())-8*rr+2*(float)Math.PI*rr,light=96*density;
+    if(per>light*3){line.setShader(new LinearGradient(0,0,w,0,0xFFFF4D67,0xFFFFE3B8,Shader.TileMode.CLAMP));line.setStrokeCap(Paint.Cap.ROUND);float[][] passes={{7,.2f},{3.5f,.35f},{1.8f,1}};
+     for(int k=0;k<2;k++)for(float[] pass:passes){float phase=((sec*62*density+k*per/2)%per);line.setPathEffect(new DashPathEffect(new float[]{light,per-light},per-phase));line.setStrokeWidth(pass[0]*density);line.setAlpha(Math.round(255*pass[1]));canvas.drawRoundRect(box,radius,radius,line);}
+     line.setPathEffect(null);line.setAlpha(255);}
+    float size=Math.min(Math.min(w,h)*.44f,130*density),breathe=.88f+.12f*(float)Math.sin(sec*1.3f);
+    corner(canvas,cs,0,0,0,size,false,false,breathe);corner(canvas,cs,0,w,0,size,true,false,breathe);corner(canvas,cs,0,0,h,size,false,true,breathe);corner(canvas,cs,0,w,h,size,true,true,breathe);
+    if(crest!=null&&w>size*2.6f){float cw=Math.min(150*density,w*.3f),ch=cw*crest.h/crest.w;draw(canvas,crest,0,w/2,ch/2+2*density,cw,ch,0,.9f+.1f*(float)Math.sin(sec*1.7f),false,false);}
+    return true;}
    case "neon":{float pulse=.75f+.25f*(float)Math.sin(sec*2.4)*(Math.sin(sec*13)>.96?.3f:1f);
     int[] loop={colors[0],colors[Math.min(1,colors.length-1)],colors[colors.length-1],colors[0]};SweepGradient sweep=new SweepGradient(w/2,h/2,loop,null);Matrix m=new Matrix();m.setRotate(sec*30%360,w/2,h/2);sweep.setLocalMatrix(m);
     float[][] passes={{16,.10f},{10,.18f},{6,.35f},{3,.8f}};for(float[] pass:passes){line.setStrokeWidth(pass[0]*density);line.setShader(sweep);line.setAlpha(Math.round(255*pass[1]*pulse));canvas.drawRoundRect(box,radius,radius,line);}
