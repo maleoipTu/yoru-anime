@@ -87,13 +87,24 @@ public static class Sprites
     /// <summary>Частицы с глубиной: дальние мельче и бледнее. false — рисунка нет, нужен процедурный эффект.</summary>
     public static bool Effect(DrawingContext dc, string type, double w, double h)
     {
+        if (type == "night_watch") return NightWatch(dc, w, h);
         var s = Get(EffectSheet(type)); if (s == null) return false;
         var now = Now; var sec = now / 1000.0 * EffectPace; var r = new Random(type.Length * 7919 + type[0]);
         var (count, size0) = type switch { "snow" => (40, 16.0), "starfall" => (6, 100.0), "bats" => (7, 50.0), "fireflies" => (18, 32.0), "bubbles" => (16, 32.0), "sparkles" => (22, 26.0), "hearts" => (14, 26.0), _ => (24, 22.0) };
-        for (var i = 0; i < count; i++)
+        // Слои глубины: дальние частицы мельче, бледнее и медленнее (параллакс); пара крупных полупрозрачных
+        // частиц «у самой камеры» для лепестков, снега, пузырей, сердечек и искр. Рисуем от дальних к ближним.
+        var near = type is "petals" or "snow" or "bubbles" or "hearts" or "sparkles" ? 2 : 0;
+        var parts = new (double Rx, double Ry, double Speed, double Phase, double Depth, int Variant, double Jitter, int I)[count + near];
+        for (var k = 0; k < parts.Length; k++)
         {
             double rx = r.NextDouble(), ry = r.NextDouble(), speed = .6 + r.NextDouble() * .8, phase = r.NextDouble(), depth = .45 + r.NextDouble() * .55; var variant = r.Next(Math.Max(1, s.Frames));
-            double size = size0 * depth * (.8 + r.NextDouble() * .4), alpha = .45 + .55 * depth;
+            if (k >= count) depth = 1.6 + depth * .3;
+            parts[k] = (rx, ry, speed * (.55 + .45 * Math.Min(depth, 1.3)), phase, depth, variant, .8 + r.NextDouble() * .4, k);
+        }
+        Array.Sort(parts, (pa, pb) => pa.Depth.CompareTo(pb.Depth));
+        foreach (var (rx, ry, speed, phase, depth, variant, jitter, i) in parts)
+        {
+            double size = size0 * depth * jitter, alpha = depth > 1.2 ? .3 : .45 + .55 * depth;
             switch (type)
             {
                 case "sparkles": { var life = (sec * .35 * speed + phase) % 1; var a = Math.Sin(life * Math.PI); Draw(dc, s, variant, rx * w, ry * h, size * (.4 + .6 * a), size * (.4 + .6 * a), life * 90, a * alpha); break; }
@@ -120,6 +131,44 @@ public static class Sprites
                 }
             }
         }
+        return true;
+    }
+
+    /// <summary>«Ночной дозор» (набор администрации): три слоя глубины — дальние звёзды, огоньки зари, размытое боке
+    /// у «камеры», плюс кометы. Дальние слои движутся медленнее (параллакс).</summary>
+    static bool NightWatch(DrawingContext dc, double w, double h)
+    {
+        var s = Get("fx_night"); if (s == null) return false;
+        var comet = Get("fx_night_comet");
+        var sec = Now / 1000.0 * EffectPace; var r = new Random(4242);
+        for (var i = 0; i < 26; i++)
+        {
+            double rx = r.NextDouble(), ry = r.NextDouble(), phase = r.NextDouble() * Math.PI * 2, depth = .3 + r.NextDouble() * .4; var variant = r.Next(2);
+            var x = (rx * (w + 40) + sec * 5 * depth) % (w + 40) - 20;
+            var tw = Math.Pow(.5 + .5 * Math.Sin(sec * (1.1 + depth * 1.6) + phase), 2);
+            var size = (9 + 12 * depth) * (.65 + .35 * tw);
+            Draw(dc, s, variant, x, ry * h * .9, size, size, tw * 45, (.25 + .75 * tw) * (.4 + .6 * depth));
+        }
+        for (var i = 0; i < 12; i++)
+        {
+            double rx = r.NextDouble(), speed = .6 + r.NextDouble() * .7, phase = r.NextDouble(), depth = .55 + r.NextDouble() * .35; var variant = 2 + r.Next(2);
+            var p = (sec * .045 * speed + phase) % 1; var size = 12 + 16 * depth;
+            Draw(dc, s, variant, rx * w + Math.Sin(sec * .7 * speed + phase * 9) * 18 * depth, h * (1.08 - p * 1.2), size, size, 0, Math.Sin(p * Math.PI) * (.5 + .45 * depth));
+        }
+        for (var i = 0; i < 3; i++)
+        {
+            double rx = r.NextDouble(), ry = r.NextDouble(), phase = r.NextDouble(), size = 80 + 50 * r.NextDouble();
+            var p = (sec * .02 + phase) % 1;
+            Draw(dc, s, 4, w * (rx * .8 - .1 + p * .4), h * (.15 + ry * .7) + Math.Sin(sec * .3 + i) * 12, size, size, 0, .45 * Math.Sin(p * Math.PI));
+        }
+        if (comet != null)
+            for (var i = 0; i < 2; i++)
+            {
+                double rx = r.NextDouble(), ry = r.NextDouble(), phase = r.NextDouble();
+                var p = (sec * .085 + phase) % 1; if (p > .32) continue; var q = p / .32;
+                double dx = -w * .55, dy = h * .5, len = Math.Min(220, w * .3);
+                Draw(dc, comet, 0, w * (.6 + rx * .45) + q * dx, h * (ry * .3 - .08) + q * dy, len, len * comet.H / comet.W, Math.Atan2(dy, dx) * 180 / Math.PI, Math.Sin(q * Math.PI));
+            }
         return true;
     }
 
@@ -206,6 +255,32 @@ public static class Sprites
                 if (cl != null) { var cw = ms * 1.2; Draw(dc, cl, 0, w - ms * .9 + Math.Sin(sec * .25) * 14, ms * .92, cw, cw * cl.H / cl.W, 0, .9); }
                 var edge = new LinearGradientBrush(Color.FromRgb(0xFF, 0xE9, 0xA8), Color.FromArgb(0x22, 0x6F, 0x7B, 0xFF), new Point(1, 0), new Point(0, 1)); edge.Freeze();
                 dc.DrawRoundedRectangle(null, Line(edge, 1.5), box, radius, radius);
+                return true;
+            }
+            case "night_crown":
+            {
+                // «Полуночная грань» (набор администрации): узорные углы, герб с полумесяцем и бегущий по краю свет зари.
+                var cornerSheet = Get("pf_night_corner"); var crest = Get("pf_night_crest"); if (cornerSheet == null) return false;
+                var edge = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(1, 1) };
+                edge.GradientStops.Add(new GradientStop(Color.FromArgb(0xCC, 0xFF, 0xE3, 0xB8), 0)); edge.GradientStops.Add(new GradientStop(Color.FromArgb(0x55, 0xFF, 0x8A, 0x3D), .3));
+                edge.GradientStops.Add(new GradientStop(Color.FromArgb(0x66, 0x4A, 0x32, 0x70), .5)); edge.GradientStops.Add(new GradientStop(Color.FromArgb(0x55, 0xFF, 0x8A, 0x3D), .7));
+                edge.GradientStops.Add(new GradientStop(Color.FromArgb(0xCC, 0xFF, 0x4D, 0x67), 1)); edge.Freeze();
+                dc.DrawRoundedRectangle(null, Line(edge, 1.4), box, radius, radius);
+                var dawn = new LinearGradientBrush(Color.FromRgb(0xFF, 0x4D, 0x67), Color.FromRgb(0xFF, 0xE3, 0xB8), 0); dawn.Freeze();
+                var r = Math.Min(radius, Math.Min(box.Width, box.Height) / 2);
+                var perimeter = 2 * (box.Width + box.Height) - 8 * r + 2 * Math.PI * r;
+                const double light = 110;
+                if (perimeter > light * 3)
+                    for (var k = 0; k < 2; k++)
+                        foreach (var (width, alpha) in new[] { (8.0, .2), (4.0, .35), (2.0, 1.0) })
+                        {
+                            var pen = new Pen(dawn, width) { DashCap = PenLineCap.Round, DashStyle = new DashStyle([light / width, (perimeter - light) / width], (-sec * 70 - k * perimeter / 2) / width) };
+                            pen.Freeze(); dc.PushOpacity(alpha); dc.DrawRoundedRectangle(null, pen, box, radius, radius); dc.Pop();
+                        }
+                var size = Math.Min(Math.Min(w, h) * .44, 150); var breathe = .88 + .12 * Math.Sin(sec * 1.3);
+                Corner(dc, cornerSheet, 0, 0, size, false, false, breathe); Corner(dc, cornerSheet, w, 0, size, true, false, breathe);
+                Corner(dc, cornerSheet, 0, h, size, false, true, breathe); Corner(dc, cornerSheet, w, h, size, true, true, breathe);
+                if (crest != null && w > size * 2.6) { var cw = Math.Min(168, w * .3); var ch = cw * crest.H / crest.W; Draw(dc, crest, 0, w / 2, ch / 2 + 2, cw, ch, 0, .9 + .1 * Math.Sin(sec * 1.7)); }
                 return true;
             }
             case "neon":

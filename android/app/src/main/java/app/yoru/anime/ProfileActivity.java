@@ -59,7 +59,10 @@ public final class ProfileActivity extends Activity {
  void refresh(){background(()->new Object[]{account.profile(),account.decorations(),account.inventory(),account.achievements(),account.unlocked(),account.isAdmin()},result->{profile=(JSONObject)result[0];decorations=(JSONArray)result[1];byId=Decor.index(decorations);@SuppressWarnings("unchecked")Set<String> inventory=(Set<String>)result[2];owned=inventory;achievements=(JSONArray)result[3];@SuppressWarnings("unchecked")Set<String> got=(Set<String>)result[4];unlocked=got;isAdmin=Boolean.TRUE.equals(result[5]);renderProfile();});}
 
  // ───── Чужой профиль ─────
- void loadPublic(){background(()->{JSONObject data=account.publicProfile(viewing);if(account.cachedDecorations().length()==0)account.decorations();if(account.cachedAchievements().length()==0)account.achievements();return data==null?new JSONObject():data;},data->{decorations=account.cachedDecorations();byId=Decor.index(decorations);achievements=account.cachedAchievements();renderPublic(data);});}
+ void loadPublic(){background(()->{JSONObject data=account.publicProfile(viewing);if(account.cachedDecorations().length()==0||missingStyles(data))account.decorations();if(account.cachedAchievements().length()==0)account.achievements();return data==null?new JSONObject():data;},data->{decorations=account.cachedDecorations();byId=Decor.index(decorations);achievements=account.cachedAchievements();renderPublic(data);});}
+ /** Надетое у профиля украшение, которого нет в сохранённом каталоге (например, новое админское), — каталог нужно обновить. */
+ boolean missingStyles(JSONObject data){JSONObject p=data==null?null:data.optJSONObject("profile");if(p==null)return false;Map<String,JSONObject> known=Decor.index(account.cachedDecorations());
+  for(String key:new String[]{"equipped_frame","equipped_badge","equipped_color","equipped_deco","equipped_effect","equipped_pframe"}){String id=p.optString(key);if(!id.isEmpty()&&!known.containsKey(id))return true;}return false;}
  void renderPublic(JSONObject data){
   content.removeAllViews();JSONObject p=data.optJSONObject("profile");
   if(p==null){LinearLayout card=card();card.addView(Ui.title(this,"Профиль не найден",18));Ui.add(card,Ui.text(this,"Пользователя @"+viewing+" нет — возможно, он сменил ник.",14,Ui.MUTED),8);content.addView(card);return;}
@@ -160,7 +163,7 @@ public final class ProfileActivity extends Activity {
   for(String[] kind:kinds){Button chip=Ui.chip(this,kind[1]);chip.setCompoundDrawablesRelativeWithIntrinsicBounds(null,null,null,null);Ui.chipState(chip,tab.equals(kind[0]));chip.setCompoundDrawablesRelativeWithIntrinsicBounds(null,null,null,null);chip.setContentDescription(kind[1]+(tab.equals(kind[0])?", выбрано":""));chip.setOnClickListener(v->{tab=kind[0];renderProfile();});LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-2,-2);cp.rightMargin=Ui.dp(this,8);tabs.addView(chip,cp);}
   HorizontalScrollView tabScroll=new HorizontalScrollView(this);tabScroll.setHorizontalScrollBarEnabled(false);tabScroll.addView(tabs);Ui.add(content,tabScroll,4);
   List<JSONObject> items=new ArrayList<>();long now=System.currentTimeMillis();
-  for(int i=0;i<decorations.length();i++){JSONObject d=decorations.optJSONObject(i);if(d==null||!d.optString("kind").equals(tab))continue;boolean have=owned.contains(d.optString("id"));
+  for(int i=0;i<decorations.length();i++){JSONObject d=decorations.optJSONObject(i);if(d==null||!d.optString("kind").equals(tab))continue;if(d.optBoolean("admin_only")&&!isAdmin)continue;boolean have=owned.contains(d.optString("id"));
    if(!have&&!Rewards.onSale(d.optString("available_from"),d.optString("available_until"),now))continue;items.add(d);}
   int columns=getResources().getConfiguration().screenWidthDp>=600?3:2;
   for(int i=0;i<items.size();i+=columns){LinearLayout row=Ui.row(this);row.setGravity(Gravity.TOP);row.setBaselineAligned(false);for(int j=0;j<columns;j++){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-1,1);if(j>0)lp.leftMargin=Ui.dp(this,10);if(i+j<items.size())row.addView(tile(items.get(i+j),points,level),lp);else row.addView(new View(this),lp);}Ui.add(content,row,10);}
@@ -186,11 +189,13 @@ public final class ProfileActivity extends Activity {
 
  View tile(JSONObject d,int points,int level){
   String id=d.optString("id"),kind=d.optString("kind");JSONObject style=d.optJSONObject("style");if(style==null)style=new JSONObject();
-  int price=d.optInt("price"),minLevel=d.optInt("min_level",1);boolean exclusive=d.optBoolean("exclusive");boolean have=(price==0&&!exclusive)||owned.contains(id);
+  int price=d.optInt("price"),minLevel=d.optInt("min_level",1);boolean exclusive=d.optBoolean("exclusive"),staff=d.optBoolean("admin_only");boolean have=(price==0&&!exclusive)||owned.contains(id);
   String until=d.isNull("available_until")?"":d.optString("available_until");
   String equippedId=profile.optString(equippedField(kind));boolean worn=id.equals(equippedId);boolean removable=!kind.equals("frame")&&!kind.equals("name_color");
   LinearLayout tile=Ui.column(this);tile.setPadding(Ui.dp(this,12),Ui.dp(this,14),Ui.dp(this,12),Ui.dp(this,12));tile.setGravity(Gravity.CENTER_HORIZONTAL);
   android.graphics.drawable.GradientDrawable face=Ui.shape(this,worn?Ui.SOFT:Ui.PANEL,18);face.setStroke(Ui.dp(this,1),worn?0xFF7A2A3A:Ui.LINE);
+  // Своя подложка у набора администрации: ночное небо с отсветом зари и кант цвета зари.
+  if(staff){face=new android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0xFF1E1730,worn?0xFF301826:0xFF191422,0xFF3A1A22});face.setCornerRadius(Ui.dp(this,18));face.setStroke(Ui.dp(this,1),worn?0xFFFF8A3D:0xFF8A3A3A);}
   tile.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x24FFFFFF),face,Ui.shape(this,android.graphics.Color.WHITE,18)));
   FrameLayout preview=new FrameLayout(this);tile.addView(preview,new LinearLayout.LayoutParams(-1,Ui.dp(this,72)));
   if(kind.equals("frame")){Decor.AvatarView a=new Decor.AvatarView(this);a.frame(style);a.person(Decor.name(profile),profile.optString("avatar_url"));preview.addView(a,new FrameLayout.LayoutParams(Ui.dp(this,68),Ui.dp(this,68),Gravity.CENTER));}
@@ -199,19 +204,21 @@ public final class ProfileActivity extends Activity {
   else if(kind.equals("profile_effect")||kind.equals("profile_frame")){preview.addView(new Ornaments.Preview(this,kind,style),new FrameLayout.LayoutParams(Ui.dp(this,104),-1,Gravity.CENTER));}
   else{TextView n=Ui.title(this,Decor.name(profile),18);n.setGravity(Gravity.CENTER);n.setMaxLines(1);n.setEllipsize(TextUtils.TruncateAt.END);Decor.nameColor(n,style);preview.addView(n,new FrameLayout.LayoutParams(-2,-2,Gravity.CENTER));}
   TextView title=Ui.title(this,d.optString("title"),14);title.setGravity(Gravity.CENTER);title.setMaxLines(2);Ui.add(tile,title,8);
-  TextView rarity=Ui.text(this,Rewards.rarity(d.optString("rarity"))+(until.isEmpty()||have?"":" · до "+Rewards.until(until)),11,Rewards.rarityColor(d.optString("rarity")));rarity.setGravity(Gravity.CENTER);Ui.add(tile,rarity,4);
+  TextView rarity=staff?Ui.text(this,"☾ Только для администрации",11,0xFFFFB36B):Ui.text(this,Rewards.rarity(d.optString("rarity"))+(until.isEmpty()||have?"":" · до "+Rewards.until(until)),11,Rewards.rarityColor(d.optString("rarity")));if(staff)rarity.setTypeface(Ui.MEDIUM);rarity.setGravity(Gravity.CENTER);Ui.add(tile,rarity,4);
   String state;int color;
   if(worn){state=removable?"✓ Надето · снять":"✓ Надето";color=Ui.ACCENT;}
   else if(have){state="Надеть";color=Ui.TEXT;}
+  else if(staff){state="Выдаётся администрации";color=0xFF60616F;}
   else if(exclusive){state="🏆 За достижение";color=0xFF60616F;}
   else if(level<minLevel){state="С уровня "+minLevel;color=0xFF60616F;}
   else{state="◆ "+Rewards.points(price);color=points>=price?Ui.WARM:0xFF60616F;}
   TextView action=Ui.text(this,state,13,color);action.setTypeface(Ui.MEDIUM);action.setGravity(Gravity.CENTER);Ui.add(tile,action,10);
-  tile.setClickable(true);tile.setFocusable(true);tile.setContentDescription(d.optString("title")+", "+Rewards.rarity(d.optString("rarity"))+". "+state.replace("◆","цена")+(state.startsWith("◆")?" очков":""));
+  tile.setClickable(true);tile.setFocusable(true);tile.setContentDescription(d.optString("title")+", "+(staff?"только для администрации":Rewards.rarity(d.optString("rarity")))+". "+state.replace("◆","цена")+(state.startsWith("◆")?" очков":""));
   tile.setOnClickListener(v->{
    if(busy)return;
    if(worn){if(removable)equip(kind,"");return;}
    if(have){equip(kind,id);return;}
+   if(staff){Toast.makeText(this,"Это украшение выдаётся только администрации.",Toast.LENGTH_LONG).show();return;}
    if(exclusive){Toast.makeText(this,d.optString("description"),Toast.LENGTH_LONG).show();return;}
    if(level<minLevel){Toast.makeText(this,"Откроется на уровне "+minLevel,Toast.LENGTH_SHORT).show();return;}
    if(points<price){Toast.makeText(this,"Не хватает "+Rewards.points(price-points)+" очков",Toast.LENGTH_SHORT).show();return;}
