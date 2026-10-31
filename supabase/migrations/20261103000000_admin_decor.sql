@@ -142,20 +142,22 @@ drop trigger if exists admin_decor_new on public.decorations;
 create trigger admin_decor_new after insert or update of admin_only on public.decorations for each row execute function public.on_admin_decor_added();
 
 -- ───────────────────────── Набор «Хранитель ночи» ─────────────────────────
--- Рисунки оригинальные: style.type рисует клиент (спрайты night_keeper, fx_night*, pf_night_*), цвета — «заря» Yoru.
+-- Рисунки оригинальные: style.type рисует клиент (спрайты night_keeper, fx_night*, pf_night_crest).
+-- Стиль строгий — знак статуса, а не праздник: тонкие линии, лунное серебро #DCE3F0 и графит, зарёй (#FF8A3D → #FF4D67)
+-- окрашена лишь одна маленькая деталь, движение медленное и едва заметное.
 insert into public.decorations (id, kind, title, description, price, min_level, rarity, style, sort, exclusive, admin_only, available_from, available_until) values
-  ('deco_admin_keeper', 'avatar_deco',    'Хранитель ночи',  'Корона полуночи: луна, звёзды и свет зари над аватаром. Только для администрации', 0, 1, 'legendary',
-    '{"type":"night_keeper","colors":["#FF4D67","#FF8A3D","#FFE3B8"],"animated":true}', 300, true, true, null, null),
-  ('fx_admin_watch',    'profile_effect', 'Ночной дозор',    'Звёзды в три слоя, падающие кометы и тёплые огоньки зари. Только для администрации', 0, 1, 'legendary',
-    '{"type":"night_watch","colors":["#FFFFFF","#FF8A3D","#FF4D67"]}', 300, true, true, null, null),
-  ('pf_admin_crown',    'profile_frame',  'Полуночная грань', 'Узорные углы с полумесяцем и бегущий по краю свет зари. Только для администрации', 0, 1, 'legendary',
-    '{"type":"night_crown","colors":["#FF4D67","#FF8A3D","#FFE3B8"],"animated":true}', 300, true, true, null, null),
-  ('frame_admin',       'frame',          'Кольцо дозора',   'Обводка аватара цвета зари. Только для администрации', 0, 1, 'legendary',
-    '{"colors":["#FF4D67","#FF8A3D","#FFE3B8","#FF8A3D"],"animated":true,"glow":true}', 300, true, true, null, null),
-  ('badge_admin',       'badge',          'Хранитель',       'Знак администрации Yoru', 0, 1, 'legendary',
-    '{"glyph":"☾","color":"#FF8A3D"}', 300, true, true, null, null),
-  ('color_admin',       'name_color',     'Заря полуночи',   'Цвет ника администрации', 0, 1, 'legendary',
-    '{"colors":["#FFE3B8","#FF8A3D","#FF4D67"]}', 300, true, true, null, null)
+  ('deco_admin_keeper', 'avatar_deco',    'Хранитель ночи',   'Тонкий лунный ореол с серебряным полумесяцем и ромбом зари. Только для администрации', 0, 1, 'legendary',
+    '{"type":"night_keeper","colors":["#DCE3F0","#9AA4B6","#FF8A3D"],"animated":true}', 300, true, true, null, null),
+  ('fx_admin_watch',    'profile_effect', 'Ночной дозор',     'Редкие тусклые звёзды, медленно мерцают; изредка — тонкая комета. Только для администрации', 0, 1, 'legendary',
+    '{"type":"night_watch","colors":["#DCE3F0","#9AA4B6"]}', 300, true, true, null, null),
+  ('pf_admin_crown',    'profile_frame',  'Полуночная грань', 'Тонкий серебряный контур, угловые скобки и лунная эмблема. Только для администрации', 0, 1, 'legendary',
+    '{"type":"night_crown","colors":["#DCE3F0","#9AA4B6","#FF8A3D"]}', 300, true, true, null, null),
+  ('frame_admin',       'frame',          'Кольцо дозора',    'Тонкое серебряное кольцо с едва заметным отсветом зари. Только для администрации', 0, 1, 'legendary',
+    '{"colors":["#DCE3F0","#8E98AB","#DCE3F0","#8E98AB","#DCE3F0","#D4A994"],"thin":true}', 300, true, true, null, null),
+  ('badge_admin',       'badge',          'Хранитель',        'Знак администрации Yoru', 0, 1, 'legendary',
+    '{"glyph":"☾","color":"#DCE3F0"}', 300, true, true, null, null),
+  ('color_admin',       'name_color',     'Лунное серебро',   'Цвет ника администрации', 0, 1, 'legendary',
+    '{"colors":["#EEF2F8","#B9C3D4"]}', 300, true, true, null, null)
 on conflict (id) do update set
   kind = excluded.kind, title = excluded.title, description = excluded.description, price = excluded.price, min_level = excluded.min_level,
   rarity = excluded.rarity, style = excluded.style, sort = excluded.sort, exclusive = excluded.exclusive, admin_only = excluded.admin_only,
