@@ -59,6 +59,8 @@ public static class Sprites
         return type == "orbit" ? (AccountClient.Text(style, "glyph") == "♥" ? "orbit_hearts" : "orbit_stars") : type;
     }
     static long Now => Environment.TickCount64;
+    /// <summary>Темп движения частиц эффектов и деталей рамок (1 — исходный, медленный).</summary>
+    public const double EffectPace = 1.6, FramePace = 1.4;
 
     public static void Draw(DrawingContext dc, Sheet? s, int frame, double cx, double cy, double w, double h, double rotate = 0, double alpha = 1, bool flipX = false, bool flipY = false)
     {
@@ -86,7 +88,7 @@ public static class Sprites
     public static bool Effect(DrawingContext dc, string type, double w, double h)
     {
         var s = Get(EffectSheet(type)); if (s == null) return false;
-        var now = Now; var sec = now / 1000.0; var r = new Random(type.Length * 7919 + type[0]);
+        var now = Now; var sec = now / 1000.0 * EffectPace; var r = new Random(type.Length * 7919 + type[0]);
         var (count, size0) = type switch { "snow" => (40, 16.0), "starfall" => (6, 100.0), "bats" => (7, 50.0), "fireflies" => (18, 32.0), "bubbles" => (16, 32.0), "sparkles" => (22, 26.0), "hearts" => (14, 26.0), _ => (24, 22.0) };
         for (var i = 0; i < count; i++)
         {
@@ -125,7 +127,7 @@ public static class Sprites
     /// <summary>false — для типа нет рисунка, нужна процедурная рамка.</summary>
     public static bool Frame(DrawingContext dc, string type, Color[] colors, double w, double h, double radius)
     {
-        var now = Now; var sec = now / 1000.0; var corner = Math.Min(Math.Min(w, h) * .62, 190);
+        var now = Now; var sec = now / 1000.0 * FramePace; var corner = Math.Min(Math.Min(w, h) * .62, 190);
         var box = new Rect(1, 1, Math.Max(0, w - 2), Math.Max(0, h - 2));
         switch (type)
         {

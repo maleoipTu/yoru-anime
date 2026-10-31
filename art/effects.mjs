@@ -87,6 +87,6 @@ export default [
   { name: 'fx_firefly', w: 64, h: 64, frames: 2, draw: fireflies },
   { name: 'fx_heart', w: 56, h: 56, frames: 3, draw: hearts },
   { name: 'fx_starfall', w: 200, h: 48, frames: 1, draw: starfall },
-  { name: 'fx_bat', w: 104, h: 72, frames: 8, fps: 16, draw: bats },
+  { name: 'fx_bat', w: 104, h: 72, frames: 16, fps: 30, draw: bats },
   { name: 'fx_snow', w: 48, h: 48, frames: 4, draw: snow },
 ];

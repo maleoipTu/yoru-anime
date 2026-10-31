@@ -38,11 +38,11 @@ public sealed class OrnamentLayer : FrameworkElement
         else if (!animate && subscribed) { CompositionTarget.Rendering -= Tick; subscribed = false; }
     }
     DateTime last;
-    void Tick(object? sender, EventArgs e) { var now = DateTime.UtcNow; if ((now - last).TotalMilliseconds < 33) return; last = now; InvalidateVisual(); }
+    void Tick(object? sender, EventArgs e) { var now = DateTime.UtcNow; if ((now - last).TotalMilliseconds < 14) return; last = now; InvalidateVisual(); }
 
     protected override void OnRender(DrawingContext dc)
     {
-        var seconds = (DateTime.UtcNow - Start).TotalSeconds;
+        var seconds = (DateTime.UtcNow - Start).TotalSeconds * Sprites.EffectPace;
         double w = ActualWidth, h = ActualHeight;
         if (w <= 0 || h <= 0 || Empty) return;
         switch (kind)
