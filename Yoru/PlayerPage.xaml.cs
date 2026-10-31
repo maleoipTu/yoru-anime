@@ -214,6 +214,7 @@ public partial class PlayerPage : UserControl
             var result=await StreamResolver.Resolve(episode.Url, cts.Token);
             if(closed || session!=navigationSession) return;
             resolved=result;
+            if(result.Intro!=null && intro["opening"]==null && intro["ending"]==null) intro=(System.Text.Json.Nodes.JsonObject)result.Intro.DeepClone();
             var streams=new System.Text.Json.Nodes.JsonArray();
             foreach(var stream in result.Streams) streams.Add(new System.Text.Json.Nodes.JsonObject { ["label"]=stream.Label, ["url"]=stream.Url, ["mime"]=stream.Mime });
             Post(new System.Text.Json.Nodes.JsonObject { ["cmd"]="load", ["session"]=session, ["streams"]=streams, ["quality"]=store.Data.Quality,
@@ -259,7 +260,7 @@ public partial class PlayerPage : UserControl
             var range=LimitRange(e.Request.Headers.Contains("Range") ? e.Request.Headers.GetHeader("Range") : null);
             using var timeout=CancellationTokenSource.CreateLinkedTokenSource(resolveCts?.Token ?? default);
             timeout.CancelAfter(TimeSpan.FromSeconds(40));
-            using var response=await StreamResolver.Fetch(target, source.Referer, range, timeout.Token);
+            using var response=await StreamResolver.Fetch(target, source.Referer, range, timeout.Token, source.Agent);
             var bytes=await ReadLimited(response.Content, 64*1024*1024, timeout.Token);
             if(IsPlaylist(target, response.Content.Headers.ContentType?.MediaType)) bytes=System.Text.Encoding.UTF8.GetBytes(AbsolutePlaylist(System.Text.Encoding.UTF8.GetString(bytes), target));
             if((int)response.StatusCode>=400) Dispatcher.BeginInvoke(() => PlayerStatus.Text=$"Источник видео ответил {(int)response.StatusCode} · {new Uri(target).Host}");
