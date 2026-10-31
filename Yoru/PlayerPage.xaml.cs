@@ -145,6 +145,7 @@ public partial class PlayerPage : UserControl
                     else if(state=="exit-fullscreen") SetFullscreen(false);
                     else if(state=="quality") { store.Data.Quality=ApiParser.Text(ApiParser.Field(doc.RootElement,"value")); SavePrefs(); }
                     else if(state=="speed") { store.Data.Speed=ApiParser.Number(ApiParser.Field(doc.RootElement,"value")); SavePrefs(); }
+                    else if(state=="volume") { var v=ApiParser.Number(ApiParser.Field(doc.RootElement,"value")); store.Data.Volume=v is >= 0 and <= 1 ? v : 1; store.Data.Muted=ApiParser.Field(doc.RootElement,"muted").ValueKind==JsonValueKind.True; SavePrefs(); }
                     else if(state=="autonext") { store.Data.AutoNext=ApiParser.Field(doc.RootElement,"value").ValueKind==JsonValueKind.True; SavePrefs(); }
                     else if(state=="error") Status("Видео недоступно · можно открыть плеер сайта","error");
                     else if(state=="playing") { Status("Идёт просмотр · "+current.Label,state); Presence(true); }
@@ -225,7 +226,7 @@ public partial class PlayerPage : UserControl
             var streams=new System.Text.Json.Nodes.JsonArray();
             foreach(var stream in result.Streams) streams.Add(new System.Text.Json.Nodes.JsonObject { ["label"]=stream.Label, ["url"]=stream.Url, ["mime"]=stream.Mime });
             Post(new System.Text.Json.Nodes.JsonObject { ["cmd"]="load", ["session"]=session, ["streams"]=streams, ["quality"]=store.Data.Quality,
-                ["speed"]=store.Data.Speed is >= 0.5 and <= 2 ? store.Data.Speed : 1, ["autoNext"]=store.Data.AutoNext, ["hasNext"]=NextButton.IsEnabled, ["start"]=Progress.StartPosition(store,anime.Id,episode) });
+                ["speed"]=store.Data.Speed is >= 0.5 and <= 2 ? store.Data.Speed : 1, ["autoNext"]=store.Data.AutoNext, ["volume"]=store.Data.Volume is >= 0 and <= 1 ? store.Data.Volume : 1, ["muted"]=store.Data.Muted, ["hasNext"]=NextButton.IsEnabled, ["start"]=Progress.StartPosition(store,anime.Id,episode) });
             Status("Плеер Yoru · "+episode.Label,"loaded");
             SendIntro(); RoomLoaded();
             try { store.Started(anime,episode); } catch(IOException) { }

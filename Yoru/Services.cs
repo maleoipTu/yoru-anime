@@ -73,6 +73,9 @@ public sealed class LibraryData
     public string Quality { get; set; } = "";
     public double Speed { get; set; } = 1;
     public bool AutoNext { get; set; } = true;
+    /// <summary>Громкость собственного плеера (0–1) и выключен ли звук.</summary>
+    public double Volume { get; set; } = 1;
+    public bool Muted { get; set; }
     /// <summary>Application ID из Discord Developer Portal для статуса «Смотрит» в Discord.</summary>
     public string DiscordClientId { get; set; } = "";
     public bool DiscordPresence { get; set; } = true;

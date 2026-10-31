@@ -27,10 +27,15 @@ button.primary{background:var(--accent);color:var(--on);font-weight:600}
 #message h2{margin:0 0 8px;font-size:19px}#message p{margin:0 0 16px;color:var(--muted);line-height:1.5}
 #spinner{width:42px;height:42px;border-radius:21px;border:3px solid #ffffff33;border-top-color:var(--accent);animation:spin 1s linear infinite;display:none}
 @keyframes spin{to{transform:rotate(360deg)}}
+#volume{display:flex;align-items:center;gap:4px}#mute{width:40px;padding:0;font-size:16px}
+#vol{-webkit-appearance:none;appearance:none;width:0;opacity:0;height:4px;border-radius:2px;background:linear-gradient(to right,var(--accent) var(--v,100%),#ffffff44 var(--v,100%));outline:none;transition:width .2s,opacity .2s;cursor:pointer;margin:0}
+#volume:hover #vol,#vol:focus-visible,#volume.open #vol{width:96px;opacity:1}
+#vol::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:7px;background:#fff;border:0}
+#osd{position:absolute;left:50%;top:18%;transform:translateX(-50%);background:#000b;border-radius:14px;padding:10px 18px;font-size:15px;font-weight:600;display:none;pointer-events:none}
 </style></head>
 <body><div id="stage">
 <video id="video" playsinline preload="auto"></video>
-<div id="center"><div id="spinner"></div><div id="message"><h2 id="mtitle"></h2><p id="mtext"></p><div id="mactions"></div></div></div>
+<div id="osd" role="status" aria-live="polite"></div><div id="center"><div id="spinner"></div><div id="message"><h2 id="mtitle"></h2><p id="mtext"></p><div id="mactions"></div></div></div>
 <div id="ui"><div class="shade"></div>
  <button id="skip" title="Пропустить опенинг">Пропустить опенинг · +85 с</button>
  <div id="timeline" role="slider" aria-label="Позиция в серии" tabindex="0"><div class="track"></div><div class="buffer"></div><div class="done"></div><div class="knob"></div></div>
@@ -38,6 +43,7 @@ button.primary{background:var(--accent);color:var(--on);font-weight:600}
   <button id="back10" title="Назад на 10 секунд (←)" aria-label="Назад на 10 секунд">−10</button>
   <button id="play" class="primary" aria-label="Воспроизвести">▶</button>
   <button id="fwd10" title="Вперёд на 10 секунд (→)" aria-label="Вперёд на 10 секунд">+10</button>
+  <span id="volume"><button id="mute" aria-label="Выключить звук" title="Звук (M), громкость — ↑/↓ или колесо мыши">🔊</button><input id="vol" type="range" min="0" max="100" step="1" value="100" aria-label="Громкость"></span>
   <span id="clock">00:00 / --:--</span><span class="spacer"></span>
   <button id="settings" aria-label="Качество и скорость">⚙ <span id="summary">Авто · 1×</span></button>
   <button id="full" aria-label="Полный экран">⛶</button>
@@ -135,11 +141,23 @@ button.primary{background:var(--accent);color:var(--on);font-weight:600}
  timeline.addEventListener('pointerdown',e=>{timeline.setPointerCapture(e.pointerId);scrub(e);timeline.onpointermove=scrub;});
  timeline.addEventListener('pointerup',()=>{timeline.onpointermove=null;});
  document.addEventListener('mousemove',showUi);
+ // ───── Громкость: кнопка, ползунок, ↑/↓, колесо мыши над видео, M — выключить звук. Уровень запоминается. ─────
+ const vol=$('vol'),mute=$('mute');let osdTimer=0,volSave=0;
+ function paintVolume(){const v=video.muted?0:Math.round(video.volume*100);vol.value=v;vol.style.setProperty('--v',v+'%');mute.textContent=v===0?'🔇':v<50?'🔉':'🔊';mute.setAttribute('aria-label',video.muted?'Включить звук':'Выключить звук');}
+ function osd(text){const o=$('osd');o.textContent=text;o.style.display='block';clearTimeout(osdTimer);osdTimer=setTimeout(()=>o.style.display='none',900);}
+ function setVolume(v,show){v=Math.max(0,Math.min(1,v));video.volume=v;video.muted=v===0;paintVolume();if(show)osd(video.muted?'Звук выключен':'Громкость '+Math.round(v*100)+'%');clearTimeout(volSave);volSave=setTimeout(()=>send('volume',video.volume,{muted:video.muted}),400);}
+ vol.addEventListener('input',()=>setVolume(vol.value/100,false));
+ mute.onclick=()=>{if(video.muted||video.volume===0){video.muted=false;if(video.volume===0)video.volume=.5;}else video.muted=true;paintVolume();osd(video.muted?'Звук выключен':'Громкость '+Math.round(video.volume*100)+'%');send('volume',video.volume,{muted:video.muted});};
+ $('stage').addEventListener('wheel',e=>{if(menu.style.display==='block'&&menu.contains(e.target))return;e.preventDefault();setVolume((video.muted?0:video.volume)+(e.deltaY<0?.05:-.05),true);showUi();},{passive:false});
+ video.addEventListener('volumechange',paintVolume);
  document.addEventListener('keydown',e=>{
   if(e.target.tagName==='BUTTON'&&(e.key===' '||e.key==='Enter'))return;
   if(e.key===' '||e.key==='k'){e.preventDefault();toggle();}
   else if(e.key==='ArrowLeft'){e.preventDefault();seek(-10);}
   else if(e.key==='ArrowRight'){e.preventDefault();seek(10);}
+  else if(e.key==='ArrowUp'&&e.target!==vol){e.preventDefault();setVolume((video.muted?0:video.volume)+.05,true);}
+  else if(e.key==='ArrowDown'&&e.target!==vol){e.preventDefault();setVolume((video.muted?0:video.volume)-.05,true);}
+  else if(e.key==='m'||e.key==='M'||e.key==='ь'||e.key==='Ь')mute.onclick();
   else if(e.key==='f'||e.key==='F11'){e.preventDefault();send('fullscreen');}
   else if(e.key==='Escape'){if(menu.style.display==='block')menu.style.display='none';else send('exit-fullscreen');}
   else if(e.key==='n'||e.key==='N')send('next');
@@ -158,7 +176,7 @@ button.primary{background:var(--accent);color:var(--on);font-weight:600}
 
  window.chrome?.webview?.addEventListener('message',e=>{
   const m=e.data;if(!m||m.session!==session)return;
-  if(m.cmd==='load'){streams=m.streams||[];speed=m.speed||1;autoNext=!!m.autoNext;hasNext=!!m.hasNext;let i=streams.findIndex(s=>s.label===m.quality);load(i<0?0:i,m.start||0);}
+  if(m.cmd==='load'){streams=m.streams||[];speed=m.speed||1;if(typeof m.volume==='number'){video.volume=Math.max(0,Math.min(1,m.volume));video.muted=!!m.muted;paintVolume();}autoNext=!!m.autoNext;hasNext=!!m.hasNext;let i=streams.findIndex(s=>s.label===m.quality);load(i<0?0:i,m.start||0);}
   else if(m.cmd==='error'){spinner(false);message('Видео недоступно',m.text||'',[['Повторить',()=>send('retry'),true],['Плеер сайта',()=>send('site')]]);}
   else if(m.cmd==='pause')video.pause();
   else if(m.cmd==='intro')intro=m.intro||{};
