@@ -29,7 +29,7 @@ public partial class PlayerPage
         roomTimer.Tick += async (_, _) => await Poll();
         foreach (var (title, key) in new[] { ("Плеер", "player"), ("Вместе", "party"), ("Чат серии", "comments") })
         {
-            var tab = new ToggleButton { Content = title, Padding = new Thickness(6, 7, 6, 7), Margin = new Thickness(0, 0, 6, 0), Tag = key, IsChecked = key == "player" };
+            var tab = new ToggleButton { Content = title, Style = (Style)Application.Current.Resources["Chip"], Padding = new Thickness(6, 8, 6, 8), Margin = new Thickness(0, 0, 6, 0), Tag = key, IsChecked = key == "player" };
             tab.Click += (_, _) => SelectTab(key);
             tabs.Add(tab); SidebarTabs.Children.Add(tab);
         }

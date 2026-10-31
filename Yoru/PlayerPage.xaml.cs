@@ -235,31 +235,55 @@ public partial class PlayerPage : UserControl
         store.Data.Positions[current.Id.ToString()]=duration>0 && seconds>=duration-10 ? 0 : Math.Max(0,seconds);
         SavePrefs();
     }
-    /// <summary>Прокси видео: страница плеера запрашивает https://player.yoru.local/proxy?u=…, приложение скачивает с CDN с нужным Referer.</summary>
+    /// <summary>
+    /// Прокси видео: страница плеера запрашивает https://player.yoru.local/proxy?u=…, приложение скачивает с CDN с нужным Referer.
+    /// Ответ целиком читается в память и только потом отдаётся WebView2: потоковая передача сетевого ответа
+    /// в WebView2 могла зависать навсегда (бесконечная загрузка без ошибки). Открытые диапазоны MP4 режутся на куски по 8 МБ.
+    /// </summary>
     async void Proxy(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
     {
         var core=Browser.CoreWebView2;
-        var source=resolved;
         if(core==null) return;
-        if(source==null || !nativeMode) { e.Response=core.Environment.CreateWebResourceResponse(null,403,"Forbidden",""); return; }
-        var query=new Uri(e.Request.Uri).Query;
-        var target=query.StartsWith("?u=") ? Uri.UnescapeDataString(query[3..]) : "";
-        var range=e.Request.Headers.Contains("Range") ? e.Request.Headers.GetHeader("Range") : null;
         var deferral=e.GetDeferral();
         try
         {
-            var response=await StreamResolver.Fetch(target, source.Referer, range, resolveCts?.Token ?? default);
-            var body=await response.Content.ReadAsStreamAsync();
+            var source=resolved;
+            if(source==null || !nativeMode) { e.Response=core.Environment.CreateWebResourceResponse(null,403,"Forbidden",""); return; }
+            var query=new Uri(e.Request.Uri).Query;
+            var target=query.StartsWith("?u=") ? Uri.UnescapeDataString(query[3..]) : "";
+            var range=LimitRange(e.Request.Headers.Contains("Range") ? e.Request.Headers.GetHeader("Range") : null);
+            using var timeout=CancellationTokenSource.CreateLinkedTokenSource(resolveCts?.Token ?? default);
+            timeout.CancelAfter(TimeSpan.FromSeconds(40));
+            using var response=await StreamResolver.Fetch(target, source.Referer, range, timeout.Token);
+            var bytes=await ReadLimited(response.Content, 64*1024*1024, timeout.Token);
             var headers=new System.Text.StringBuilder("Access-Control-Allow-Origin: *\r\nCache-Control: no-store\r\n");
             if(response.Content.Headers.ContentType is { } type) headers.Append("Content-Type: ").Append(type).Append("\r\n");
-            if(response.Content.Headers.ContentLength is { } length) headers.Append("Content-Length: ").Append(length).Append("\r\n");
+            headers.Append("Content-Length: ").Append(bytes.Length).Append("\r\n");
             if(response.Content.Headers.ContentRange is { } contentRange) headers.Append("Content-Range: ").Append(contentRange).Append("\r\n");
-            if(response.Headers.AcceptRanges.Count>0) headers.Append("Accept-Ranges: ").Append(string.Join(",",response.Headers.AcceptRanges)).Append("\r\n");
-            if(!closed) e.Response=core.Environment.CreateWebResourceResponse(body,(int)response.StatusCode,response.ReasonPhrase ?? "OK",headers.ToString());
+            headers.Append("Accept-Ranges: bytes\r\n");
+            if(!closed) e.Response=core.Environment.CreateWebResourceResponse(new MemoryStream(bytes,false),(int)response.StatusCode,response.ReasonPhrase ?? "OK",headers.ToString());
         }
-        catch(Exception ex) when (ex is InvalidOperationException or System.Net.Http.HttpRequestException or TaskCanceledException or IOException or UriFormatException)
-        { if(!closed) e.Response=core.Environment.CreateWebResourceResponse(null,502,"Bad Gateway",""); }
+        catch(Exception)
+        {
+            // Любая ошибка сети — 502: плеер покажет понятную ошибку вместо бесконечной загрузки.
+            try { if(!closed) e.Response=core.Environment.CreateWebResourceResponse(null,502,"Bad Gateway",""); } catch(Exception) { }
+        }
         finally { deferral.Complete(); }
+    }
+    /// <summary>«bytes=N-» превращается в «bytes=N-(N+8 МБ)», чтобы не тянуть весь фильм одним ответом.</summary>
+    public static string? LimitRange(string? range)
+    {
+        if(string.IsNullOrEmpty(range)) return range;
+        var m=System.Text.RegularExpressions.Regex.Match(range,@"^bytes=(\d+)-$");
+        return m.Success && long.TryParse(m.Groups[1].Value,out var from) ? $"bytes={from}-{from+8*1024*1024-1}" : range;
+    }
+    static async Task<byte[]> ReadLimited(System.Net.Http.HttpContent content, int limit, CancellationToken ct)
+    {
+        await using var stream=await content.ReadAsStreamAsync(ct);
+        using var buffer=new MemoryStream();
+        var chunk=new byte[81920]; int read;
+        while((read=await stream.ReadAsync(chunk,ct))>0) { buffer.Write(chunk,0,read); if(buffer.Length>limit) throw new IOException("too large"); }
+        return buffer.ToArray();
     }
     void SiteClick(object sender,RoutedEventArgs e) { forceSite=!forceSite || !StreamResolver.Supports(current.Url); if(initialized) NavigateEpisode(current); }
     void VoiceChanged(object sender,SelectionChangedEventArgs e)

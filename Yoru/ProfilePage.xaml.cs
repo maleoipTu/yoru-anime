@@ -235,6 +235,24 @@ public partial class ProfilePage : UserControl
     public static string EquippedField(string kind) => kind switch { "frame" => "equipped_frame", "badge" => "equipped_badge", "avatar_deco" => "equipped_deco", "profile_effect" => "equipped_effect", "profile_frame" => "equipped_pframe", _ => "equipped_color" };
     static string Field(JsonNode? node, string key, string fallback) => AccountClient.Text(node, key) is { Length: > 0 } v ? v : fallback;
 
+    /// <summary>Превью украшения на текущем профиле; scale — масштаб (1 — плитка магазина, 2 — окно покупки).</summary>
+    FrameworkElement Preview(string kind, JsonObject style, double scale)
+    {
+        var preview = new Grid { Height = 84 * scale };
+        if (kind == "frame") preview.Children.Add(Decor.Avatar(76 * scale, style, account.DisplayName, AccountClient.Text(account.Profile, "avatar_url")));
+        else if (kind == "badge") { var glyph = Decor.Badge(style, 38 * scale); glyph.HorizontalAlignment = HorizontalAlignment.Center; preview.Children.Add(glyph); }
+        else if (kind == "avatar_deco") preview.Children.Add(Decor.Avatar(84 * scale, account.Style(Frame), account.DisplayName, AccountClient.Text(account.Profile, "avatar_url"), style));
+        else if (kind is "profile_effect" or "profile_frame")
+        {
+            var card = new Grid { Width = 140 * scale, Height = 84 * scale };
+            card.Children.Add(new Border { CornerRadius = new CornerRadius(12), Background = new LinearGradientBrush(Color.FromRgb(0x2A, 0x2A, 0x35), Color.FromRgb(0x16, 0x16, 0x1B), 90) });
+            card.Children.Add(Ornaments_Overlay(kind == "profile_effect" ? style : null, kind == "profile_frame" ? style : null, 12));
+            preview.Children.Add(card);
+        }
+        else preview.Children.Add(new TextBlock { Text = account.DisplayName, FontSize = 19 * scale, FontWeight = FontWeights.Bold, Foreground = Decor.NameBrush(style), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
+        return preview;
+    }
+
     FrameworkElement Tile(JsonObject d, int points, int level)
     {
         string id = AccountClient.Text(d, "id"), kind = AccountClient.Text(d, "kind"), rarity = AccountClient.Text(d, "rarity");
@@ -247,18 +265,7 @@ public partial class ProfilePage : UserControl
         var removable = kind is not ("frame" or "name_color");
         var worn = id == equipped;
         var panel = new StackPanel { Width = 170 };
-        var preview = new Grid { Height = 84 };
-        if (kind == "frame") preview.Children.Add(Decor.Avatar(76, style, account.DisplayName, AccountClient.Text(account.Profile, "avatar_url")));
-        else if (kind == "badge") { var glyph = Decor.Badge(style, 38); glyph.HorizontalAlignment = HorizontalAlignment.Center; preview.Children.Add(glyph); }
-        else if (kind == "avatar_deco") preview.Children.Add(Decor.Avatar(84, account.Style(Frame), account.DisplayName, AccountClient.Text(account.Profile, "avatar_url"), style));
-        else if (kind is "profile_effect" or "profile_frame")
-        {
-            var card = new Grid { Width = 140, Height = 84 };
-            card.Children.Add(new Border { CornerRadius = new CornerRadius(12), Background = new LinearGradientBrush(Color.FromRgb(0x2A, 0x2A, 0x35), Color.FromRgb(0x16, 0x16, 0x1B), 90) });
-            card.Children.Add(Ornaments_Overlay(kind == "profile_effect" ? style : null, kind == "profile_frame" ? style : null, 12));
-            preview.Children.Add(card);
-        }
-        else preview.Children.Add(new TextBlock { Text = account.DisplayName, FontSize = 19, FontWeight = FontWeights.Bold, Foreground = Decor.NameBrush(style), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
+        var preview = Preview(kind, style, 1);
         panel.Children.Add(preview);
         panel.Children.Add(new TextBlock { Text = AccountClient.Text(d, "title"), FontSize = 14, FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0) });
         panel.Children.Add(new TextBlock { Text = Rewards.Rarity(rarity) + (until.Length > 0 && !have ? " · до " + Rewards.Until(until) : ""), FontSize = 11, Foreground = new SolidColorBrush(Decor.Parse(Rewards.RarityColor(rarity), Colors.Gray)), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 3, 0, 0) });
@@ -279,7 +286,7 @@ public partial class ProfilePage : UserControl
             if (exclusive) { StatusText.Text = AccountClient.Text(d, "description"); return; }
             if (level < minLevel) { StatusText.Text = $"«{AccountClient.Text(d, "title")}» откроется на уровне {minLevel}."; return; }
             if (points < price) { StatusText.Text = $"Не хватает {Rewards.Points(price - points)} очков."; return; }
-            if (MessageBox.Show(Window.GetWindow(this)!, $"Купить «{AccountClient.Text(d, "title")}» за {Rewards.Points(price)} очков и сразу надеть?\nОстанется: {Rewards.Points(points - price)}.", "Украшение", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            if (!Dialogs.Confirm(Window.GetWindow(this), AccountClient.Text(d, "title"), AccountClient.Text(d, "description") is { Length: > 0 } about ? about : "Украшение сразу наденется.", $"Купить за ◆ {Rewards.Points(price)}", "Не сейчас", Preview(kind, style, 1.6), $"Останется: ◆ {Rewards.Points(points - price)}")) return;
             await Run(async () => { await account.Buy(id, kind); if (account.Owned.Count >= 5) { await account.Refresh(); await account.LoadAchievements(); } }, RenderProfile);
         };
         return button;

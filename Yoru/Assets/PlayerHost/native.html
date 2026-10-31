@@ -73,20 +73,22 @@ button.primary{background:var(--accent);color:var(--on);font-weight:600}
    } else if(video.canPlayType('application/vnd.apple.mpegurl')) video.src=proxy(s.url);
    else { fail('Встроенный плеер не загрузился. Открой плеер сайта.'); return; }
   } else video.src=proxy(s.url);
-  video.playbackRate=speed;video.play().catch(()=>{});
+  video.playbackRate=speed;video.play().catch(()=>{});watch();
   summary();
  }
+ let watchdog=0;
+ function watch(){clearTimeout(watchdog);watchdog=setTimeout(()=>{if(video.readyState<3&&!video.paused)fail('Видео слишком долго не загружается. Повтори или выбери другое качество.');},35000);}
  function fail(text){spinner(false);send('error',text);message('Видео недоступно',text,[['Повторить',()=>load(current,video.currentTime),true],['Плеер сайта',()=>send('site')]]);}
  function summary(){$('summary').textContent=(streams[current]?.label||'Авто')+' · '+speed+'×';}
 
  video.addEventListener('loadedmetadata',()=>{applying=Date.now()+1500;if(pendingStart>0&&pendingStart<video.duration-10)video.currentTime=pendingStart;pendingStart=0;});
- video.addEventListener('playing',()=>{spinner(false);message('');send('playing',video.currentTime,{duration:video.duration});play.textContent='❚❚';play.setAttribute('aria-label','Пауза');showUi();});
+ video.addEventListener('playing',()=>{clearTimeout(watchdog);spinner(false);message('');send('playing',video.currentTime,{duration:video.duration});play.textContent='❚❚';play.setAttribute('aria-label','Пауза');showUi();});
  video.addEventListener('pause',()=>{send('paused',video.currentTime,{duration:video.duration});play.textContent='▶';play.setAttribute('aria-label','Воспроизвести');ui.classList.remove('hidden');});
  // Действия зрителя уходят в комнату совместного просмотра; применённые из комнаты — нет.
  const control=()=>{if(Date.now()<applying)return;send('control',video.currentTime,{paused:video.paused,duration:video.duration});};
  video.addEventListener('play',control);video.addEventListener('pause',control);video.addEventListener('seeked',control);
  function floatEmoji(e){const s=document.createElement('div');s.textContent=e;s.style.cssText='position:absolute;right:'+(30+Math.random()*80)+'px;bottom:120px;font-size:34px;transition:transform 2.2s ease-out,opacity 2.2s ease-out;pointer-events:none;z-index:9';document.body.appendChild(s);requestAnimationFrame(()=>{s.style.transform='translateY(-180px)';s.style.opacity='0';});setTimeout(()=>s.remove(),2400);}
- video.addEventListener('waiting',()=>spinner(true));
+ video.addEventListener('waiting',()=>{spinner(true);watch();});
  video.addEventListener('canplay',()=>spinner(false));
  video.addEventListener('error',()=>fail('Не получилось воспроизвести видео. Попробуй другое качество или источник.'));
  video.addEventListener('timeupdate',()=>{
