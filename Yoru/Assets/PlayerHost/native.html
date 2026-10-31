@@ -52,7 +52,7 @@ button.primary{background:var(--accent);color:var(--on);font-weight:600}
  const video=$('video'), ui=$('ui'), play=$('play'), clock=$('clock'), menu=$('menu'), skip=$('skip');
  const session=new URLSearchParams(location.search).get('session');
  const send=(state,value,extra={})=>window.chrome?.webview?.postMessage({state,value,session,...extra});
- let streams=[], current=0, speed=1, hls=null, autoNext=false, hasNext=false, countdown=0, countdownTimer=0, hideTimer=0, lastReport=0, pendingStart=0;
+ let intro={}, applying=0, streams=[], current=0, speed=1, hls=null, autoNext=false, hasNext=false, countdown=0, countdownTimer=0, hideTimer=0, lastReport=0, pendingStart=0;
  const proxy=u=>'https://player.yoru.local/proxy?u='+encodeURIComponent(u);
  const time=s=>{s=Math.max(0,Math.floor(s||0));const h=Math.floor(s/3600),m=Math.floor(s/60)%60,x=s%60;return (h?h+':'+String(m).padStart(2,'0'):String(m).padStart(2,'0'))+':'+String(x).padStart(2,'0');};
 
@@ -79,9 +79,13 @@ button.primary{background:var(--accent);color:var(--on);font-weight:600}
  function fail(text){spinner(false);send('error',text);message('Видео недоступно',text,[['Повторить',()=>load(current,video.currentTime),true],['Плеер сайта',()=>send('site')]]);}
  function summary(){$('summary').textContent=(streams[current]?.label||'Авто')+' · '+speed+'×';}
 
- video.addEventListener('loadedmetadata',()=>{if(pendingStart>0&&pendingStart<video.duration-10)video.currentTime=pendingStart;pendingStart=0;});
+ video.addEventListener('loadedmetadata',()=>{applying=Date.now()+1500;if(pendingStart>0&&pendingStart<video.duration-10)video.currentTime=pendingStart;pendingStart=0;});
  video.addEventListener('playing',()=>{spinner(false);message('');send('playing',video.currentTime,{duration:video.duration});play.textContent='❚❚';play.setAttribute('aria-label','Пауза');showUi();});
  video.addEventListener('pause',()=>{send('paused',video.currentTime,{duration:video.duration});play.textContent='▶';play.setAttribute('aria-label','Воспроизвести');ui.classList.remove('hidden');});
+ // Действия зрителя уходят в комнату совместного просмотра; применённые из комнаты — нет.
+ const control=()=>{if(Date.now()<applying)return;send('control',video.currentTime,{paused:video.paused,duration:video.duration});};
+ video.addEventListener('play',control);video.addEventListener('pause',control);video.addEventListener('seeked',control);
+ function floatEmoji(e){const s=document.createElement('div');s.textContent=e;s.style.cssText='position:absolute;right:'+(30+Math.random()*80)+'px;bottom:120px;font-size:34px;transition:transform 2.2s ease-out,opacity 2.2s ease-out;pointer-events:none;z-index:9';document.body.appendChild(s);requestAnimationFrame(()=>{s.style.transform='translateY(-180px)';s.style.opacity='0';});setTimeout(()=>s.remove(),2400);}
  video.addEventListener('waiting',()=>spinner(true));
  video.addEventListener('canplay',()=>spinner(false));
  video.addEventListener('error',()=>fail('Не получилось воспроизвести видео. Попробуй другое качество или источник.'));
@@ -89,7 +93,11 @@ button.primary{background:var(--accent);color:var(--on);font-weight:600}
   const t=video.currentTime,d=video.duration||0;clock.textContent=time(t)+' / '+(d?time(d):'--:--');
   const p=d?t/d*100:0;document.querySelector('#timeline .done').style.width=p+'%';document.querySelector('#timeline .knob').style.left=p+'%';
   if(video.buffered.length&&d)document.querySelector('#timeline .buffer').style.width=(video.buffered.end(video.buffered.length-1)/d*100)+'%';
-  skip.style.display=t<300&&(!d||t+85<d)&&!video.paused?'block':'none';
+  const op=intro.opening, ed=intro.ending;
+  if(op&&t>=op.start-3&&t<op.end-1){skip.textContent='Пропустить опенинг';skip.dataset.to=op.end;skip.style.display='block';}
+  else if(ed&&t>=ed.start&&t<ed.end-1){skip.textContent=hasNext&&d&&ed.end>=d-15?'Следующая серия':'Пропустить эндинг';skip.dataset.to=hasNext&&d&&ed.end>=d-15?'next':ed.end;skip.style.display='block';}
+  else if(!op&&t<300&&(!d||t+85<d)&&!video.paused){skip.textContent='Пропустить опенинг · +85 с';skip.dataset.to='+85';skip.style.display='block';}
+  else skip.style.display='none';
   if(Date.now()-lastReport>1000){lastReport=Date.now();send('time',t,{duration:d});}
  });
  video.addEventListener('ended',()=>{send('ended',0,{duration:video.duration});if(autoNext&&hasNext)startCountdown();else message('Серия закончилась',hasNext?'Можно включить следующую.':'Это была последняя доступная серия.',hasNext?[['Следующая серия',()=>send('next'),true]]:[]);});
@@ -98,7 +106,7 @@ button.primary{background:var(--accent);color:var(--on);font-weight:600}
 
  const toggle=()=>{if(video.paused)video.play().catch(()=>{});else video.pause();};
  const seek=d=>{if(video.duration){video.currentTime=Math.max(0,Math.min(video.duration-0.5,video.currentTime+d));showUi();}};
- play.onclick=toggle;$('back10').onclick=()=>seek(-10);$('fwd10').onclick=()=>seek(10);skip.onclick=()=>seek(85);
+ play.onclick=toggle;$('back10').onclick=()=>seek(-10);$('fwd10').onclick=()=>seek(10);skip.onclick=()=>{const to=skip.dataset.to;if(to==='next')send('next');else if(to==='+85'||!to)seek(85);else if(video.duration){video.currentTime=Math.min(video.duration-0.5,+to);showUi();}};
  $('full').onclick=()=>send('fullscreen');
  video.addEventListener('click',toggle);video.addEventListener('dblclick',()=>send('fullscreen'));
  const timeline=$('timeline');
@@ -132,6 +140,10 @@ button.primary{background:var(--accent);color:var(--on);font-weight:600}
   if(m.cmd==='load'){streams=m.streams||[];speed=m.speed||1;autoNext=!!m.autoNext;hasNext=!!m.hasNext;let i=streams.findIndex(s=>s.label===m.quality);load(i<0?0:i,m.start||0);}
   else if(m.cmd==='error'){spinner(false);message('Видео недоступно',m.text||'',[['Повторить',()=>send('retry'),true],['Плеер сайта',()=>send('site')]]);}
   else if(m.cmd==='pause')video.pause();
+  else if(m.cmd==='intro')intro=m.intro||{};
+  else if(m.cmd==='sync'){applying=Date.now()+1200;if(Math.abs(video.currentTime-m.position)>2.5&&video.duration)video.currentTime=Math.max(0,Math.min(video.duration-0.5,m.position));if(m.paused&&!video.paused)video.pause();else if(!m.paused&&video.paused)video.play().catch(()=>{});showUi();}
+  else if(m.cmd==='seek'){if(video.duration){video.currentTime=Math.max(0,Math.min(video.duration-0.5,m.position));showUi();}}
+  else if(m.cmd==='reaction')floatEmoji(m.emoji);
  });
  spinner(true);send('ready');
 })();

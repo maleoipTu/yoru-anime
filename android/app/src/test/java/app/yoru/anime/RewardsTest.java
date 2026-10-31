@@ -29,4 +29,6 @@ public class RewardsTest {
         assertTrue(Rewards.mediaProblem(true,"gif",9_000_000,1500,500,0).contains("8 МБ"));
     }
     @Test public void updatesOnlyForNewerBuilds(){assertTrue(Updater.newer(31,30));assertFalse(Updater.newer(30,30));assertFalse(Updater.newer(9,30));}
+    @Test public void parsesOldYummyAnimeProfile(){assertEquals(529123,Extras.oldUserId("https://old.yummyani.me/users/id529123"));assertEquals(1000,Extras.oldUserId(" 1000 "));assertEquals(0,Extras.oldUserId("yummyani.me"));}
+    @Test public void explainsPartyErrors(){assertEquals("Комната не найдена — проверь код.",Rewards.error("room_not_found P0002"));assertTrue(Rewards.error("gift_limit").contains("1000"));assertEquals("Отложено",Account.listLabel("on_hold"));}
 }

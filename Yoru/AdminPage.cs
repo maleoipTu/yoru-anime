@@ -175,12 +175,14 @@ public sealed class AdminPage : UserControl
         body.Children.Add(add);
     }
 
+    public const string StyleTypes = "украшения аватара: cat_ears, bunny, halo, horns, headphones, crown, orbit, sakura_wreath, pumpkin; эффекты: sparkles, bubbles, petals, fireflies, hearts, starfall, bats, snow; рамки профиля: vines, neon, constellation, flames, crystal, moon, cobweb";
+    public static string KindLabel(string kind) => kind switch { "frame" => "Обводка аватара", "badge" => "Значок", "name_color" => "Цвет ника", "avatar_deco" => "Украшение аватара", "profile_effect" => "Эффект профиля", "profile_frame" => "Рамка профиля", _ => "Украшение" };
     UIElement DecorationEditor(JsonObject d)
     {
         var grid = new WrapPanel();
         TextBox Field(string label, string value, double width) { var box = new TextBox { Text = value, Width = width, Margin = new Thickness(0, 0, 8, 8), ToolTip = label }; System.Windows.Automation.AutomationProperties.SetName(box, label); return box; }
         var id = Field("ID (латиница)", AccountClient.Text(d, "id"), 150); id.IsReadOnly = AccountClient.Text(d, "id").Length > 0;
-        var kind = new ComboBox { MinWidth = 120, Margin = new Thickness(0, 0, 8, 8), ItemsSource = new[] { "frame", "badge", "name_color" }, SelectedItem = AccountClient.Text(d, "kind") };
+        var kind = new ComboBox { MinWidth = 120, Margin = new Thickness(0, 0, 8, 8), ItemsSource = new[] { "frame", "badge", "name_color", "avatar_deco", "profile_effect", "profile_frame" }, SelectedItem = AccountClient.Text(d, "kind"), ToolTip = "frame — обводка аватара, avatar_deco — украшение аватара, profile_effect — эффект профиля, profile_frame — рамка профиля" };
         var title = Field("Название", AccountClient.Text(d, "title"), 170);
         var price = Field("Цена", AccountClient.Int(d, "price").ToString(), 70);
         var level = Field("Уровень", Math.Max(1, AccountClient.Int(d, "min_level")).ToString(), 60);
@@ -190,7 +192,25 @@ public sealed class AdminPage : UserControl
         var style = Field("Стиль JSON", (d["style"] ?? new JsonObject()).ToJsonString(), 360);
         var exclusive = new CheckBox { Content = "Только за достижение", IsChecked = AccountClient.Bool(d, "exclusive"), Foreground = Brushes.WhiteSmoke, Margin = new Thickness(0, 6, 12, 8) };
         var active = new CheckBox { Content = "Показывать", IsChecked = d["active"] is null || AccountClient.Bool(d, "active"), Foreground = Brushes.WhiteSmoke, Margin = new Thickness(0, 6, 12, 8) };
-        foreach (UIElement e in new UIElement[] { id, kind, title, price, level, rarity, from, until, style, exclusive, active }) grid.Children.Add(e);
+        style.ToolTip = "Стиль JSON: colors — цвета, type — рисунок кодом (" + StyleTypes + "), image_url — своя картинка PNG/GIF/WebP";
+        var upload = new Button { Content = "Картинка…", Margin = new Thickness(0, 0, 8, 8), ToolTip = "Загрузить свою картинку (PNG, GIF, WebP до 8 МБ) — она заменит рисунок кодом" };
+        upload.Click += async (_, _) =>
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog { Title = "Картинка украшения", Filter = "Картинки|*.png;*.gif;*.webp;*.jpg;*.jpeg" };
+            if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
+            await Run(async () =>
+            {
+                var bytes = await File.ReadAllBytesAsync(dialog.FileName);
+                if (bytes.Length > 8 * 1024 * 1024) throw new InvalidOperationException("Файл больше 8 МБ.");
+                var ext = Path.GetExtension(dialog.FileName).ToLowerInvariant().TrimStart('.');
+                var mime = ext switch { "gif" => "image/gif", "webp" => "image/webp", "jpg" or "jpeg" => "image/jpeg", _ => "image/png" };
+                var url = await account.Upload($"decor-{DateTime.UtcNow:yyyyMMddHHmmss}.{(ext == "jpeg" ? "jpg" : ext)}", bytes, mime);
+                var node = JsonNode.Parse(style.Text) as JsonObject ?? new JsonObject();
+                node["image_url"] = url; style.Text = node.ToJsonString();
+                status.Foreground = new SolidColorBrush(Color.FromRgb(0x7E, 0xDC, 0xA9)); status.Text = "Картинка загружена — нажми «Сохранить».";
+            });
+        };
+        foreach (UIElement e in new UIElement[] { id, kind, title, price, level, rarity, from, until, style, upload, exclusive, active }) grid.Children.Add(e);
         var save = new Button { Content = "Сохранить", Margin = new Thickness(0, 0, 8, 8) };
         save.Click += async (_, _) => await Run(async () =>
         {
@@ -211,6 +231,8 @@ public sealed class AdminPage : UserControl
         {
             "badge" => Decor.Badge(styleObject, 26),
             "name_color" => new TextBlock { Text = AccountClient.Text(d, "title"), FontSize = 18, FontWeight = FontWeights.Bold, Foreground = Decor.NameBrush(styleObject) },
+            "avatar_deco" => Decor.Avatar(64, account.Style("frame_moon"), account.DisplayName, "", styleObject),
+            "profile_effect" or "profile_frame" => new Grid { Width = 120, Height = 64, Children = { new Border { CornerRadius = new CornerRadius(10), Background = new SolidColorBrush(Color.FromRgb(0x21, 0x22, 0x2D)) }, OrnamentLayer.Overlay(AccountClient.Text(d, "kind") == "profile_effect" ? styleObject : null, AccountClient.Text(d, "kind") == "profile_frame" ? styleObject : null, 10) } },
             _ => Decor.Avatar(48, styleObject, account.DisplayName, "")
         });
         var panel = new StackPanel(); panel.Children.Add(preview); panel.Children.Add(grid);

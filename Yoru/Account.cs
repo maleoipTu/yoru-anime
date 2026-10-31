@@ -73,6 +73,18 @@ public static class Rewards
         if (text.Contains("password should be") || text.Contains("weak_password")) return "Пароль слишком простой: нужно минимум 6 символов.";
         if (text.Contains("rate limit") || text.Contains("429")) return "Слишком много попыток. Подожди немного.";
         if (text.Contains("not_enough_points")) return "Не хватает очков.";
+        if (text.Contains("room_not_found")) return "Комната не найдена — проверь код.";
+        if (text.Contains("room_full")) return "В комнате уже 20 человек.";
+        if (text.Contains("not_in_room")) return "Ты уже вышел из комнаты.";
+        if (text.Contains("too_fast")) return "Не так быстро — подожди пару секунд.";
+        if (text.Contains("not_friends")) return "Дарить можно только друзьям.";
+        if (text.Contains("gift_limit")) return "За сутки можно подарить не больше 1000 очков.";
+        if (text.Contains("bad_amount")) return "Подарок — от 10 до 500 очков.";
+        if (text.Contains("not_giftable")) return "Это украшение нельзя подарить.";
+        if (text.Contains("bad_range")) return "Конец должен быть позже начала (не дольше 4 минут).";
+        if (text.Contains("empty_comment")) return "Напиши что-нибудь.";
+        if (text.Contains("not_in_list")) return "Сначала добавь аниме в список.";
+        if (text.Contains("bad_import")) return "Слишком большой список для переноса.";
         if (text.Contains("level_too_low")) return "Нужен более высокий уровень.";
         if (text.Contains("already_owned")) return "Это украшение уже есть.";
         if (text.Contains("not_owned")) return "Сначала получи это украшение.";
@@ -266,14 +278,23 @@ public sealed class AccountClient : IDisposable
     public async Task<JsonArray> Get(string path) => JsonNode.Parse(await Send(HttpMethod.Get, path, null, await Bearer()))!.AsArray();
 
     // ───── Списки ─────
-    public static readonly string[] Lists = ["watching", "planned", "completed", "dropped"];
-    public static string ListLabel(string status) => status switch { "watching" => "Смотрю", "planned" => "Запланировано", "completed" => "Просмотрено", "dropped" => "Брошено", _ => "Избранное" };
+    public static readonly string[] Lists = ["watching", "planned", "completed", "on_hold", "dropped"];
+    public static string ListLabel(string status) => status switch { "watching" => "Смотрю", "planned" => "Запланировано", "completed" => "Просмотрено", "on_hold" => "Отложено", "dropped" => "Брошено", _ => "Избранное" };
     public async Task<List<Anime>> List(string status) =>
         (await Get($"/rest/v1/anime_lists?user_id=eq.{UserId}&status=eq.{status}&select=anime_id,title,poster,episodes,total&order=updated_at.desc&limit=500"))
         .Select(r => new Anime { Id = Long(r, "anime_id"), Title = Text(r, "title"), Poster = Text(r, "poster"), EpisodeCount = Int(r, "total"),
             DisplayNote = Int(r, "episodes") > 0 ? $"Серий: {Int(r, "episodes")}" + (Int(r, "total") > 0 ? $" из {Int(r, "total")}" : "") : "" }).ToList();
     public async Task<JsonObject> ListEntry(long animeId) => (await Get($"/rest/v1/anime_lists?user_id=eq.{UserId}&anime_id=eq.{animeId}&select=status,episodes,total")).FirstOrDefault() as JsonObject ?? new JsonObject();
     public async Task<JsonObject> SetList(Anime anime, string status) => (await Rpc("set_list_status", new JsonObject { ["p_anime_id"] = anime.Id, ["p_status"] = status, ["p_title"] = anime.Title, ["p_poster"] = anime.Poster, ["p_total"] = anime.EpisodeCount }))!.AsObject();
+
+    /// <summary>Название, постер, жанры и число серий — для статистики, рекомендаций и «Года в Yoru».</summary>
+    public async Task NoteAnime(Anime anime)
+    {
+        if (!SignedIn) return;
+        var genres = new JsonArray(); foreach (var g in anime.Genres.Split(" · ", StringSplitOptions.RemoveEmptyEntries)) genres.Add(g);
+        try { await Rpc("note_anime", new JsonObject { ["p_anime_id"] = anime.Id, ["p_title"] = anime.Title, ["p_poster"] = anime.Poster, ["p_genres"] = genres, ["p_episodes"] = anime.EpisodeCount }); }
+        catch (Exception e) when (e is AccountException or HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or InvalidOperationException) { }
+    }
 
     // ───── Оценки и отзывы ─────
     public async Task<JsonObject> Rating(long animeId) => (await PublicRpc("anime_rating", new JsonObject { ["p_anime_id"] = animeId }))!.AsObject();

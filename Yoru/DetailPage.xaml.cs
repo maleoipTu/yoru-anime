@@ -46,7 +46,7 @@ public partial class DetailPage : UserControl
         {
             var result = await api.Detail(anime.Id, cts.Token);
             if (cts.IsCancellationRequested) return;
-            anime = result.Anime; social.Anime = anime; videos = result.Videos; Render();
+            anime = result.Anime; social.Anime = anime; videos = result.Videos; Render(); _ = AccountClient.Shared.NoteAnime(anime);
             if (videos.Count == 0) { VideoStatus.Text = "Для этого аниме API не вернул доступных видео. Попробуй открыть его на сайте."; return; }
             VideoStatus.Text = $"Доступно серий: {videos.Select(v => v.Number).Distinct().Count()}. Выбери озвучку.";
             Selectors.Visibility = Visibility.Visible;

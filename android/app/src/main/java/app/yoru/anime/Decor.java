@@ -37,11 +37,21 @@ final class Decor {
   final Paint ring=new Paint(Paint.ANTI_ALIAS_FLAG),glow=new Paint(Paint.ANTI_ALIAS_FLAG),fill=new Paint(Paint.ANTI_ALIAS_FLAG),letterPaint=new Paint(Paint.ANTI_ALIAS_FLAG),border=new Paint(Paint.ANTI_ALIAS_FLAG);
   final Path clip=new Path();
   int[] frame={Ui.ACCENT};boolean animated,glowing;float angle;ValueAnimator spinner;
+  String decoType="",decoGlyph="",decoUrl="";int[] decoColors={Ui.ACCENT};boolean decoAnimated;android.graphics.drawable.Drawable decoImage;
   String letter="?",pictureUrl="";android.graphics.drawable.Drawable picture;Media.VideoSurface video;
 
   AvatarView(Context c){super(c);setWillNotDraw(false);ring.setStyle(Paint.Style.STROKE);glow.setStyle(Paint.Style.STROKE);border.setStyle(Paint.Style.STROKE);border.setColor(Ui.BG);fill.setColor(Ui.SOFT);letterPaint.setColor(Ui.TEXT);letterPaint.setTextAlign(Paint.Align.CENTER);letterPaint.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);}
 
   void frame(JSONObject style){frame=colors(style,Ui.ACCENT);animated=style.optBoolean("animated");glowing=style.optBoolean("glow");updateAnimation();invalidate();}
+  /** Украшение аватара (ушки, нимб, корона…) или своя картинка style.image_url; пустой стиль — без украшения. */
+  void deco(JSONObject style){
+   if(style==null)style=new JSONObject();
+   decoType=style.optString("type");decoGlyph=style.optString("glyph");decoColors=colors(style,Ui.ACCENT);decoAnimated=Ornaments.animatedAvatar(decoType)||style.optBoolean("animated");
+   String url=style.optString("image_url");
+   if(!url.equals(decoUrl)){decoUrl=url;if(decoImage!=null)decoImage.setCallback(null);decoImage=null;if(url.startsWith("https://")&&getContext() instanceof Activity)Media.drawable((Activity)getContext(),url,512,d->{if(url.equals(decoUrl)){decoImage=d;d.setCallback(this);invalidate();}});}
+   updateAnimation();requestLayout();invalidate();
+  }
+  boolean hasDeco(){return !decoType.isEmpty()||!decoUrl.isEmpty();}
   void person(String name,String avatarUrl){
    letter=name.isEmpty()?"?":name.substring(0,name.offsetByCodePoints(0,1)).toUpperCase(Locale.forLanguageTag("ru"));
    String url=avatarUrl==null?"":avatarUrl;
@@ -53,16 +63,17 @@ final class Decor {
    else if(getContext() instanceof Activity)Media.drawable((Activity)getContext(),url,512,d->{if(url.equals(pictureUrl))setPicture(d);});
   }
   void setPicture(android.graphics.drawable.Drawable d){if(picture!=null)picture.setCallback(null);picture=d;if(d!=null)d.setCallback(this);invalidate();}
-  @Override protected boolean verifyDrawable(android.graphics.drawable.Drawable who){return who==picture||super.verifyDrawable(who);}
+  @Override protected boolean verifyDrawable(android.graphics.drawable.Drawable who){return who==picture||who==decoImage||super.verifyDrawable(who);}
 
-  float stroke(){return Math.max(2,Math.min(getWidth(),getHeight())*.065f);}
-  float radius(){float size=Math.min(getWidth(),getHeight());return size/2f-stroke()/2f-(glowing?size*.04f:0);}
-  float inner(){return radius()-stroke()/2f-Math.min(getWidth(),getHeight())*.035f;}
+  float side(){return Math.min(getWidth(),getHeight())*(hasDeco()?.72f:1f);}
+  float stroke(){return Math.max(2,side()*.065f);}
+  float radius(){float size=side();return size/2f-stroke()/2f-(glowing?size*.04f:0);}
+  float inner(){return radius()-stroke()/2f-side()*.035f;}
   @Override protected void onLayout(boolean changed,int l,int t,int r,int b){if(video!=null){float in=inner(),cx=(r-l)/2f,cy=(b-t)/2f;video.layout(Math.round(cx-in),Math.round(cy-in),Math.round(cx+in),Math.round(cy+in));}}
   @Override protected void onMeasure(int w,int h){super.onMeasure(w,h);if(video!=null){int side=Math.round(inner()*2);video.measure(MeasureSpec.makeMeasureSpec(Math.max(1,side),MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(Math.max(1,side),MeasureSpec.EXACTLY));}}
 
   void updateAnimation(){
-   boolean run=animated&&isAttachedToWindow()&&ValueAnimator.areAnimatorsEnabled();
+   boolean run=(animated||decoAnimated)&&isAttachedToWindow()&&ValueAnimator.areAnimatorsEnabled();
    if(run&&spinner==null){spinner=ValueAnimator.ofFloat(0,360);spinner.setDuration(6000);spinner.setRepeatCount(ValueAnimator.INFINITE);spinner.setInterpolator(new LinearInterpolator());spinner.addUpdateListener(a->{angle=(float)a.getAnimatedValue();invalidate();});spinner.start();}
    else if(!run&&spinner!=null){spinner.cancel();spinner=null;angle=0;}
   }
@@ -81,11 +92,13 @@ final class Decor {
   @Override protected void dispatchDraw(Canvas canvas){
    super.dispatchDraw(canvas);
    float cx=getWidth()/2f,cy=getHeight()/2f,stroke=stroke(),radius=radius();
-   border.setStrokeWidth(Math.min(getWidth(),getHeight())*.035f+1);canvas.drawCircle(cx,cy,radius-stroke/2f,border);
+   border.setStrokeWidth(side()*.035f+1);canvas.drawCircle(cx,cy,radius-stroke/2f,border);
    Shader shader=null;
    if(frame.length>1){int[] loop=frame;if(loop[0]!=loop[loop.length-1]){loop=Arrays.copyOf(frame,frame.length+1);loop[frame.length]=frame[0];}SweepGradient sweep=new SweepGradient(cx,cy,loop,null);Matrix rotate=new Matrix();rotate.setRotate(angle-90,cx,cy);sweep.setLocalMatrix(rotate);shader=sweep;}
    if(glowing){glow.setStrokeWidth(stroke*2.6f);glow.setShader(shader);glow.setColor(frame[0]);glow.setAlpha(70);canvas.drawCircle(cx,cy,radius,glow);}
    ring.setStrokeWidth(stroke);ring.setShader(shader);ring.setColor(frame[0]);canvas.drawCircle(cx,cy,radius,ring);
+   if(decoImage!=null){decoImage.setBounds(0,0,getWidth(),getHeight());decoImage.draw(canvas);}
+   else if(!decoType.isEmpty())Ornaments.avatar(canvas,decoType,decoGlyph,decoColors,cx,cy,radius+stroke/2f,angle/360f);
   }
  }
 }

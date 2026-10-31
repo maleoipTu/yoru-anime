@@ -92,8 +92,8 @@ final class Account {
  JSONArray get(String path) throws Exception {return new JSONArray(call("GET",path,null,bearer(),null));}
 
  // ───── Списки ─────
- static final String[] LISTS={"watching","planned","completed","dropped"};
- static String listLabel(String status){switch(status){case "watching":return "Смотрю";case "planned":return "Запланировано";case "completed":return "Просмотрено";case "dropped":return "Брошено";default:return "Избранное";}}
+ static final String[] LISTS={"watching","planned","completed","on_hold","dropped"};
+ static String listLabel(String status){switch(status){case "watching":return "Смотрю";case "planned":return "Запланировано";case "completed":return "Просмотрено";case "on_hold":return "Отложено";case "dropped":return "Брошено";default:return "Избранное";}}
  /** Аниме из облачного списка в формате карточки каталога. */
  List<Anime> list(String status) throws Exception {
   JSONArray rows=get("/rest/v1/anime_lists?user_id=eq."+userId()+"&status=eq."+status+"&select=anime_id,title,poster,episodes,total&order=updated_at.desc&limit=500");
@@ -104,6 +104,10 @@ final class Account {
  /** Статус аниме в моих списках: {status, episodes, total} или пустой объект. */
  JSONObject listEntry(long animeId) throws Exception {JSONArray rows=get("/rest/v1/anime_lists?user_id=eq."+userId()+"&anime_id=eq."+animeId+"&select=status,episodes,total");return rows.length()>0?rows.getJSONObject(0):new JSONObject();}
  JSONObject setList(Anime anime,String status) throws Exception {return (JSONObject)rpc("set_list_status",new JSONObject().put("p_anime_id",anime.id).put("p_status",status).put("p_title",anime.title).put("p_poster",anime.poster).put("p_total",anime.totalEpisodes()));}
+
+ /** Сообщает серверу название, постер, жанры и число серий — для статистики, рекомендаций и «Года в Yoru». */
+ void noteAnime(Anime anime){if(!signedIn())return;try{JSONArray genres=new JSONArray();JSONArray all=anime.raw.optJSONArray("genres");if(all!=null)for(int i=0;i<all.length();i++){Object g=all.opt(i);String name=g instanceof JSONObject?((JSONObject)g).optString("title"):String.valueOf(g);if(!name.isEmpty())genres.put(name);}
+  rpc("note_anime",new JSONObject().put("p_anime_id",anime.id).put("p_title",anime.title).put("p_poster",anime.poster).put("p_genres",genres).put("p_episodes",anime.totalEpisodes()));}catch(Exception ignored){}}
 
  // ───── Оценки и отзывы ─────
  JSONObject rating(long animeId) throws Exception {return (JSONObject)anonRpc("anime_rating",new JSONObject().put("p_anime_id",animeId));}
@@ -118,7 +122,7 @@ final class Account {
  // ───── Друзья ─────
  JSONArray friends() throws Exception {return (JSONArray)rpc("my_friends",new JSONObject());}
  JSONArray feed() throws Exception {return (JSONArray)rpc("friend_feed",new JSONObject());}
- JSONArray search(String query) throws Exception {String q=query.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_]","");if(q.isEmpty())return new JSONArray();return get("/rest/v1/profiles?username=ilike.*"+q+"*&select=id,username,display_name,avatar_url,status,equipped_frame,equipped_badge,equipped_color,total_earned&order=username.asc&limit=20");}
+ JSONArray search(String query) throws Exception {String q=query.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_]","");if(q.isEmpty())return new JSONArray();return get("/rest/v1/profiles?username=ilike.*"+q+"*&select=id,username,display_name,avatar_url,status,equipped_frame,equipped_badge,equipped_color,equipped_deco,total_earned&order=username.asc&limit=20");}
  JSONObject publicProfile(String username) throws Exception {Object result=anonRpc("public_profile",new JSONObject().put("p_username",username));return result instanceof JSONObject?(JSONObject)result:null;}
 
  // ───── Хранилище аватаров и баннеров ─────

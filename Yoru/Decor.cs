@@ -40,6 +40,20 @@ public static class Decor
     }
 
     /// <summary>Круглый аватар (постер или буква) с рамкой: градиент, свечение и вращение для анимированных рамок.</summary>
+    public static FrameworkElement Avatar(double size, JsonObject frame, string name, string avatarUrl, JsonObject? deco)
+    {
+        var decoType = AccountClient.Text(deco, "type"); var decoImage = AccountClient.Text(deco, "image_url");
+        if (decoType.Length == 0 && !decoImage.StartsWith("https://")) return Avatar(size, frame, name, avatarUrl);
+        // Украшение выходит за круг аватара: сам аватар занимает 72% области, рисунок — всю область.
+        var inner = size * 0.72;
+        var host = new Grid { Width = size, Height = size };
+        var avatar = Avatar(inner, frame, name, avatarUrl); avatar.HorizontalAlignment = HorizontalAlignment.Center; avatar.VerticalAlignment = VerticalAlignment.Center;
+        host.Children.Add(avatar);
+        if (decoImage.StartsWith("https://")) { var view = Media.View(decoImage, Stretch.Uniform); view.IsHitTestVisible = false; host.Children.Add(view); }
+        else host.Children.Add(new OrnamentLayer(OrnamentLayer.Kind.Avatar, deco, inner / 2) { Width = size, Height = size });
+        System.Windows.Automation.AutomationProperties.SetName(host, "Аватар " + name);
+        return host;
+    }
     public static FrameworkElement Avatar(double size, JsonObject frame, string name, string avatarUrl)
     {
         var colors = Colors(frame, Accent);
@@ -88,7 +102,8 @@ public static class Decor
         var name = AccountClient.Text(p, "display_name").Trim() is { Length: > 0 } n ? n : AccountClient.Text(p, "username");
         string Equipped(string key, string fallback) => AccountClient.Text(p, key) is { Length: > 0 } v ? v : fallback;
         var row = new DockPanel { Margin = new Thickness(0, 6, 0, 6) };
-        var avatar = Avatar(size, account.Style(Equipped("equipped_frame", "frame_moon")), name, AccountClient.Text(p, "avatar_url"));
+        var deco = AccountClient.Text(p, "equipped_deco");
+        var avatar = Avatar(deco.Length > 0 ? size * 1.3 : size, account.Style(Equipped("equipped_frame", "frame_moon")), name, AccountClient.Text(p, "avatar_url"), deco.Length > 0 ? account.Style(deco) : null);
         DockPanel.SetDock(avatar, Dock.Left); row.Children.Add(avatar);
         var text = new StackPanel { Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
         var nameRow = new StackPanel { Orientation = Orientation.Horizontal };

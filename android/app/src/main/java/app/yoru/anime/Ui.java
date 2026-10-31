@@ -129,6 +129,14 @@ final class Ui {
     case "user":canvas.drawCircle(12,8,4,paint);path.moveTo(4,21);path.cubicTo(4,15,20,15,20,21);canvas.drawPath(path,paint);break;
     case "gem":path.moveTo(7,4);path.lineTo(17,4);path.lineTo(21,9);path.lineTo(12,20);path.lineTo(3,9);path.close();canvas.drawPath(path,paint);line(canvas,3,9,21,9);line(canvas,9,9,12,20,15,9);break;
     case "logout":line(canvas,10,4,4,4,4,20,10,20);line(canvas,9,12,20,12);line(canvas,16,8,20,12,16,16);break;
+    case "send":path.moveTo(4,12);path.lineTo(20,4);path.lineTo(14,20);path.lineTo(11,13);path.close();canvas.drawPath(path,paint);line(canvas,11,13,20,4);break;
+    case "chat":path.moveTo(4,5);path.lineTo(20,5);path.lineTo(20,16);path.lineTo(10,16);path.lineTo(6,20);path.lineTo(6,16);path.lineTo(4,16);path.close();canvas.drawPath(path,paint);break;
+    case "party":canvas.drawCircle(9,8,3,paint);canvas.drawCircle(16,9,2.5f,paint);path.moveTo(3,20);path.cubicTo(3,14,15,14,15,20);path.moveTo(15,15);path.cubicTo(18,14,21,16,21,19);canvas.drawPath(path,paint);break;
+    case "dice":canvas.drawRoundRect(new RectF(4,4,20,20),3,3,paint);canvas.drawCircle(8.5f,8.5f,1,paint);canvas.drawCircle(15.5f,15.5f,1,paint);canvas.drawCircle(12,12,1,paint);break;
+    case "gift":canvas.drawRect(4,9,20,13,paint);canvas.drawRect(5,13,19,20,paint);line(canvas,12,9,12,20);path.moveTo(12,9);path.cubicTo(9,4,5,6,8,9);path.moveTo(12,9);path.cubicTo(15,4,19,6,16,9);canvas.drawPath(path,paint);break;
+    case "trophy":path.moveTo(7,4);path.lineTo(17,4);path.lineTo(17,9);path.cubicTo(17,13,7,13,7,9);path.close();canvas.drawPath(path,paint);line(canvas,7,6,4,6,4,8,7,10);line(canvas,17,6,20,6,20,8,17,10);line(canvas,12,12,12,17);line(canvas,8,20,16,20);line(canvas,9,17,15,17);break;
+    case "chart":line(canvas,4,20,20,20);line(canvas,7,20,7,13);line(canvas,12,20,12,7);line(canvas,17,20,17,10);break;
+    case "spark":path.moveTo(12,3);path.quadTo(12,12,21,12);path.quadTo(12,12,12,21);path.quadTo(12,12,3,12);path.quadTo(12,12,12,3);canvas.drawPath(path,paint);break;
     default:canvas.drawCircle(12,12,8,paint);
    }canvas.restoreToCount(save);
   }

@@ -17,3 +17,5 @@ run supabase/migrations/20261030120000_social.sql; run supabase/migrations/20261
 psql -q -v ON_ERROR_STOP=1 -d "$db" -f supabase/tests/social_test.sql | tail -1
 run supabase/migrations/20261031000000_admin_customization.sql; run supabase/migrations/20261031000000_admin_customization.sql
 psql -q -v ON_ERROR_STOP=1 -d "$db" -f supabase/tests/admin_test.sql | tail -1
+run supabase/migrations/20261101000000_party_stats.sql; run supabase/migrations/20261101000000_party_stats.sql
+psql -q -v ON_ERROR_STOP=1 -d "$db" -f supabase/tests/party_test.sql | tail -1

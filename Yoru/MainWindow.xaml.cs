@@ -18,12 +18,16 @@ public static class Shell
     public static void Home(string section = "catalog") => Main?.GoHome(section);
     public static void Title(string text) { if (Main != null) Main.Title = text.Length > 0 ? text + " · Yoru" : "Yoru"; }
     public static void Fullscreen(bool value) => Main?.SetFullscreen(value);
+    public static YummyClient Api => Main!.Api;
+    public static LocalStore Store => Main!.Store;
 }
 
 public partial class MainWindow : Window
 {
     readonly LocalStore store = new();
     readonly YummyClient api = new();
+    public YummyClient Api => api;
+    public LocalStore Store => store;
     List<Anime> preview = [];
     List<Anime> displayed = [];
     string page = "catalog";
@@ -59,6 +63,8 @@ public partial class MainWindow : Window
         AccountClient.Shared.Changed += UpdateAuthGate; UpdateAuthGate();
         Loaded += (_, _) => { ready = true; CatalogNav.IsChecked = true; if (store.LoadWarning != null) StatusText.Text = store.LoadWarning; };
         Loaded += async (_, _) => await CheckUpdates();
+        Loaded += (_, _) => { NotifyBox.IsChecked = store.Data.NotifyEpisodes; DiscordBox.IsChecked = store.Data.DiscordPresence; DiscordIdBox.Text = store.Data.DiscordClientId; EpisodeNotifier.Start(store); };
+        Closed += (_, _) => EpisodeNotifier.Stop();
         Loaded += async (_, _) =>
         {
             AccountClient.Shared.Changed += UpdateProfileCard; UpdateProfileCard();
@@ -182,6 +188,15 @@ public partial class MainWindow : Window
     async void RefreshClick(object sender, RoutedEventArgs e) => await LoadPage();
     async void MoreClick(object sender, RoutedEventArgs e) { if (!busy) await LoadPage(true); }
     void SettingsClick(object sender, RoutedEventArgs e) => SettingsNav.IsChecked = true;
+    void RouletteClick(object sender, RoutedEventArgs e) => PushPage(new RoulettePage(AccountClient.Shared));
+    void ForYouClick(object sender, RoutedEventArgs e) => PushPage(new ForYouPage(AccountClient.Shared));
+    void SocialSettingsChanged(object sender, RoutedEventArgs e)
+    {
+        store.Data.NotifyEpisodes = NotifyBox.IsChecked == true; store.Data.DiscordPresence = DiscordBox.IsChecked == true;
+        var id = DiscordIdBox.Text.Trim(); store.Data.DiscordClientId = System.Text.RegularExpressions.Regex.IsMatch(id, "^[0-9]{15,22}$") ? id : "";
+        try { store.Save(); } catch (IOException) { }
+        EpisodeNotifier.Start(store);
+    }
     void DeveloperClick(object sender, RoutedEventArgs e) => OpenLink("https://yummyani.me/dev/applications");
     public static void OpenLink(string url) => Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
     async void ConnectClick(object sender, RoutedEventArgs e)

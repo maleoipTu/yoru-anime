@@ -56,10 +56,12 @@
      </Border>
      <Grid Margin="0,0,0,19"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock x:Name="PageTitle" Text="Найди свою следующую историю" FontSize="24" FontWeight="SemiBold"/><TextBlock x:Name="PageSubtitle" Text="Большие миры начинаются с одной серии" Foreground="{StaticResource Muted}" FontSize="12" Margin="0,7,0,0"/></StackPanel><Button x:Name="RefreshButton" Grid.Column="1" Content="↻  Обновить" Click="RefreshClick" VerticalAlignment="Center" Padding="14,9"/></Grid>
      <StackPanel x:Name="Filters" Orientation="Horizontal" Margin="0,0,0,20">
-      <ComboBox x:Name="ListPicker" Margin="0,0,12,0" SelectionChanged="ListChanged" AutomationProperties.Name="Список" Visibility="Collapsed"><ComboBoxItem Content="Избранное" Tag="" IsSelected="True"/><ComboBoxItem Content="Смотрю" Tag="watching"/><ComboBoxItem Content="Запланировано" Tag="planned"/><ComboBoxItem Content="Просмотрено" Tag="completed"/><ComboBoxItem Content="Брошено" Tag="dropped"/></ComboBox>
+      <ComboBox x:Name="ListPicker" Margin="0,0,12,0" SelectionChanged="ListChanged" AutomationProperties.Name="Список" Visibility="Collapsed"><ComboBoxItem Content="Избранное" Tag="" IsSelected="True"/><ComboBoxItem Content="Смотрю" Tag="watching"/><ComboBoxItem Content="Запланировано" Tag="planned"/><ComboBoxItem Content="Просмотрено" Tag="completed"/><ComboBoxItem Content="Отложено" Tag="on_hold"/><ComboBoxItem Content="Брошено" Tag="dropped"/></ComboBox>
       <ComboBox x:Name="SortBox" SelectionChanged="FilterChanged" AutomationProperties.Name="Сортировка"><ComboBoxItem Content="По рейтингу" Tag="rating" IsSelected="True"/><ComboBoxItem Content="По популярности" Tag="views"/><ComboBoxItem Content="Сначала новые" Tag="year"/><ComboBoxItem Content="Случайный выбор" Tag="random"/></ComboBox>
       <ComboBox x:Name="StatusBox" Margin="12,0,12,0" SelectionChanged="FilterChanged" AutomationProperties.Name="Статус аниме"><ComboBoxItem Content="Все статусы" Tag="" IsSelected="True"/><ComboBoxItem Content="Вышедшие" Tag="released"/><ComboBoxItem Content="Онгоинги" Tag="ongoing"/><ComboBoxItem Content="Анонсы" Tag="announcement"/></ComboBox>
       <Button x:Name="FilterButton" Content="⚲  Фильтры" Click="FiltersClick" Padding="14,9" Visibility="{Binding Visibility, ElementName=StatusBox}" AutomationProperties.Name="Фильтры по жанрам, годам и возрастному рейтингу"/>
+      <Button Content="🎲  Рулетка" Click="RouletteClick" Padding="14,9" Margin="10,0,0,0" AutomationProperties.Name="Случайное аниме"/>
+      <Button Content="✨  Для тебя" Click="ForYouClick" Padding="14,9" Margin="10,0,0,0" AutomationProperties.Name="Рекомендации для тебя"/>
       <TextBlock x:Name="ResultCount" Foreground="{StaticResource Muted}" VerticalAlignment="Center" Margin="16,0,0,0" FontSize="12"/>
      </StackPanel>
      <Border x:Name="EmptyState" Visibility="Collapsed" CornerRadius="14" Background="{StaticResource Panel}" Padding="40" Margin="0,8,0,18"><StackPanel><TextBlock Text="☾" FontSize="42" Foreground="#FF4D67" HorizontalAlignment="Center"/><TextBlock x:Name="EmptyText" FontSize="17" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,12,0,0"/></StackPanel></Border>
@@ -92,6 +94,14 @@
       <TextBlock Text="Если заменить ключ, его копия сохранится на этом ПК под защитой учётной записи Windows. Запросы отправляются напрямую в YummyAnime." FontSize="12" Foreground="{StaticResource Muted}" Margin="0,10,0,20" LineHeight="20"/>
       <Button x:Name="ConnectButton" Content="Проверить и подключить" Style="{StaticResource Primary}" Click="ConnectClick" HorizontalAlignment="Left"/>
       <TextBlock x:Name="SettingsResult" TextWrapping="Wrap" Foreground="#C4B4F6" Margin="0,16,0,0"/>
+     </StackPanel></Border>
+     <Border Background="{StaticResource Panel}" CornerRadius="16" Padding="26" Margin="0,18,0,0"><StackPanel>
+      <TextBlock Text="Уведомления и Discord" FontSize="18" FontWeight="SemiBold"/>
+      <CheckBox x:Name="NotifyBox" Content="Сообщать о новых сериях аниме из «Смотрю» и избранного" Foreground="#F5F5F7" Margin="0,14,0,0" Click="SocialSettingsChanged"/>
+      <CheckBox x:Name="DiscordBox" Content="Показывать в Discord, что я смотрю" Foreground="#F5F5F7" Margin="0,12,0,0" Click="SocialSettingsChanged"/>
+      <TextBlock Text="Discord Application ID" FontWeight="SemiBold" Margin="0,16,0,8"/>
+      <TextBox x:Name="DiscordIdBox" MaxLength="22" AutomationProperties.Name="Discord Application ID" LostFocus="SocialSettingsChanged"/>
+      <TextBlock Text="Создай приложение «Yoru» на discord.com/developers/applications и вставь сюда его Application ID. Discord должен быть запущен на этом ПК." FontSize="12" Foreground="{StaticResource Muted}" TextWrapping="Wrap" LineHeight="20" Margin="0,8,0,0"/>
      </StackPanel></Border>
      <Border Background="{StaticResource Panel}" CornerRadius="16" Padding="26" Margin="0,18,0,0"><StackPanel>
       <TextBlock Text="Личная коллекция" FontSize="18" FontWeight="SemiBold"/>
