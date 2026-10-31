@@ -22,6 +22,7 @@
     <Resource Include="Assets\yoru.ico" />
     <Resource Include="Assets\yoru-256.png" />
     <Content Include="Assets\**\*" Exclude="Assets\PlayerHost\hls.min.js" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\art\assets\decor\*.*" Link="Assets\decor\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="Assets\PlayerHost\hls.min.js" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="..\supabase.properties" Link="supabase.properties" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Condition="Exists('..\supabase.properties')" />
   </ItemGroup>

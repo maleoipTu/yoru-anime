@@ -1,0 +1,158 @@
+{
+ "cat_ears": {
+  "w": 240,
+  "h": 240,
+  "frames": 24,
+  "fps": 14
+ },
+ "bunny": {
+  "w": 240,
+  "h": 240,
+  "frames": 24,
+  "fps": 14
+ },
+ "halo": {
+  "w": 240,
+  "h": 240,
+  "frames": 24,
+  "fps": 14
+ },
+ "horns": {
+  "w": 240,
+  "h": 240,
+  "frames": 24,
+  "fps": 14
+ },
+ "headphones": {
+  "w": 240,
+  "h": 240,
+  "frames": 24,
+  "fps": 14
+ },
+ "crown": {
+  "w": 240,
+  "h": 240,
+  "frames": 24,
+  "fps": 14
+ },
+ "orbit_hearts": {
+  "w": 240,
+  "h": 240,
+  "frames": 24,
+  "fps": 14
+ },
+ "orbit_stars": {
+  "w": 240,
+  "h": 240,
+  "frames": 24,
+  "fps": 14
+ },
+ "sakura_wreath": {
+  "w": 240,
+  "h": 240,
+  "frames": 24,
+  "fps": 14
+ },
+ "pumpkin": {
+  "w": 240,
+  "h": 240,
+  "frames": 24,
+  "fps": 14
+ },
+ "fx_sparkle": {
+  "w": 64,
+  "h": 64,
+  "frames": 4,
+  "fps": 0
+ },
+ "fx_bubble": {
+  "w": 72,
+  "h": 72,
+  "frames": 3,
+  "fps": 0
+ },
+ "fx_petal": {
+  "w": 48,
+  "h": 48,
+  "frames": 4,
+  "fps": 0
+ },
+ "fx_firefly": {
+  "w": 64,
+  "h": 64,
+  "frames": 2,
+  "fps": 0
+ },
+ "fx_heart": {
+  "w": 56,
+  "h": 56,
+  "frames": 3,
+  "fps": 0
+ },
+ "fx_starfall": {
+  "w": 200,
+  "h": 48,
+  "frames": 1,
+  "fps": 0
+ },
+ "fx_bat": {
+  "w": 104,
+  "h": 72,
+  "frames": 8,
+  "fps": 16
+ },
+ "fx_snow": {
+  "w": 48,
+  "h": 48,
+  "frames": 4,
+  "fps": 0
+ },
+ "pf_cobweb": {
+  "w": 230,
+  "h": 230,
+  "frames": 1,
+  "fps": 0
+ },
+ "pf_spider": {
+  "w": 56,
+  "h": 64,
+  "frames": 8,
+  "fps": 10
+ },
+ "pf_vines": {
+  "w": 190,
+  "h": 190,
+  "frames": 1,
+  "fps": 0
+ },
+ "pf_constellation": {
+  "w": 170,
+  "h": 170,
+  "frames": 1,
+  "fps": 0
+ },
+ "pf_flame": {
+  "w": 72,
+  "h": 112,
+  "frames": 12,
+  "fps": 16
+ },
+ "pf_crystal": {
+  "w": 170,
+  "h": 170,
+  "frames": 1,
+  "fps": 0
+ },
+ "pf_moon": {
+  "w": 150,
+  "h": 150,
+  "frames": 1,
+  "fps": 0
+ },
+ "pf_cloud": {
+  "w": 190,
+  "h": 84,
+  "frames": 1,
+  "fps": 0
+ }
+}

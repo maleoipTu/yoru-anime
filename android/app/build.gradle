@@ -35,6 +35,8 @@ android {
         }
     }
     buildFeatures { buildConfig true }
+    // Нарисованные украшения (art/assets/decor) — общие для Android и Windows.
+    sourceSets { main { assets.srcDirs += ['../../art/assets'] } }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
     lint { abortOnError true; checkReleaseBuilds true }
 }
