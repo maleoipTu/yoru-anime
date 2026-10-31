@@ -2,6 +2,9 @@ name: Windows design screenshots
 # Ручная проверка дизайна: собирает Windows-версию, проходит по основным экранам и кладёт снимки в ветку qa-shots.
 on:
   workflow_dispatch:
+  # Ветки с работой над дизайном снимаются автоматически при каждом push.
+  push:
+    branches: ['design/**', qa-screenshots]
 permissions:
   contents: write
 jobs:
