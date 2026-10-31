@@ -158,30 +158,24 @@
  "night_keeper": {
   "w": 240,
   "h": 240,
-  "frames": 40,
-  "fps": 30
+  "frames": 48,
+  "fps": 8
  },
  "fx_night": {
-  "w": 64,
-  "h": 64,
-  "frames": 5,
+  "w": 32,
+  "h": 32,
+  "frames": 3,
   "fps": 0
  },
  "fx_night_comet": {
-  "w": 220,
-  "h": 56,
-  "frames": 1,
-  "fps": 0
- },
- "pf_night_corner": {
-  "w": 180,
-  "h": 180,
+  "w": 200,
+  "h": 12,
   "frames": 1,
   "fps": 0
  },
  "pf_night_crest": {
-  "w": 168,
-  "h": 84,
+  "w": 96,
+  "h": 72,
   "frames": 1,
   "fps": 0
  }

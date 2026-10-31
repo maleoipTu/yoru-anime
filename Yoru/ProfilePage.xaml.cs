@@ -239,14 +239,14 @@ public partial class ProfilePage : UserControl
         Dispatcher.BeginInvoke(() => Scroll.ScrollToVerticalOffset(offset));
     }
     string Frame => Field(account.Profile, "equipped_frame", "frame_moon");
-    static readonly Brush StaffText = Frozen(new SolidColorBrush(Color.FromRgb(0xFF, 0xB3, 0x6B)));
-    static readonly Brush StaffBorder = Frozen(new LinearGradientBrush(Color.FromRgb(0xFF, 0x4D, 0x67), Color.FromRgb(0xFF, 0xC2, 0x7A), 30));
+    // Набор администрации в магазине: строгая графитовая подложка, тонкий серебряный кант и подпись лунным серебром.
+    static readonly Brush StaffText = Frozen(new SolidColorBrush(Color.FromRgb(0xC9, 0xD2, 0xE3)));
+    static readonly Brush StaffBorder = Frozen(new LinearGradientBrush(Color.FromArgb(0x99, 0xDC, 0xE3, 0xF0), Color.FromArgb(0x40, 0x8E, 0x98, 0xAB), 30));
     static Brush StaffBackground(bool worn)
     {
         var sky = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
-        sky.GradientStops.Add(new GradientStop(Color.FromRgb(0x1E, 0x17, 0x30), 0));
-        sky.GradientStops.Add(new GradientStop(worn ? Color.FromRgb(0x30, 0x18, 0x26) : Color.FromRgb(0x19, 0x14, 0x22), .65));
-        sky.GradientStops.Add(new GradientStop(Color.FromRgb(0x3A, 0x1A, 0x22), 1));
+        sky.GradientStops.Add(new GradientStop(Color.FromRgb(0x22, 0x24, 0x2C), 0));
+        sky.GradientStops.Add(new GradientStop(worn ? Color.FromRgb(0x2E, 0x1C, 0x24) : Color.FromRgb(0x1A, 0x1B, 0x21), 1));
         return Frozen(sky);
     }
     static Brush Frozen(Brush brush) { brush.Freeze(); return brush; }
@@ -299,7 +299,7 @@ public partial class ProfilePage : UserControl
         else { state = "◆ " + Rewards.Points(price); color = points >= price ? Warm : Muted; }
         panel.Children.Add(new TextBlock { Text = state, FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = color, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0) });
         var button = new Button { Content = panel, Padding = new Thickness(12, 18, 12, 16), Margin = new Thickness(0, 0, 14, 14), Background = worn ? new SolidColorBrush(Color.FromRgb(0x3A, 0x18, 0x20)) : new SolidColorBrush(Color.FromRgb(0x21, 0x22, 0x2D)), ToolTip = AccountClient.Text(d, "description") };
-        // Своя подложка у набора администрации: ночное небо с отсветом зари и тонкий кант цвета зари.
+        // Своя подложка у набора администрации: графит с тонким серебряным кантом.
         if (staff) { button.Background = StaffBackground(worn); button.BorderBrush = StaffBorder; button.BorderThickness = new Thickness(1); }
         System.Windows.Automation.AutomationProperties.SetName(button, $"{AccountClient.Text(d, "title")}, {(staff ? "только для администрации" : Rewards.Rarity(rarity))}. {state.Replace("◆", "цена")}");
         button.Click += async (_, _) =>

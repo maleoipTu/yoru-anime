@@ -94,21 +94,32 @@ final class Sprites {
   return true;
  }
 
- /** «Ночной дозор» (набор администрации): дальние звёзды, огоньки зари, размытое боке у «камеры» и кометы; дальние слои медленнее. */
+ /** «Ночной дозор» (набор администрации): редкие мелкие тусклые звёзды стоят на месте и очень медленно мерцают (период 14–25 с);
+  * примерно раз в 40 с небо пересекает одна тонкая комета. Темп намеренно не ускоряется EFFECT_PACE. */
  static boolean nightWatch(Canvas canvas,Context c,float w,float h,float density){
   Sheet s=get(c,"fx_night",false);if(s==null)return false;Sheet comet=get(c,"fx_night_comet",false);
-  float sec=SystemClock.uptimeMillis()/1000f*EFFECT_PACE;Random r=new Random(4242);
-  for(int i=0;i<22;i++){float rx=r.nextFloat(),ry=r.nextFloat(),phase=r.nextFloat()*6.2832f,depth=.3f+r.nextFloat()*.4f;int variant=r.nextInt(2);
-   float span=w+40*density,x=(rx*span+sec*5*density*depth)%span-20*density;float tw=(float)Math.pow(.5+.5*Math.sin(sec*(1.1f+depth*1.6f)+phase),2);float size=(8+11*depth)*density*(.65f+.35f*tw);
-   draw(canvas,s,variant,x,ry*h*.9f,size,size,tw*45,(.25f+.75f*tw)*(.4f+.6f*depth),false,false);}
-  for(int i=0;i<10;i++){float rx=r.nextFloat(),speed=.6f+r.nextFloat()*.7f,phase=r.nextFloat(),depth=.55f+r.nextFloat()*.35f;int variant=2+r.nextInt(2);
-   float p=(sec*.045f*speed+phase)%1f,size=(11+14*depth)*density;
-   draw(canvas,s,variant,rx*w+(float)Math.sin(sec*.7f*speed+phase*9)*16*density*depth,h*(1.08f-p*1.2f),size,size,0,(float)Math.sin(p*Math.PI)*(.5f+.45f*depth),false,false);}
-  for(int i=0;i<3;i++){float rx=r.nextFloat(),ry=r.nextFloat(),phase=r.nextFloat(),size=(64+40*r.nextFloat())*density;float p=(sec*.02f+phase)%1f;
-   draw(canvas,s,4,w*(rx*.8f-.1f+p*.4f),h*(.15f+ry*.7f)+(float)Math.sin(sec*.3f+i)*12*density,size,size,0,.45f*(float)Math.sin(p*Math.PI),false,false);}
-  if(comet!=null)for(int i=0;i<2;i++){float rx=r.nextFloat(),ry=r.nextFloat(),phase=r.nextFloat();float p=(sec*.085f+phase)%1f;if(p>.32f)continue;float q=p/.32f,dx=-w*.55f,dy=h*.5f,len=Math.min(200*density,w*.34f);
-   draw(canvas,comet,0,w*(.6f+rx*.45f)+q*dx,h*(ry*.3f-.08f)+q*dy,len,len*comet.h/comet.w,(float)Math.toDegrees(Math.atan2(dy,dx)),(float)Math.sin(q*Math.PI),false,false);}
+  float sec=SystemClock.uptimeMillis()/1000f;Random r=new Random(4242);
+  int count=Math.max(6,Math.min(18,Math.round(w*h/(12000*density*density))));
+  for(int i=0;i<count;i++){float rx=r.nextFloat(),ry=r.nextFloat(),phase=r.nextFloat()*6.2832f,speed=.25f+r.nextFloat()*.2f,depth=r.nextFloat();int variant=depth>.85f?0:depth>.45f?1:2;
+   float tw=.5f+.5f*(float)Math.sin(sec*speed+phase),size=(variant==0?20:16)*density,pad=10*density;
+   draw(canvas,s,variant,pad+rx*Math.max(0,w-2*pad),pad+ry*Math.max(0,h-2*pad),size,size,0,(.2f+.25f*depth)*(.55f+.45f*tw),false,false);}
+  if(comet!=null){final float period=40,flight=2.4f;long cycle=(long)Math.floor(sec/period);float p=sec-cycle*period;
+   if(p<flight){Random path=new Random(cycle*31+7);float q=p/flight,dx=-w*.35f,dy=h*.22f,len=Math.min(150*density,w*.25f);
+    draw(canvas,comet,0,w*(.55f+path.nextFloat()*.35f)+q*dx,h*(.1f+path.nextFloat()*.3f)+q*dy,len,len*comet.h/comet.w,(float)Math.toDegrees(Math.atan2(dy,dx)),.55f*(float)Math.sin(q*Math.PI),false,false);}}
   return true;
+ }
+
+ /** Контур скруглённого прямоугольника с разрывом шириной gap по центру верхнего края (под эмблему). */
+ static Path outline(RectF b,float r,float gap){
+  Path p=new Path();float cx=b.centerX();p.moveTo(cx+gap/2,b.top);p.lineTo(b.right-r,b.top);
+  p.arcTo(new RectF(b.right-2*r,b.top,b.right,b.top+2*r),-90,90,false);p.lineTo(b.right,b.bottom-r);
+  p.arcTo(new RectF(b.right-2*r,b.bottom-2*r,b.right,b.bottom),0,90,false);p.lineTo(b.left+r,b.bottom);
+  p.arcTo(new RectF(b.left,b.bottom-2*r,b.left+2*r,b.bottom),90,90,false);p.lineTo(b.left,b.top+r);
+  p.arcTo(new RectF(b.left,b.top,b.left+2*r,b.top+2*r),180,90,false);p.lineTo(cx-gap/2,b.top);return p;
+ }
+ /** Угловая скобка у левого верхнего угла: повторяет скругление радиуса r и уходит по краям на arm. */
+ static Path bracket(RectF b,float r,float arm){
+  Path p=new Path();p.moveTo(b.left,b.top+r+arm);p.lineTo(b.left,b.top+r);if(r>0)p.arcTo(new RectF(b.left,b.top,b.left+2*r,b.top+2*r),180,90,false);p.lineTo(b.left+r+arm,b.top);return p;
  }
 
  // ───────── Рамки профиля с нарисованными деталями ─────────
@@ -144,16 +155,15 @@ final class Sprites {
     float ms=Math.min(120*density,h*.7f);draw(canvas,m,0,w-ms*.55f,ms*.55f,ms,ms,(float)Math.sin(sec*.5)*3,1,false,false);
     if(cl!=null){float cw=ms*1.2f,drift=(float)Math.sin(sec*.25)*14*density;draw(canvas,cl,0,w-ms*.9f+drift,ms*.92f,cw,cw*cl.h/cl.w,0,.9f,false,false);}
     line.setStrokeWidth(1.5f*density);line.setShader(new LinearGradient(w,0,0,h,0xFFFFE9A8,0x226F7BFF,Shader.TileMode.CLAMP));canvas.drawRoundRect(box,radius,radius,line);return true;}
-   case "night_crown":{Sheet cs=get(c,"pf_night_corner",false),crest=get(c,"pf_night_crest",false);if(cs==null)return false;
-    // «Полуночная грань» (набор администрации): узорные углы, герб с полумесяцем и бегущий по краю свет зари.
-    line.setStrokeWidth(1.4f*density);line.setShader(new LinearGradient(0,0,w,h,new int[]{0xCCFFE3B8,0x55FF8A3D,0x664A3270,0x55FF8A3D,0xCCFF4D67},new float[]{0,.3f,.5f,.7f,1},Shader.TileMode.CLAMP));canvas.drawRoundRect(box,radius,radius,line);
-    float rr=Math.min(radius,Math.min(box.width(),box.height())/2),per=2*(box.width()+box.height())-8*rr+2*(float)Math.PI*rr,light=96*density;
-    if(per>light*3){line.setShader(new LinearGradient(0,0,w,0,0xFFFF4D67,0xFFFFE3B8,Shader.TileMode.CLAMP));line.setStrokeCap(Paint.Cap.ROUND);float[][] passes={{7,.2f},{3.5f,.35f},{1.8f,1}};
-     for(int k=0;k<2;k++)for(float[] pass:passes){float phase=((sec*62*density+k*per/2)%per);line.setPathEffect(new DashPathEffect(new float[]{light,per-light},per-phase));line.setStrokeWidth(pass[0]*density);line.setAlpha(Math.round(255*pass[1]));canvas.drawRoundRect(box,radius,radius,line);}
-     line.setPathEffect(null);line.setAlpha(255);}
-    float size=Math.min(Math.min(w,h)*.44f,130*density),breathe=.88f+.12f*(float)Math.sin(sec*1.3f);
-    corner(canvas,cs,0,0,0,size,false,false,breathe);corner(canvas,cs,0,w,0,size,true,false,breathe);corner(canvas,cs,0,0,h,size,false,true,breathe);corner(canvas,cs,0,w,h,size,true,true,breathe);
-    if(crest!=null&&w>size*2.6f){float cw=Math.min(150*density,w*.3f),ch=cw*crest.h/crest.w;draw(canvas,crest,0,w/2,ch/2+2*density,cw,ch,0,.9f+.1f*(float)Math.sin(sec*1.7f),false,false);}
+   case "night_crown":{Sheet crest=get(c,"pf_night_crest",false);
+    // «Полуночная грань» (набор администрации): тонкий лунно-белый контур с разрывом под эмблемой, строгие угловые скобки
+    // по скруглению карточки и эмблема-полумесяц сверху по центру. Движения почти нет: эмблема очень медленно «дышит» (~10 с).
+    float rr=Math.min(radius,Math.min(box.width(),box.height())/2),cw=Math.min(46*density,w*.3f),ch=crest==null?0:cw*crest.h/crest.w,gap=crest!=null&&w>90*density?cw*.6f:0;
+    line.setStrokeWidth(density);line.setColor(0x4DDCE3F0);if(gap>0)canvas.drawPath(outline(box,rr,gap),line);else canvas.drawRoundRect(box,radius,radius,line);
+    float inset=6*density,arm=Math.min(24*density,Math.min(w,h)*.12f);Path br=bracket(new RectF(box.left+inset,box.top+inset,box.right-inset,box.bottom-inset),Math.max(0,rr-inset),arm);
+    line.setStrokeWidth(1.4f*density);line.setColor(0xB3DCE3F0);line.setStrokeCap(Paint.Cap.ROUND);
+    float[][] mirrors={{1,1},{-1,1},{1,-1},{-1,-1}};for(float[] m:mirrors){int save=canvas.save();canvas.scale(m[0],m[1],w/2,h/2);canvas.drawPath(br,line);canvas.restoreToCount(save);}
+    if(gap>0)draw(canvas,crest,0,w/2,box.top+density+ch/2,cw,ch,0,.85f+.15f*(float)Math.sin(sec*.45f),false,false);
     return true;}
    case "neon":{float pulse=.75f+.25f*(float)Math.sin(sec*2.4)*(Math.sin(sec*13)>.96?.3f:1f);
     int[] loop={colors[0],colors[Math.min(1,colors.length-1)],colors[colors.length-1],colors[0]};SweepGradient sweep=new SweepGradient(w/2,h/2,loop,null);Matrix m=new Matrix();m.setRotate(sec*30%360,w/2,h/2);sweep.setLocalMatrix(m);
