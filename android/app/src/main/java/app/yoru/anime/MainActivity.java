@@ -22,7 +22,7 @@ public final class MainActivity extends Activity {
  final Set<Integer> genres=new LinkedHashSet<>();int fromYear,toYear,age=-1;Button filterChip;
  static JSONObject genreCache;android.widget.ListPopupWindow suggestions;final List<Anime> suggested=new ArrayList<>();int suggestGeneration;
  final android.os.Handler ui=new android.os.Handler(android.os.Looper.getMainLooper());Runnable pendingSuggest;int autoLoads;BaseAdapter suggestAdapter;
- List<Integer> pages=new ArrayList<>(); static final int RANDOM_PAGES=50;
+ List<Integer> pages=new ArrayList<>(); static final int RANDOM_PAGES=400;
  int offset,generation,restoreScroll; boolean firstResume=true,loading,hasMore,failedAppend;
  final String[] keys={"catalog","schedule","favorites","history"};
 
@@ -145,18 +145,20 @@ public final class MainActivity extends Activity {
    catch(Exception e){runOnUiThread(()->loadingGenres.setText("Не удалось загрузить жанры. Годы и рейтинг работают."));}});
  }
  void setStatus(String value){status.setText(value);status.setVisibility(value.isEmpty()?View.GONE:View.VISIBLE);}
+ /** Сначала 50 самых смотрибельных страниц вперемешку, затем остальной каталог тоже вперемешку: лента бесконечная и каждый раз новая. */
+ static List<Integer> shuffledPages(Random random){List<Integer> top=new ArrayList<>(),rest=new ArrayList<>();for(int i=0;i<RANDOM_PAGES;i++)(i<50?top:rest).add(i);Collections.shuffle(top,random);Collections.shuffle(rest,random);top.addAll(rest);return top;}
  void load(boolean append){
   int request=++generation;loading=true;failedAppend=append;updateChrome();errorPanel.setVisibility(View.GONE);more.setEnabled(false);retry.setEnabled(false);
   if(!append){shown.clear();offset=0;hasMore=false;autoLoads=0;((BaseAdapter)grid.getAdapter()).notifyDataSetChanged();grid.setSelection(0);}spinner.setVisibility(shown.isEmpty()?View.VISIBLE:View.GONE);emptyPanel.setVisibility(View.GONE);setStatus(append?"Загружаем…":"");more.setVisibility(View.GONE);
   String requestedPage=page,requestedQuery=query,requestedState=state,requestedList=list;int start=offset;
   // «Случайные»: страницы популярного каталога в случайном порядке, внутри страницы — перемешанные аниме. Каждая новая загрузка даёт новую подборку.
-  boolean random=page.equals("catalog")&&sort.equals("random")&&query.isEmpty();if(random&&!append){pages=new ArrayList<>();for(int i=0;i<RANDOM_PAGES;i++)pages.add(i);Collections.shuffle(pages);}List<Integer> candidates=new ArrayList<>(pages);
+  boolean random=page.equals("catalog")&&sort.equals("random")&&query.isEmpty();if(random&&!append)pages=shuffledPages(new Random());List<Integer> candidates=new ArrayList<>(pages);Set<Long> known=new HashSet<>();for(Anime anime:shown)known.add(anime.id);
   String filterParams=page.equals("catalog")?filterQuery():"";int requestedAge=page.equals("catalog")?age:-1;
   String path=page.equals("schedule")?"anime/schedule":"anime?limit=24&sort="+(sort.equals("random")?"views":sort)+"&sort_forward=false&offset="+start+"&q="+Api.encode(query)+(state.isEmpty()?"":"&status="+state)+filterParams;
   int[] rawCount={0};
   Api.IO.execute(()->{try{
    List<Anime> data=new ArrayList<>();
-   if(random){while(!candidates.isEmpty()){int candidate=candidates.remove(0);List<Anime> found=Api.catalog(Api.get("anime?limit=24&sort=views&sort_forward=false&offset="+candidate*24+(requestedState.isEmpty()?"":"&status="+requestedState)+filterParams));if(found.isEmpty()){candidates.removeIf(other->other>candidate);continue;}if(requestedAge>=0){found.removeIf(a->a.ageValue()!=requestedAge);if(found.isEmpty())continue;}Collections.shuffle(found);data=found;break;}}
+   if(random){while(!candidates.isEmpty()){int candidate=candidates.remove(0);List<Anime> found=Api.catalog(Api.get("anime?limit=24&sort=views&sort_forward=false&offset="+candidate*24+(requestedState.isEmpty()?"":"&status="+requestedState)+filterParams));if(found.isEmpty()){candidates.removeIf(other->other>candidate);continue;}if(requestedAge>=0)found.removeIf(a->a.ageValue()!=requestedAge);found.removeIf(a->known.contains(a.id));if(found.isEmpty())continue;Collections.shuffle(found);data=found;break;}}
    else{data=requestedPage.equals("favorites")?(requestedList.isEmpty()?library.favorites():new Account(this).list(requestedList)):requestedPage.equals("history")?library.history():Api.catalog(Api.get(path));
    rawCount[0]=data.size();if(requestedAge>=0&&requestedPage.equals("catalog"))data.removeIf(a->a.ageValue()!=requestedAge);}
    if(requestedPage.equals("favorites")||requestedPage.equals("history"))data.removeIf(anime->!anime.title.toLowerCase(Locale.ROOT).contains(requestedQuery.toLowerCase(Locale.ROOT)));
