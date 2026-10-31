@@ -107,34 +107,26 @@ const snow = (t, i) => {
   return svg(S, S, `<defs>${rad('g', [[0, '#CFEBFF', .7], [1, '#CFEBFF', 0]])}${glow('gl', 1.2)}</defs><circle cx="${c}" cy="${c}" r="${c}" fill="url(#g)"/><g filter="url(#gl)" transform="translate(${c} ${c}) rotate(${i * 15}) scale(${[1, .85, .8, .95, .7, .9][i]}) translate(${-c} ${-c})">${arms.join('')}${plate}</g>`);
 };
 
-// ───── Набор администрации: «Ночной дозор» ─────
-// Варианты частиц: 0 — холодная звезда, 1 — тёплая звезда с лучами, 2 — огонёк зари, 3 — янтарный огонёк,
-// 4 — размытое боке переднего плана (глубина).
+// ───── Набор администрации: «Ночной дозор» — строгое ночное небо ─────
+// Варианты частиц (все холодные, лунно-белые #DCE3F0): 0 — звезда с тонким крестом лучей, 1 — точка с мягким ореолом,
+// 2 — совсем мелкая точка. Клиент рисует их редко, мелко и тускло.
 const night = (t, i) => {
-  const S = 64, c = S / 2;
+  const S = 32, c = S / 2;
   const body = [
-    () => `${rad('h', [[0, '#DDF0FF', .85], [.3, '#9FD0FF', .3], [1, '#9FD0FF', 0]])}</defs><circle cx="${c}" cy="${c}" r="${c}" fill="url(#h)"/>
-      ${sparkle(c, c, 24, '#CFE8FF', .55).replace('/>', ' filter="url(#b)"/>')}${sparkle(c, c, 19, '#FFFFFF')}<circle cx="${c}" cy="${c}" r="3" fill="#FFF"/>`,
-    () => `${rad('h', [[0, '#FFF1DC', .9], [.3, '#FFC27A', .35], [1, '#FF8A3D', 0]])}</defs><circle cx="${c}" cy="${c}" r="${c}" fill="url(#h)"/>
-      <g transform="rotate(45 ${c} ${c})">${sparkle(c, c, 12, '#FFE3B8', .8)}</g>${sparkle(c, c, 25, '#FFB36B', .5).replace('/>', ' filter="url(#b)"/>')}${sparkle(c, c, 21, '#FFF7EA')}<circle cx="${c}" cy="${c}" r="3.2" fill="#FFF"/>`,
-    () => `${rad('h', [[0, '#FFFFFF', 1], [.12, '#FFD0C0', 1], [.3, '#FF6A5A', .55], [.65, '#FF4D67', .15], [1, '#FF4D67', 0]])}</defs><circle cx="${c}" cy="${c}" r="${c}" fill="url(#h)"/>`,
-    () => `${rad('h', [[0, '#FFFFFF', 1], [.12, '#FFE3B8', 1], [.32, '#FF9A45', .5], [.7, '#FF8A3D', .12], [1, '#FF8A3D', 0]])}</defs><circle cx="${c}" cy="${c}" r="${c}" fill="url(#h)"/>`,
-    () => `${rad('h', [[0, '#FF8A6A', .2], [.6, '#FF7A5A', .2], [.85, '#FFB08A', .16], [1, '#FFB08A', 0]])}</defs><circle cx="${c}" cy="${c}" r="${c}" fill="url(#h)"/>`,
+    () => `${rad('h', [[0, '#DCE3F0', .55], [.35, '#DCE3F0', .12], [1, '#DCE3F0', 0]])}</defs><circle cx="${c}" cy="${c}" r="${c}" fill="url(#h)"/>
+      <path d="M${c} ${c - 12} L${c} ${c + 12} M${c - 12} ${c} L${c + 12} ${c}" stroke="url(#ray)" stroke-width="1" stroke-linecap="round"/><circle cx="${c}" cy="${c}" r="1.9" fill="#F4F7FC"/>`,
+    () => `${rad('h', [[0, '#F4F7FC', .9], [.18, '#DCE3F0', .45], [.5, '#DCE3F0', .08], [1, '#DCE3F0', 0]])}</defs><circle cx="${c}" cy="${c}" r="${c}" fill="url(#h)"/><circle cx="${c}" cy="${c}" r="1.6" fill="#F4F7FC"/>`,
+    () => `</defs><circle cx="${c}" cy="${c}" r="1.4" fill="#DCE3F0"/>`,
   ][i];
-  return svg(S, S, `<defs>${blur('b', 1.4)}${body()}`);
+  return svg(S, S, `<defs>${rad('ray', [[0, '#F4F7FC', .9], [1, '#DCE3F0', 0]], .5, .5, .5)}${body()}`);
 };
 
+// Редкая комета: тонкая линия, гаснущая к хвосту, и маленькая головка — без пыли и свечения.
 const nightComet = () => {
-  const W = 220, H = 56, y = H / 2, hx = W - 26;
-  const dust = [[60, -3, 1.2, .35], [92, 4, 1.5, .5], [120, -5, 1.1, .45], [146, 3, 1.8, .7], [168, -2, 1.3, .8]].map(([x, dy, r, o]) => `${sparkle(x, y + dy, r * 2.6, '#FFE3B8', o)}`).join('');
-  return svg(W, H, `<defs>${lin('outer', [[0, '#FF4D67', 0], [.55, '#FF6A4D', .35], [1, '#FF8A3D', .8]], 0, 0, 1, 0)}${lin('core', [[0, '#FFE3B8', 0], [.7, '#FFE3B8', .7], [1, '#FFFFFF', 1]], 0, 0, 1, 0)}
-    ${blur('b', 3)}${blur('b2', 1.2)}${rad('head', [[0, '#FFFFFF'], [.25, '#FFF1DC', .95], [.55, '#FF8A3D', .4], [1, '#FF4D67', 0]])}</defs>
-    <path d="M8 ${y} L${hx} ${y - 7} L${hx} ${y + 7}Z" fill="url(#outer)" filter="url(#b)"/>
-    <path d="M30 ${y} L${hx} ${y - 3} L${hx} ${y + 3}Z" fill="url(#outer)" filter="url(#b2)"/>
-    <path d="M70 ${y} L${hx} ${y - 1.4} L${hx} ${y + 1.4}Z" fill="url(#core)"/>
-    ${dust}
-    <circle cx="${hx}" cy="${y}" r="24" fill="url(#head)"/>
-    ${sparkle(hx, y, 15, '#FFFFFF')}<g transform="rotate(45 ${hx} ${y})">${sparkle(hx, y, 8, '#FFE3B8', .8)}</g>`);
+  const W = 200, H = 12, y = H / 2, hx = W - 8;
+  return svg(W, H, `<defs>${lin('tail', [[0, '#DCE3F0', 0], [.7, '#DCE3F0', .35], [1, '#F4F7FC', .9]], 0, 0, 1, 0)}${rad('head', [[0, '#FFFFFF'], [.4, '#DCE3F0', .5], [1, '#DCE3F0', 0]])}</defs>
+    <path d="M6 ${y} L${hx} ${y - .9} L${hx} ${y + .9}Z" fill="url(#tail)"/>
+    <circle cx="${hx}" cy="${y}" r="5" fill="url(#head)"/><circle cx="${hx}" cy="${y}" r="1.4" fill="#FFFFFF"/>`);
 };
 
 export default [
@@ -146,6 +138,6 @@ export default [
   { name: 'fx_starfall', w: 200, h: 48, frames: 1, draw: starfall },
   { name: 'fx_bat', w: 104, h: 72, frames: 16, fps: 30, draw: bats },
   { name: 'fx_snow', w: 48, h: 48, frames: 6, draw: snow },
-  { name: 'fx_night', w: 64, h: 64, frames: 5, draw: night },
-  { name: 'fx_night_comet', w: 220, h: 56, frames: 1, draw: nightComet },
+  { name: 'fx_night', w: 32, h: 32, frames: 3, draw: night },
+  { name: 'fx_night_comet', w: 200, h: 12, frames: 1, draw: nightComet },
 ];

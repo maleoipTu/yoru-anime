@@ -59,7 +59,9 @@ public static class Decor
         var colors = Colors(frame, Accent);
         var glow = frame["glow"] is JsonValue g && g.TryGetValue<bool>(out var gv) && gv;
         var animated = frame["animated"] is JsonValue a && a.TryGetValue<bool>(out var av) && av;
-        var stroke = Math.Max(2, size * 0.07);
+        // style.thin — тонкое кольцо (строгие рамки вроде «Кольца дозора»).
+        var thin = frame["thin"] is JsonValue th && th.TryGetValue<bool>(out var tv) && tv;
+        var stroke = thin ? Math.Max(1.5, size * 0.035) : Math.Max(2, size * 0.07);
         var ringSize = size - (glow ? size * 0.08 : 0);
         var innerSize = ringSize - stroke * 2 - size * 0.06;
         var grid = new Grid { Width = size, Height = size };

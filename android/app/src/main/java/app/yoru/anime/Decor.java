@@ -36,13 +36,14 @@ final class Decor {
  static final class AvatarView extends android.widget.FrameLayout {
   final Paint ring=new Paint(Paint.ANTI_ALIAS_FLAG),glow=new Paint(Paint.ANTI_ALIAS_FLAG),fill=new Paint(Paint.ANTI_ALIAS_FLAG),letterPaint=new Paint(Paint.ANTI_ALIAS_FLAG),border=new Paint(Paint.ANTI_ALIAS_FLAG);
   final Path clip=new Path();
-  int[] frame={Ui.ACCENT};boolean animated,glowing;float angle;ValueAnimator spinner;
+  int[] frame={Ui.ACCENT};boolean animated,glowing,thin;float angle;ValueAnimator spinner;
   String decoType="",decoGlyph="",decoUrl="";int[] decoColors={Ui.ACCENT};boolean decoAnimated;android.graphics.drawable.Drawable decoImage;Sprites.Sheet decoSheet;
   String letter="?",pictureUrl="";android.graphics.drawable.Drawable picture;Media.VideoSurface video;
 
   AvatarView(Context c){super(c);setWillNotDraw(false);ring.setStyle(Paint.Style.STROKE);glow.setStyle(Paint.Style.STROKE);border.setStyle(Paint.Style.STROKE);border.setColor(Ui.BG);fill.setColor(Ui.SOFT);letterPaint.setColor(Ui.TEXT);letterPaint.setTextAlign(Paint.Align.CENTER);letterPaint.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);}
 
-  void frame(JSONObject style){frame=colors(style,Ui.ACCENT);animated=style.optBoolean("animated");glowing=style.optBoolean("glow");updateAnimation();invalidate();}
+  /** style.thin — тонкое кольцо (строгие рамки вроде «Кольца дозора»). */
+  void frame(JSONObject style){frame=colors(style,Ui.ACCENT);animated=style.optBoolean("animated");glowing=style.optBoolean("glow");thin=style.optBoolean("thin");updateAnimation();invalidate();}
   /** Украшение аватара (ушки, нимб, корона…) или своя картинка style.image_url; пустой стиль — без украшения. */
   void deco(JSONObject style){
    if(style==null)style=new JSONObject();
@@ -67,7 +68,7 @@ final class Decor {
   @Override protected boolean verifyDrawable(android.graphics.drawable.Drawable who){return who==picture||who==decoImage||super.verifyDrawable(who);}
 
   float side(){return Math.min(getWidth(),getHeight())*(hasDeco()?.72f:1f);}
-  float stroke(){return Math.max(2,side()*.065f);}
+  float stroke(){return thin?Math.max(1.5f,side()*.035f):Math.max(2,side()*.065f);}
   float radius(){float size=side();return size/2f-stroke()/2f-(glowing?size*.04f:0);}
   float inner(){return radius()-stroke()/2f-side()*.035f;}
   @Override protected void onLayout(boolean changed,int l,int t,int r,int b){if(video!=null){float in=inner(),cx=(r-l)/2f,cy=(b-t)/2f;video.layout(Math.round(cx-in),Math.round(cy-in),Math.round(cx+in),Math.round(cy+in));}}

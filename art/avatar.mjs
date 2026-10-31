@@ -204,80 +204,30 @@ const pumpkin = t => {
     </g>`);
 };
 
-// ───── Набор администрации: «Хранитель ночи» — корона полуночи ─────
-// Венец из ночного металла по верху аватара, лучи-звёзды, полумесяц цвета зари в центре,
-// искра, обегающая аватар за цикл, и тёплая дуга «зари» снизу.
+// ───── Набор администрации: «Хранитель ночи» — знак статуса, а не праздник ─────
+// Тонкий лунно-белый ореол вокруг аватара с разрывом сверху, в разрыве — строгий серебряный полумесяц.
+// Две короткие засечки по бокам, внизу — маленький ромб: единственная деталь цвета зари.
+// Движение одно: блик на кончике полумесяца раз в цикл (~6 с) медленно проступает и гаснет, остальное статично.
 const arcPath = (a0, a1, r) => { const [x0, y0] = at(a0, r), [x1, y1] = at(a1, r); return `M${f(x0)} ${f(y0)} A${r} ${r} 0 ${Math.abs(a1 - a0) > 180 ? 1 : 0} 1 ${f(x1)} ${f(y1)}`; };
+const KEEPER_FRAMES = 48, KEEPER_FPS = 8;
 const nightKeeper = t => {
-  const pulse = .5 + .5 * sin(t), breathe = .5 + .5 * sin(t * 2 + .25), RB = 85;
-  // Зубцы венца: стрельчатые арки из ночного металла с кантом зари; на остриях — мерцающие звёзды.
-  const spike = (deg, h, w, ph, big) => {
-    const [x, y] = at(deg, RB - 1), tw = .55 + .45 * Math.max(0, sin(t + ph));
-    const body = `M${-w} 0 C${f(-w * .7)} ${f(-h * .42)} ${f(-w * .18)} ${f(-h * .78)} 0 ${-h} C${f(w * .18)} ${f(-h * .78)} ${f(w * .7)} ${f(-h * .42)} ${w} 0Z`;
-    const win = `M0 ${f(-h * .62)} L${f(w * .3)} ${f(-h * .36)} L0 ${f(-h * .12)} L${f(-w * .3)} ${f(-h * .36)}Z`;
-    return `<g transform="translate(${f(x)} ${f(y)}) rotate(${deg + 90})">
-      <path d="${body}" fill="url(#gold)" stroke="#6E2414" stroke-width="1.2" stroke-linejoin="round"/>
-      <path d="${win}" fill="url(#metal)" stroke="#6E2414" stroke-opacity=".6" stroke-width=".8" stroke-linejoin="round"/>
-      ${sparkle(0, -h * .37, Math.max(1.6, w * .2), '#FFE3B8', .45 + .55 * tw)}
-      <path d="M${f(-w * .78)} -2 C${f(-w * .6)} ${f(-h * .42)} ${f(-w * .22)} ${f(-h * .72)} -.6 ${f(-h * .92)}" fill="none" stroke="#FFFFFF" stroke-opacity=".7" stroke-width="1.1" stroke-linecap="round"/>
-      ${big ? '' : `<circle cy="${f(-h)}" r="${f(6 + 2 * tw)}" fill="url(#tipglow)" opacity="${f(.55 + .45 * tw)}"/>${sparkle(0, -h, 3.6 + 2.4 * tw, '#FFF4DF', .7 + .3 * tw)}`}
-    </g>`;
-  };
-  const spikes = [[-151, 13, 9, .05], [-132, 19, 11, .25], [-111, 25, 12.5, .45], [-69, 25, 12.5, .65], [-48, 19, 11, .85], [-29, 13, 9, .15]].map(([d, h, w, ph]) => spike(d, h, w, ph)).join('');
-  const band = arcPath(-158, -22, RB);
-  const caps = [-158, -22].map(deg => { const [x, y] = at(deg, RB); return `<circle cx="${f(x)}" cy="${f(y)}" r="6" fill="url(#gold)" stroke="#6E2414" stroke-width="1.1"/><circle cx="${f(x)}" cy="${f(y)}" r="2.6" fill="url(#gem)"/><circle cx="${f(x - 1.6)}" cy="${f(y - 1.8)}" r="1.3" fill="#FFF" opacity=".85"/>`; }).join('');
-  const studs = [-146, -122, -102, -78, -58, -34].map(deg => { const [x, y] = at(deg, RB); return `<circle cx="${f(x)}" cy="${f(y)}" r="1.9" fill="url(#stud)"/>`; }).join('');
-  // Центр: высокая арка, на ней полумесяц цвета зари; ореол дышит.
-  const mx = 120, my = 15, mr = 12.5;
-  const moon = `<circle cx="${mx}" cy="${my}" r="${f(13 + 2.5 * breathe)}" fill="url(#halo)" opacity="${f(.65 + .35 * breathe)}"/>
-    <g transform="rotate(${f(-20 + 5 * sin(t))} ${mx} ${my})" filter="url(#sh2)">
-      <g mask="url(#crescent)"><circle cx="${mx}" cy="${my}" r="${mr}" fill="url(#moon)"/>
-        <circle cx="${mx - 5}" cy="${my + 3}" r="2" fill="#E0663A" opacity=".35"/><circle cx="${mx - 6}" cy="${my - 4}" r="1.3" fill="#E0663A" opacity=".3"/>
-        <path d="M${mx - 9} ${my - 6} A${mr} ${mr} 0 0 0 ${mx - 4} ${my + 10}" stroke="#FFFFFF" stroke-opacity=".85" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-        <circle cx="${mx}" cy="${my}" r="${mr - .5}" fill="none" stroke="#FFF1DC" stroke-opacity=".7" stroke-width="1"/></g></g>`;
-  // Самоцвет у основания центральной арки с бегущим бликом.
-  const [gx, gy] = at(-90, RB);
-  const gem = `<g transform="translate(${f(gx)} ${f(gy - 1)})">
-    <circle r="${f(9 + 2 * pulse)}" fill="url(#gemglow)" opacity="${f(.5 + .4 * pulse)}"/>
-    <path d="M0 -7.5 L5.6 -1 L0 7.5 L-5.6 -1Z" fill="url(#gem)" stroke="#5E0A1E" stroke-width="1.1" stroke-linejoin="round"/>
-    <path d="M0 -7.5 L5.6 -1 L0 .8 Z" fill="#FFFFFF" opacity=".35"/><path d="M-5.6 -1 L0 .8 L0 7.5Z" fill="#3A0010" opacity=".28"/>
-    <circle cx="-1.5" cy="-2.8" r="${f(.9 + .9 * pulse)}" fill="#FFF" opacity="${f(.6 + .4 * pulse)}"/></g>`;
-  // Искра на орбите: оборот за цикл, хвост — дуги убывающей толщины.
-  const head = -90 + t * 360, [ox, oy] = at(head, 104);
-  const tail = [[46, 1.2, .18], [30, 2.2, .3], [16, 3.2, .5], [7, 4, .75]].map(([len, w, o]) => `<path d="${arcPath(head - len, head, 104)}" stroke="url(#trail)" stroke-width="${w}" stroke-linecap="round" fill="none" opacity="${o}"/>`).join('');
-  const orbit = `${tail}<circle cx="${f(ox)}" cy="${f(oy)}" r="10" fill="url(#tipglow)"/>${sparkle(ox, oy, 7.5, '#FFFFFF')}`;
-  // Дуга «зари» снизу: мягкое свечение и тонкая линия, по ней дважды за цикл пробегает блик.
-  const g2 = (t * 2) % 1, [dx, dy] = at(22 + 136 * g2, 97);
-  const dawn = `<path d="${arcPath(18, 162, 97)}" stroke="url(#dawn)" stroke-width="10" fill="none" stroke-linecap="round" opacity="${f(.22 + .18 * pulse)}" filter="url(#soft)"/>
-    <path d="${arcPath(24, 156, 97)}" stroke="url(#dawn)" stroke-width="2.2" fill="none" stroke-linecap="round" opacity="${f(.7 + .3 * pulse)}"/>
-    <circle cx="${f(dx)}" cy="${f(dy)}" r="7" fill="url(#tipglow)" opacity="${f(Math.sin(g2 * Math.PI))}"/>`;
-  return svg(W, W, `<defs>${shadow('sh', 2.5, 2.2, .55)}${shadow('sh2', 1.5, 1.5, .5)}${blur('soft', 3)}${blur('aura', 9)}
-    ${lin('metal', [[0, '#120E1C'], [.6, '#2A1F44'], [1, '#4A3270']])}
-    ${lin('gold', [[0, '#FFF1DC'], [.35, '#FFC27A'], [.7, '#FF8A3D'], [1, '#C8452E']])}
-    ${lin('edge', [[0, '#FFE3B8'], [.55, '#FF8A3D'], [1, '#FF4D67']])}
-    ${lin('bandg', [[0, '#3E3060'], [.5, '#211A33'], [1, '#100C18']])}
-    ${rad('tipglow', [[0, '#FFFFFF', .95], [.25, '#FFE3B8', .7], [.6, '#FF8A3D', .25], [1, '#FF4D67', 0]])}
-    ${rad('stud', [[0, '#FFF7EA'], [.55, '#FFB36B'], [1, '#C2502A']], .35, .3, .8)}
-    ${rad('halo', [[0, '#FFD9A8', .8], [.45, '#FF8A3D', .3], [1, '#FF4D67', 0]])}
-    ${rad('moon', [[0, '#FFFBF2'], [.45, '#FFE3B8'], [.8, '#FFA35C'], [1, '#FF5A55']], .3, .3, .9)}
-    ${rad('gem', [[0, '#FFD0D8'], [.35, '#FF4D67'], [1, '#7A0A26']], .4, .3, .8)}
-    ${rad('gemglow', [[0, '#FF4D67', .7], [1, '#FF4D67', 0]])}
-    ${lin('trail', [[0, '#FF4D67', 0], [.6, '#FF8A3D', .8], [1, '#FFE3B8']], 0, 0, 1, 0)}
-    ${lin('dawn', [[0, '#FF4D67', 0], [.18, '#FF4D67'], [.5, '#FF8A3D'], [.82, '#FF4D67'], [1, '#FF4D67', 0]], 0, 0, 1, 0)}
-    <mask id="crescent"><rect width="${W}" height="${W}" fill="#FFF"/><circle cx="${mx + 6.5}" cy="${my - 4.5}" r="${f(mr * .82)}" fill="#000"/></mask></defs>
-    ${dawn}
-    <path d="${arcPath(-150, -30, 96)}" stroke="#FF6A4D" stroke-width="22" fill="none" stroke-linecap="round" opacity="${f(.16 + .1 * breathe)}" filter="url(#aura)"/>
+  const RH = 102, gap = 14, mx = C, my = C - RH, mr = 12.5;
+  // Блик: плавный подъём и спад в середине цикла, в остальное время его нет.
+  const glint = Math.pow(Math.max(0, Math.sin((t - .25) * 2 * Math.PI)), 3);
+  const ticks = [0, 180].map(deg => { const [x0, y0] = at(deg, RH - 6), [x1, y1] = at(deg, RH + 6); return `<path d="M${f(x0)} ${f(y0)} L${f(x1)} ${f(y1)}"/>`; }).join('');
+  const [dx, dy] = at(90, RH), d = 5.2;
+  return svg(W, W, `<defs>${shadow('sh', .8, 1.1, .55)}
+    ${lin('silver', [[0, '#F4F7FC'], [.55, '#DCE3F0'], [1, '#9AA4B6']], 0, 0, 1, 1)}
+    ${lin('dawn', [[0, '#FF8A3D'], [1, '#FF4D67']], 0, 0, 1, 1)}
+    ${rad('spark', [[0, '#FFFFFF', .9], [.4, '#DCE3F0', .3], [1, '#DCE3F0', 0]])}
+    <mask id="crescent"><rect width="${W}" height="${W}" fill="#FFF"/><circle cx="${f(mx + 6)}" cy="${f(my - 3.4)}" r="${f(mr * .84)}" fill="#000"/></mask></defs>
     <g filter="url(#sh)">
-      ${spikes}${spike(-90, 31, 15, 0, true)}
-      <path d="${band}" stroke="#08060C" stroke-opacity=".55" stroke-width="12" fill="none" stroke-linecap="round" transform="translate(0 1.5)"/>
-      <path d="${band}" stroke="url(#bandg)" stroke-width="8.5" fill="none" stroke-linecap="round"/>
-      <path d="${arcPath(-156, -24, RB + 4)}" stroke="url(#edge)" stroke-width="1.4" fill="none" stroke-linecap="round"/>
-      <path d="${arcPath(-156, -24, RB - 4)}" stroke="#FF8A3D" stroke-opacity=".7" stroke-width="1.1" fill="none" stroke-linecap="round"/>
-      <path d="${arcPath(-150, -112, RB + 2)}" stroke="#FFFFFF" stroke-opacity=".2" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-      ${studs}${caps}
+      <path d="${arcPath(-90 + gap, 270 - gap, RH)}" stroke="#DCE3F0" stroke-opacity=".5" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <g stroke="#DCE3F0" stroke-opacity=".8" stroke-width="2" stroke-linecap="round">${ticks}</g>
+      <g mask="url(#crescent)" transform="rotate(-24 ${mx} ${my})"><circle cx="${mx}" cy="${my}" r="${mr}" fill="url(#silver)"/></g>
+      <path d="M${f(dx)} ${f(dy - d)} L${f(dx + d * .72)} ${f(dy)} L${f(dx)} ${f(dy + d)} L${f(dx - d * .72)} ${f(dy)}Z" fill="url(#dawn)"/>
     </g>
-    ${gem}${moon}${orbit}
-    ${twinkles(t, [[30, 54, 7, 0], [210, 52, 6, .3], [20, 106, 5, .55], [220, 114, 5, .8], [56, 22, 4.5, .15], [184, 20, 5, .65]], '#FFE3B8')}`);
+    ${glint > .01 ? `<circle cx="${f(mx - 8.4)}" cy="${f(my - 6.6)}" r="${f(6.5 * glint + 1)}" fill="url(#spark)" opacity="${f(glint)}"/>${sparkle(mx - 8.4, my - 6.6, 4.6 * glint + .8, '#FFFFFF', .9 * glint)}` : ''}`);
 };
 
 export default [
@@ -291,5 +241,5 @@ export default [
   { name: 'orbit_stars', w: W, h: W, frames: N / 2, fps: FPS, draw: orbit('star', ['#FFE07A', '#9FD8FF', '#C98A12']) },
   { name: 'sakura_wreath', w: W, h: W, frames: N, fps: FPS, draw: sakura },
   { name: 'pumpkin', w: W, h: W, frames: N, fps: FPS, draw: pumpkin },
-  { name: 'night_keeper', w: W, h: W, frames: N, fps: FPS, draw: nightKeeper },
+  { name: 'night_keeper', w: W, h: W, frames: KEEPER_FRAMES, fps: KEEPER_FPS, draw: nightKeeper },
 ];
