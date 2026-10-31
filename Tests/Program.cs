@@ -131,7 +131,7 @@ internal static class Program
         Check(config.Configured && config.Url == "https://demo.supabase.co" && config.AnonKey == "public-anon", "supabase.properties parsed");
         Check(!SupabaseConfig.Load(Path.Combine(root, "missing.properties")).Configured || Environment.GetEnvironmentVariable("YORU_SUPABASE_URL") != null, "missing config disables accounts");
 
-        Check(StreamResolver.Supports("https://kodik.info/seria/1/abc/720p") && !StreamResolver.Supports("https://example.com/x"), "native player handles Kodik only");
+        Check(StreamResolver.Supports("https://kodik.info/seria/1/abc/720p") && !StreamResolver.Supports("https://example.com/x"), "native player handles Kodik");
         var encoded = new string(Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("//cdn.example.net/video/720.mp4:hls:manifest.m3u8")).Select(c => c is >= 'A' and <= 'Z' ? (char)('A' + (c - 'A' + 26 - 3) % 26) : c is >= 'a' and <= 'z' ? (char)('a' + (c - 'a' + 26 - 3) % 26) : c).ToArray());
         using (var links = JsonDocument.Parse("{\"links\":{\"360\":[{\"src\":\"" + encoded + "\"}],\"720\":[{\"src\":\"" + encoded.Replace("720", "720") + "\"}],\"bad\":[]}}"))
         {
@@ -140,6 +140,14 @@ internal static class Program
         }
         var unpadded = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("//cdn.example.net/a/360.mp4:hls:manifest.m3u8")).TrimEnd('=');
         Check(StreamResolver.Decode(unpadded, 0) == "https://cdn.example.net/a/360.mp4:hls:manifest.m3u8", "Kodik Base64 without padding decodes (regression: no video stream)");
+        Check(StreamResolver.Supports("//ru.yummyani.me/iframeCVH.html?anime_id=21&episode=1") && StreamResolver.Supports("https://player.aksor.tv/video/abc123") && !StreamResolver.Supports("https://evil.example/iframeCVH.html?anime_id=1"), "native player handles CVH and Aksor");
+        var cvh = await StreamResolver.Resolve("//ru.yummyani.me/iframeCVH.html?dubbing_code=Amedia&anime_id=21&episode=2&dubbing=Озвучка Amedia", (url, body, referer, ct) => Task.FromResult((url, url.Contains("/playlist")
+            ? "{\"items\":[{\"episode\":1,\"voiceStudio\":\"Amedia\",\"vkId\":\"11\"},{\"episode\":2,\"voiceStudio\":\"AniLibria\",\"vkId\":\"21\"},{\"episode\":2,\"voiceStudio\":\"Amedia\",\"vkId\":\"22\"}]}"
+            : url.EndsWith("/video/22") ? "{\"sources\":{\"hlsUrl\":\"https://vd.okcdn.ru/v.m3u8?x=1\",\"mpegHighUrl\":\"https://vd.okcdn.ru/?id=5&type=3\"}}" : "{}")));
+        Check(cvh.Streams.Count == 2 && cvh.Streams[0].Label == "Авто" && cvh.Streams[1].Mime == "video/mp4" && cvh.Agent == StreamResolver.BrowserAgent, "CVH picks the requested voice and direct files");
+        var aksor = await StreamResolver.Resolve("https://player.aksor.tv/video/abc123", (url, body, referer, ct) => Task.FromResult((url, url == "https://player.aksor.tv/api/video/abc123"
+            ? "{\"qualities\":{\"q720\":\"https://cdn.aksor.tv/a b/720.mpd\",\"q1080\":\"https://cdn.aksor.tv/a b/1080.mpd\",\"q4k\":null},\"opening_start\":60,\"opening_length\":90}" : "{}")));
+        Check(aksor.Streams.Count == 2 && aksor.Streams[0].Label == "1080p" && aksor.Streams[0].Mime == "application/dash+xml" && !aksor.Streams[0].Url.Contains(' ') && (int?)aksor.Intro?["opening"]?["end"] == 150, "Aksor DASH qualities and intro marks");
         var unsafeRejected = false; try { StreamResolver.SafeUri("https://127.0.0.1/x"); } catch (InvalidOperationException) { unsafeRejected = true; }
         Check(unsafeRejected, "proxy refuses local addresses");
         var store2 = new LocalStore(Path.Combine(root, "positions")); store2.Data.Positions["5"] = 42; store2.Save();

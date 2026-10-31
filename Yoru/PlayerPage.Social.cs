@@ -87,7 +87,7 @@ public partial class PlayerPage
     }
     async Task LoadIntro(Episode episode)
     {
-        try { if (await Me.PublicRpc("anime_intro", new JsonObject { ["p_anime_id"] = anime.Id, ["p_episode"] = episode.Number }) is JsonObject marks && episode.Id == current.Id) { intro = marks; SendIntro(); } }
+        try { if (await Me.PublicRpc("anime_intro", new JsonObject { ["p_anime_id"] = anime.Id, ["p_episode"] = episode.Number }) is JsonObject marks && episode.Id == current.Id && (marks["opening"] != null || marks["ending"] != null || resolved?.Intro == null)) { intro = marks; SendIntro(); } }
         catch (Exception e) when (Extras.Failure(e)) { }
     }
     void SendIntro() { if (nativeMode) Post(new JsonObject { ["cmd"] = "intro", ["session"] = navigationSession, ["intro"] = intro.DeepClone() }); }

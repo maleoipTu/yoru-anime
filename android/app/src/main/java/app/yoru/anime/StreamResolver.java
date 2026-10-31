@@ -11,6 +11,8 @@ import java.util.regex.*;
 /** Resolves content streams only. Provider HTML and advertising JavaScript are never executed. */
 final class StreamResolver {
     static final String USER_AGENT = "Yoru/0.4.0 (Android)";
+    /** CVH и Aksor отдают ссылки, подписанные под обычный браузер: для них запросы идут с браузерным User-Agent. */
+    static final String BROWSER_AGENT = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36";
     static final int MAX_BODY = 2 * 1024 * 1024;
     interface Transport { Page request(String url, String body, String referer) throws Exception; }
     static final class Page {
@@ -23,20 +25,89 @@ final class StreamResolver {
     }
     static final class Result {
         final List<Stream> streams;
-        final String referer;
-        Result(List<Stream> streams, String referer) { this.streams=Collections.unmodifiableList(streams); this.referer=referer; }
+        final String referer, userAgent;
+        /** Разметка заставок от источника (Aksor): {opening:{start,end}, ending:{start,end}} или null. */
+        final JSONObject intro;
+        Result(List<Stream> streams, String referer) { this(streams, referer, USER_AGENT, null); }
+        Result(List<Stream> streams, String referer, String userAgent, JSONObject intro) { this.streams=Collections.unmodifiableList(streams); this.referer=referer; this.userAgent=userAgent; this.intro=intro; }
     }
     static boolean supports(String url) {
         try {
-            String host = safeUri(url).getHost().toLowerCase(Locale.ROOT);
-            return host.equals("kodikplayer.com") || host.equals("kodik.info") || host.equals("kodik.cc");
+            URI uri = safeUri(normalize(url));
+            return kodik(uri.getHost()) || cvh(uri) || aksor(uri);
         } catch (IOException e) { return false; }
+    }
+    static String normalize(String url) { if (url == null) return null; url = url.trim(); if (url.startsWith("//")) url = "https:" + url; return url.replace(" ", "%20"); }
+    static boolean kodik(String host) { host = host.toLowerCase(Locale.ROOT); return host.equals("kodikplayer.com") || host.equals("kodik.info") || host.equals("kodik.cc"); }
+    /** CVH: страница-обёртка YummyAnime iframeCVH.html?anime_id=…&episode=…&dubbing_code=… */
+    static boolean cvh(URI uri) { String host = uri.getHost().toLowerCase(Locale.ROOT); return (host.equals("yummyani.me") || host.endsWith(".yummyani.me")) && uri.getPath() != null && uri.getPath().endsWith("/iframeCVH.html"); }
+    /** Aksor: player.aksor.tv/video/{id} */
+    static boolean aksor(URI uri) { return uri.getHost().equalsIgnoreCase("player.aksor.tv") && uri.getPath() != null && uri.getPath().matches("/video/[A-Za-z0-9_-]{1,64}/?"); }
+    static Map<String,String> query(URI uri) {
+        Map<String,String> result = new HashMap<>(); String raw = uri.getRawQuery(); if (raw == null) return result;
+        for (String part : raw.split("&")) { int eq = part.indexOf('='); if (eq <= 0) continue; try { result.put(URLDecoder.decode(part.substring(0, eq), "UTF-8"), URLDecoder.decode(part.substring(eq + 1), "UTF-8")); } catch (Exception ignored) {} }
+        return result;
+    }
+    static String safeMediaUrl(String url) throws IOException { if (url == null || url.isEmpty() || url.equals("null")) return null; String fixed = url.startsWith("//") ? "https:" + url : url; fixed = fixed.replace(" ", "%20"); safeUri(fixed); return fixed; }
+
+    /** CVH (cdnvideohub): список серий и озвучек, затем прямые HLS/MP4 с CDN. */
+    static Result resolveCvh(URI page, Transport network) throws Exception {
+        Map<String,String> q = query(page);
+        String id = q.get("anime_id"), episode = q.get("episode"), code = q.getOrDefault("dubbing_code", ""), dubbing = q.getOrDefault("dubbing", "");
+        if (id == null || !id.matches("[0-9]{1,10}") || episode == null) throw changed();
+        Page list = network.request("https://plapi.cdnvideohub.com/api/v1/player/sv/playlist?pub=745&aggr=mali&id=" + id, null, "https://ru.yummyani.me/");
+        JSONArray items = new JSONObject(list.text).optJSONArray("items");
+        if (items == null) throw changed();
+        JSONObject chosen = null, byType = null, first = null;
+        for (int i = 0; i < items.length(); i++) {
+            JSONObject item = items.optJSONObject(i); if (item == null || !String.valueOf(item.optInt("episode")).equals(episode.trim())) continue;
+            if (first == null) first = item;
+            if (!code.isEmpty() && code.equalsIgnoreCase(item.optString("voiceStudio"))) { chosen = item; break; }
+            if (byType == null && !item.optString("voiceType").isEmpty() && dubbing.toLowerCase(Locale.ROOT).contains(item.optString("voiceType").toLowerCase(Locale.ROOT))) byType = item;
+        }
+        if (chosen == null) chosen = byType != null ? byType : first;
+        if (chosen == null) throw new IOException("Источник не вернул эту серию. Попробуй другую озвучку или плеер.");
+        String vk = chosen.optString("vkId");
+        if (!vk.matches("[0-9]{1,20}")) throw changed();
+        Page video = network.request("https://plapi.cdnvideohub.com/api/v1/player/sv/video/" + vk, null, "https://ru.yummyani.me/");
+        JSONObject sources = new JSONObject(video.text).optJSONObject("sources");
+        if (sources == null) throw changed();
+        List<Stream> streams = new ArrayList<>(); Set<String> seen = new HashSet<>();
+        String hls = safeMediaUrl(sources.optString("hlsUrl"));
+        if (hls != null && seen.add(hls)) streams.add(new Stream("Авто", hls, "application/x-mpegURL"));
+        String[][] mp4 = {{"mpeg4kUrl", "2160p"}, {"mpeg2kUrl", "1440p"}, {"mpegQhdUrl", "1440p"}, {"mpegFullHdUrl", "1080p"}, {"mpegHighUrl", "720p"}, {"mpegMediumUrl", "480p"}, {"mpegLowUrl", "360p"}, {"mpegLowestUrl", "240p"}};
+        Set<String> labels = new HashSet<>();
+        for (String[] m : mp4) { try { String url = safeMediaUrl(sources.optString(m[0])); if (url != null && labels.add(m[1]) && seen.add(url)) streams.add(new Stream(m[1], url, "video/mp4")); } catch (IOException ignored) {} }
+        if (streams.isEmpty()) throw new IOException("Источник не вернул доступный видеопоток. Попробуй другую озвучку или плеер.");
+        return new Result(streams, "https://player.cdnvideohub.com/", BROWSER_AGENT, null);
+    }
+
+    /** Aksor: JSON с DASH-потоками по качествам и разметкой опенинга/эндинга. */
+    static Result resolveAksor(URI page, Transport network) throws Exception {
+        String id = page.getPath().substring("/video/".length()).replace("/", "");
+        Page api = network.request("https://player.aksor.tv/api/video/" + id, null, page.toString());
+        JSONObject data = new JSONObject(api.text);
+        JSONObject qualities = data.optJSONObject("qualities");
+        if (qualities == null) throw changed();
+        List<Stream> streams = new ArrayList<>();
+        String[][] order = {{"q4k", "2160p"}, {"q2k", "1440p"}, {"q1080", "1080p"}, {"q720", "720p"}, {"q480", "480p"}, {"q360", "360p"}};
+        for (String[] q : order) { try { String url = qualities.isNull(q[0]) ? null : safeMediaUrl(qualities.optString(q[0])); if (url != null) streams.add(new Stream(q[1], url, url.toLowerCase(Locale.ROOT).contains(".m3u8") ? "application/x-mpegURL" : "application/dash+xml")); } catch (IOException ignored) {} }
+        if (streams.isEmpty()) throw new IOException("Источник не вернул доступный видеопоток. Попробуй другую озвучку или плеер.");
+        JSONObject intro = new JSONObject();
+        int os = data.optInt("opening_start"), ol = data.optInt("opening_length"), es = data.optInt("ending_start"), el = data.optInt("ending_length");
+        if (ol > 0) intro.put("opening", new JSONObject().put("start", os).put("end", os + ol).put("exact", true));
+        if (el > 0) intro.put("ending", new JSONObject().put("start", es).put("end", es + el).put("exact", true));
+        return new Result(streams, "https://player.aksor.tv/", BROWSER_AGENT, intro.length() > 0 ? intro : null);
     }
     static Result resolve(String url) throws Exception { return resolve(url, StreamResolver::request); }
     static Result resolve(String url, Transport network) throws Exception {
-        if (!supports(url)) throw new IOException("Для этого источника прямой поток пока не поддерживается. Выбери Kodik или открой плеер сайта.");
+        if (!supports(url)) throw new IOException("Для этого источника прямой поток пока не поддерживается. Выбери Kodik, CVH или Aksor, или открой плеер сайта.");
+        url = normalize(url);
+        URI target = safeUri(url);
+        if (cvh(target)) return resolveCvh(target, network);
+        if (aksor(target)) return resolveAksor(target, network);
         Page page = network.request(url, null, null);
-        if (!supports(page.url)) throw new IOException("Источник перенаправил запрос на неизвестный плеер.");
+        if (!kodik(safeUri(page.url).getHost())) throw new IOException("Источник перенаправил запрос на неизвестный плеер.");
         Map<String,String> form = new LinkedHashMap<>();
         for (String name : new String[]{"domain","d_sign","pd","pd_sign","ref","ref_sign"}) {
             String value = capture(page.text, "\\bvar\\s+"+name+"\\s*=\\s*([\"'])(.*?)\\1", 2);
@@ -141,7 +212,7 @@ final class StreamResolver {
             safeUri(url);
             HttpURLConnection connection=(HttpURLConnection)new URL(url).openConnection();
             connection.setInstanceFollowRedirects(false);connection.setConnectTimeout(12000);connection.setReadTimeout(18000);
-            connection.setRequestProperty("User-Agent",USER_AGENT);
+            connection.setRequestProperty("User-Agent",kodik(safeUri(url).getHost())?USER_AGENT:BROWSER_AGENT);
             if(referer!=null)connection.setRequestProperty("Referer",referer);
             try {
                 if(body!=null){connection.setRequestMethod("POST");connection.setDoOutput(true);connection.setRequestProperty("Content-Type","application/x-www-form-urlencoded; charset=UTF-8");try(OutputStream out=connection.getOutputStream()){out.write(body.getBytes(StandardCharsets.UTF_8));}}

@@ -45,6 +45,7 @@ button.primary{background:var(--accent);color:var(--on);font-weight:600}
  <div id="menu" role="menu"></div>
 </div></div>
 <script src="hls.min.js"></script>
+<script src="dash.all.min.js"></script>
 <script>
 (() => {
  'use strict';
@@ -52,7 +53,7 @@ button.primary{background:var(--accent);color:var(--on);font-weight:600}
  const video=$('video'), ui=$('ui'), play=$('play'), clock=$('clock'), menu=$('menu'), skip=$('skip');
  const session=new URLSearchParams(location.search).get('session');
  const send=(state,value,extra={})=>window.chrome?.webview?.postMessage({state,value,session,...extra});
- let intro={}, applying=0, streams=[], current=0, speed=1, hls=null, autoNext=false, hasNext=false, countdown=0, countdownTimer=0, hideTimer=0, lastReport=0, pendingStart=0;
+ let intro={}, applying=0, streams=[], current=0, speed=1, hls=null, dash=null, autoNext=false, hasNext=false, countdown=0, countdownTimer=0, hideTimer=0, lastReport=0, pendingStart=0;
  // Видео идёт через прокси приложения на отдельном адресе (не на адресе файлов плеера).
  const MEDIA='https://media.yoru.local/proxy?u=';
  const proxy=u=>MEDIA+encodeURIComponent(u);
@@ -66,6 +67,7 @@ button.primary{background:var(--accent);color:var(--on);font-weight:600}
  function load(index,start){
   current=index;const s=streams[index];if(!s)return;
   if(hls){hls.destroy();hls=null;}
+  if(dash){try{dash.reset();}catch(_){}dash=null;}
   spinner(true);message('');pendingStart=start||0;
   if(s.mime==='application/x-mpegURL'){
    if(window.Hls&&Hls.isSupported()){
@@ -81,6 +83,14 @@ button.primary{background:var(--accent);color:var(--on);font-weight:600}
     hls.loadSource(s.url);hls.attachMedia(video);
    } else if(video.canPlayType('application/vnd.apple.mpegurl')) video.src=proxy(s.url);
    else { fail('Встроенный плеер не загрузился. Открой плеер сайта.'); return; }
+  } else if(s.mime==='application/dash+xml'){
+   if(!window.dashjs){fail('Встроенный плеер DASH не загрузился. Открой плеер сайта.');return;}
+   // Манифест и сегменты идут через прокси приложения; относительные адреса dash.js считает от исходного URL.
+   dash=dashjs.MediaPlayer().create();
+   dash.extend('RequestModifier',function(){return{modifyRequestHeader:x=>x,modifyRequestURL:u=>u.startsWith(MEDIA)?u:proxy(u)};},true);
+   dash.updateSettings({streaming:{buffer:{bufferTimeAtTopQuality:60},retryAttempts:{MPD:2,MediaSegment:3}}});
+   dash.on(dashjs.MediaPlayer.events.ERROR,e=>{const d=e&&e.error;send('debug','dash '+(d&&(d.code+' '+(d.message||''))||''),{fatal:true});fail('Не получилось загрузить видео ('+(d&&d.code||'DASH')+'). Попробуй другое качество или источник.');});
+   dash.initialize(video,s.url,false);
   } else video.src=proxy(s.url);
   video.playbackRate=speed;video.play().catch(()=>{});watch();
   summary();
