@@ -41,14 +41,16 @@ public static class EpisodeGrid
             };
             var inner = new Grid();
             inner.Children.Add(new TextBlock { Text = episode.Number, FontSize = 17, FontWeight = FontWeights.SemiBold, Foreground = watched ? SeenText : Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap, Margin = new Thickness(8, 0, 8, 2) });
-            if (isCurrent) inner.Children.Add(new TextBlock { Text = "сейчас", FontSize = 9, Foreground = Accent, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 6) });
+            if (isCurrent) inner.Children.Add(new TextBlock { Text = "сейчас", FontSize = 9, Foreground = Accent, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 4, 0, 0) });
             // Полоска снизу: целиком — просмотрено, частично — где остановился.
             var fill = watched ? 1 : started;
             if (fill > 0)
             {
-                var bar = new Border { Height = 3, VerticalAlignment = VerticalAlignment.Bottom, HorizontalAlignment = HorizontalAlignment.Left, Background = (Brush)Application.Current.FindResource("AccentGradient") };
-                inner.SizeChanged += (_, e) => bar.Width = e.NewSize.Width * fill;
-                inner.Children.Add(bar);
+                // Тонкая скруглённая полоска внутри плитки (не по краю — иначе она торчала за скруглённые углы).
+                var track = new Border { Height = 3, CornerRadius = new CornerRadius(1.5), VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(10, 0, 10, 6), Background = new SolidColorBrush(Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF)) };
+                var bar = new Border { Height = 3, CornerRadius = new CornerRadius(1.5), VerticalAlignment = VerticalAlignment.Bottom, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(10, 0, 10, 6), Background = (Brush)Application.Current.FindResource("AccentGradient") };
+                inner.SizeChanged += (_, e) => bar.Width = Math.Max(3, (e.NewSize.Width - 20) * fill);
+                inner.Children.Add(track); inner.Children.Add(bar);
             }
             body.Child = inner;
             tile.Children.Add(body);
