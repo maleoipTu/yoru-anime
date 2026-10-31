@@ -194,8 +194,8 @@ public final class ProfileActivity extends Activity {
   String equippedId=profile.optString(equippedField(kind));boolean worn=id.equals(equippedId);boolean removable=!kind.equals("frame")&&!kind.equals("name_color");
   LinearLayout tile=Ui.column(this);tile.setPadding(Ui.dp(this,12),Ui.dp(this,14),Ui.dp(this,12),Ui.dp(this,12));tile.setGravity(Gravity.CENTER_HORIZONTAL);
   android.graphics.drawable.GradientDrawable face=Ui.shape(this,worn?Ui.SOFT:Ui.PANEL,18);face.setStroke(Ui.dp(this,1),worn?0xFF7A2A3A:Ui.LINE);
-  // Своя подложка у набора администрации: ночное небо с отсветом зари и кант цвета зари.
-  if(staff){face=new android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0xFF1E1730,worn?0xFF301826:0xFF191422,0xFF3A1A22});face.setCornerRadius(Ui.dp(this,18));face.setStroke(Ui.dp(this,1),worn?0xFFFF8A3D:0xFF8A3A3A);}
+  // Своя подложка у набора администрации: графит с тонким серебряным кантом (надетое — кант акцента).
+  if(staff){face=new android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0xFF22242C,worn?0xFF2E1C24:0xFF1A1B21});face.setCornerRadius(Ui.dp(this,18));face.setStroke(Ui.dp(this,1),worn?0xFFFF8A3D:0xFF5C6576);}
   tile.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x24FFFFFF),face,Ui.shape(this,android.graphics.Color.WHITE,18)));
   FrameLayout preview=new FrameLayout(this);tile.addView(preview,new LinearLayout.LayoutParams(-1,Ui.dp(this,72)));
   if(kind.equals("frame")){Decor.AvatarView a=new Decor.AvatarView(this);a.frame(style);a.person(Decor.name(profile),profile.optString("avatar_url"));preview.addView(a,new FrameLayout.LayoutParams(Ui.dp(this,68),Ui.dp(this,68),Gravity.CENTER));}
@@ -204,7 +204,7 @@ public final class ProfileActivity extends Activity {
   else if(kind.equals("profile_effect")||kind.equals("profile_frame")){preview.addView(new Ornaments.Preview(this,kind,style),new FrameLayout.LayoutParams(Ui.dp(this,104),-1,Gravity.CENTER));}
   else{TextView n=Ui.title(this,Decor.name(profile),18);n.setGravity(Gravity.CENTER);n.setMaxLines(1);n.setEllipsize(TextUtils.TruncateAt.END);Decor.nameColor(n,style);preview.addView(n,new FrameLayout.LayoutParams(-2,-2,Gravity.CENTER));}
   TextView title=Ui.title(this,d.optString("title"),14);title.setGravity(Gravity.CENTER);title.setMaxLines(2);Ui.add(tile,title,8);
-  TextView rarity=staff?Ui.text(this,"☾ Только для администрации",11,0xFFFFB36B):Ui.text(this,Rewards.rarity(d.optString("rarity"))+(until.isEmpty()||have?"":" · до "+Rewards.until(until)),11,Rewards.rarityColor(d.optString("rarity")));if(staff)rarity.setTypeface(Ui.MEDIUM);rarity.setGravity(Gravity.CENTER);Ui.add(tile,rarity,4);
+  TextView rarity=staff?Ui.text(this,"☾ Только для администрации",11,0xFFC9D2E3):Ui.text(this,Rewards.rarity(d.optString("rarity"))+(until.isEmpty()||have?"":" · до "+Rewards.until(until)),11,Rewards.rarityColor(d.optString("rarity")));if(staff)rarity.setTypeface(Ui.MEDIUM);rarity.setGravity(Gravity.CENTER);Ui.add(tile,rarity,4);
   String state;int color;
   if(worn){state=removable?"✓ Надето · снять":"✓ Надето";color=Ui.ACCENT;}
   else if(have){state="Надеть";color=Ui.TEXT;}

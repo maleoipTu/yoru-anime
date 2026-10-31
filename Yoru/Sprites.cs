@@ -134,42 +134,67 @@ public static class Sprites
         return true;
     }
 
-    /// <summary>«Ночной дозор» (набор администрации): три слоя глубины — дальние звёзды, огоньки зари, размытое боке
-    /// у «камеры», плюс кометы. Дальние слои движутся медленнее (параллакс).</summary>
+    /// <summary>«Ночной дозор» (набор администрации): редкие мелкие тусклые звёзды стоят на месте и очень медленно
+    /// мерцают (период 14–25 с); примерно раз в 40 с небо пересекает одна тонкая комета. Темп намеренно не ускоряется EffectPace.</summary>
     static bool NightWatch(DrawingContext dc, double w, double h)
     {
         var s = Get("fx_night"); if (s == null) return false;
         var comet = Get("fx_night_comet");
-        var sec = Now / 1000.0 * EffectPace; var r = new Random(4242);
-        for (var i = 0; i < 26; i++)
+        var sec = Now / 1000.0; var r = new Random(4242);
+        var count = Math.Clamp((int)(w * h / 12000), 6, 20);
+        for (var i = 0; i < count; i++)
         {
-            double rx = r.NextDouble(), ry = r.NextDouble(), phase = r.NextDouble() * Math.PI * 2, depth = .3 + r.NextDouble() * .4; var variant = r.Next(2);
-            var x = (rx * (w + 40) + sec * 5 * depth) % (w + 40) - 20;
-            var tw = Math.Pow(.5 + .5 * Math.Sin(sec * (1.1 + depth * 1.6) + phase), 2);
-            var size = (9 + 12 * depth) * (.65 + .35 * tw);
-            Draw(dc, s, variant, x, ry * h * .9, size, size, tw * 45, (.25 + .75 * tw) * (.4 + .6 * depth));
-        }
-        for (var i = 0; i < 12; i++)
-        {
-            double rx = r.NextDouble(), speed = .6 + r.NextDouble() * .7, phase = r.NextDouble(), depth = .55 + r.NextDouble() * .35; var variant = 2 + r.Next(2);
-            var p = (sec * .045 * speed + phase) % 1; var size = 12 + 16 * depth;
-            Draw(dc, s, variant, rx * w + Math.Sin(sec * .7 * speed + phase * 9) * 18 * depth, h * (1.08 - p * 1.2), size, size, 0, Math.Sin(p * Math.PI) * (.5 + .45 * depth));
-        }
-        for (var i = 0; i < 3; i++)
-        {
-            double rx = r.NextDouble(), ry = r.NextDouble(), phase = r.NextDouble(), size = 80 + 50 * r.NextDouble();
-            var p = (sec * .02 + phase) % 1;
-            Draw(dc, s, 4, w * (rx * .8 - .1 + p * .4), h * (.15 + ry * .7) + Math.Sin(sec * .3 + i) * 12, size, size, 0, .45 * Math.Sin(p * Math.PI));
+            double rx = r.NextDouble(), ry = r.NextDouble(), phase = r.NextDouble() * Math.PI * 2, speed = .25 + r.NextDouble() * .2, depth = r.NextDouble();
+            var variant = depth > .85 ? 0 : depth > .45 ? 1 : 2;
+            var tw = .5 + .5 * Math.Sin(sec * speed + phase);
+            var size = variant == 0 ? 20.0 : 16.0;
+            Draw(dc, s, variant, 10 + rx * Math.Max(0, w - 20), 10 + ry * Math.Max(0, h - 20), size, size, 0, (.2 + .25 * depth) * (.55 + .45 * tw));
         }
         if (comet != null)
-            for (var i = 0; i < 2; i++)
+        {
+            const double period = 40, flight = 2.4;
+            var cycle = Math.Floor(sec / period); var p = sec - cycle * period;
+            if (p < flight)
             {
-                double rx = r.NextDouble(), ry = r.NextDouble(), phase = r.NextDouble();
-                var p = (sec * .085 + phase) % 1; if (p > .32) continue; var q = p / .32;
-                double dx = -w * .55, dy = h * .5, len = Math.Min(220, w * .3);
-                Draw(dc, comet, 0, w * (.6 + rx * .45) + q * dx, h * (ry * .3 - .08) + q * dy, len, len * comet.H / comet.W, Math.Atan2(dy, dx) * 180 / Math.PI, Math.Sin(q * Math.PI));
+                var path = new Random((int)cycle * 31 + 7); var q = p / flight;
+                double dx = -w * .35, dy = h * .22, len = Math.Min(160, w * .25);
+                Draw(dc, comet, 0, w * (.55 + path.NextDouble() * .35) + q * dx, h * (.1 + path.NextDouble() * .3) + q * dy, len, len * comet.H / comet.W, Math.Atan2(dy, dx) * 180 / Math.PI, .55 * Math.Sin(q * Math.PI));
             }
+        }
         return true;
+    }
+
+    /// <summary>Контур скруглённого прямоугольника с разрывом шириной gap по центру верхнего края (под эмблему).</summary>
+    static Geometry Outline(Rect b, double r, double gap)
+    {
+        var g = new StreamGeometry(); var arc = new Size(r, r); var cx = b.Left + b.Width / 2;
+        using (var ctx = g.Open())
+        {
+            ctx.BeginFigure(new Point(cx + gap / 2, b.Top), false, false);
+            ctx.LineTo(new Point(b.Right - r, b.Top), true, true);
+            ctx.ArcTo(new Point(b.Right, b.Top + r), arc, 0, false, SweepDirection.Clockwise, true, true);
+            ctx.LineTo(new Point(b.Right, b.Bottom - r), true, true);
+            ctx.ArcTo(new Point(b.Right - r, b.Bottom), arc, 0, false, SweepDirection.Clockwise, true, true);
+            ctx.LineTo(new Point(b.Left + r, b.Bottom), true, true);
+            ctx.ArcTo(new Point(b.Left, b.Bottom - r), arc, 0, false, SweepDirection.Clockwise, true, true);
+            ctx.LineTo(new Point(b.Left, b.Top + r), true, true);
+            ctx.ArcTo(new Point(b.Left + r, b.Top), arc, 0, false, SweepDirection.Clockwise, true, true);
+            ctx.LineTo(new Point(cx - gap / 2, b.Top), true, true);
+        }
+        g.Freeze(); return g;
+    }
+    /// <summary>Угловая скобка у левого верхнего угла: повторяет скругление радиуса r и уходит по краям на arm.</summary>
+    static Geometry Bracket(Rect b, double r, double arm)
+    {
+        var g = new StreamGeometry();
+        using (var ctx = g.Open())
+        {
+            ctx.BeginFigure(new Point(b.Left, b.Top + r + arm), false, false);
+            ctx.LineTo(new Point(b.Left, b.Top + r), true, true);
+            if (r > 0) ctx.ArcTo(new Point(b.Left + r, b.Top), new Size(r, r), 0, false, SweepDirection.Clockwise, true, true);
+            ctx.LineTo(new Point(b.Left + r + arm, b.Top), true, true);
+        }
+        g.Freeze(); return g;
     }
 
     // ───── Рамки профиля с нарисованными деталями ─────
@@ -259,28 +284,23 @@ public static class Sprites
             }
             case "night_crown":
             {
-                // «Полуночная грань» (набор администрации): узорные углы, герб с полумесяцем и бегущий по краю свет зари.
-                var cornerSheet = Get("pf_night_corner"); var crest = Get("pf_night_crest"); if (cornerSheet == null) return false;
-                var edge = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(1, 1) };
-                edge.GradientStops.Add(new GradientStop(Color.FromArgb(0xCC, 0xFF, 0xE3, 0xB8), 0)); edge.GradientStops.Add(new GradientStop(Color.FromArgb(0x55, 0xFF, 0x8A, 0x3D), .3));
-                edge.GradientStops.Add(new GradientStop(Color.FromArgb(0x66, 0x4A, 0x32, 0x70), .5)); edge.GradientStops.Add(new GradientStop(Color.FromArgb(0x55, 0xFF, 0x8A, 0x3D), .7));
-                edge.GradientStops.Add(new GradientStop(Color.FromArgb(0xCC, 0xFF, 0x4D, 0x67), 1)); edge.Freeze();
-                dc.DrawRoundedRectangle(null, Line(edge, 1.4), box, radius, radius);
-                var dawn = new LinearGradientBrush(Color.FromRgb(0xFF, 0x4D, 0x67), Color.FromRgb(0xFF, 0xE3, 0xB8), 0); dawn.Freeze();
+                // «Полуночная грань» (набор администрации): тонкий лунно-белый контур с разрывом под эмблемой, строгие
+                // угловые скобки по скруглению карточки и эмблема-полумесяц сверху по центру. Движения почти нет:
+                // эмблема лишь очень медленно «дышит» (период ~10 с).
+                var crest = Get("pf_night_crest"); var moonlight = Color.FromRgb(0xDC, 0xE3, 0xF0);
                 var r = Math.Min(radius, Math.Min(box.Width, box.Height) / 2);
-                var perimeter = 2 * (box.Width + box.Height) - 8 * r + 2 * Math.PI * r;
-                const double light = 110;
-                if (perimeter > light * 3)
-                    for (var k = 0; k < 2; k++)
-                        foreach (var (width, alpha) in new[] { (8.0, .2), (4.0, .35), (2.0, 1.0) })
-                        {
-                            var pen = new Pen(dawn, width) { DashCap = PenLineCap.Round, DashStyle = new DashStyle([light / width, (perimeter - light) / width], (-sec * 70 - k * perimeter / 2) / width) };
-                            pen.Freeze(); dc.PushOpacity(alpha); dc.DrawRoundedRectangle(null, pen, box, radius, radius); dc.Pop();
-                        }
-                var size = Math.Min(Math.Min(w, h) * .44, 150); var breathe = .88 + .12 * Math.Sin(sec * 1.3);
-                Corner(dc, cornerSheet, 0, 0, size, false, false, breathe); Corner(dc, cornerSheet, w, 0, size, true, false, breathe);
-                Corner(dc, cornerSheet, 0, h, size, false, true, breathe); Corner(dc, cornerSheet, w, h, size, true, true, breathe);
-                if (crest != null && w > size * 2.6) { var cw = Math.Min(168, w * .3); var ch = cw * crest.H / crest.W; Draw(dc, crest, 0, w / 2, ch / 2 + 2, cw, ch, 0, .9 + .1 * Math.Sin(sec * 1.7)); }
+                double cw = Math.Min(48, w * .3), ch = crest == null ? 0 : cw * crest.H / crest.W;
+                var gap = crest != null && w > 90 ? cw * .6 : 0;
+                dc.DrawGeometry(null, Line(new SolidColorBrush(A(moonlight, .3)), 1), Outline(box, r, gap));
+                const double inset = 6; var arm = Math.Min(26, Math.Min(w, h) * .12);
+                var inner = new Rect(box.Left + inset, box.Top + inset, Math.Max(0, box.Width - inset * 2), Math.Max(0, box.Height - inset * 2));
+                var bracket = Bracket(inner, Math.Max(0, r - inset), arm);
+                var pen = new Pen(new SolidColorBrush(A(moonlight, .7)), 1.4) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }; pen.Freeze();
+                foreach (var (sx, sy) in new[] { (1.0, 1.0), (-1.0, 1.0), (1.0, -1.0), (-1.0, -1.0) })
+                {
+                    dc.PushTransform(new ScaleTransform(sx, sy, w / 2, h / 2)); dc.DrawGeometry(null, pen, bracket); dc.Pop();
+                }
+                if (gap > 0) Draw(dc, crest, 0, w / 2, box.Top + 1 + ch / 2, cw, ch, 0, .85 + .15 * Math.Sin(sec * .45));
                 return true;
             }
             case "neon":
