@@ -41,12 +41,12 @@ final class Social {
 
   AnimeCard(Activity activity,Anime anime){
    this.activity=activity;this.anime=anime;account=new Account(activity);
-   root=Ui.padded(activity,16);root.setBackground(Ui.outlined(activity,Ui.PANEL,22));
-   TextView title=Ui.title(activity,"Мой список и оценки",17);if(android.os.Build.VERSION.SDK_INT>=28)title.setAccessibilityHeading(true);root.addView(title);
+   root=Ui.padded(activity,Ui.PANEL_PAD);root.setBackground(Ui.outlined(activity,Ui.PANEL,24));
+   TextView title=Ui.title(activity,"Мой список и оценки",19);if(android.os.Build.VERSION.SDK_INT>=28)title.setAccessibilityHeading(true);root.addView(title);
    LinearLayout actions=Ui.row(activity);listButton=Ui.tonal(activity,"В список");rateButton=Ui.tonal(activity,"Оценить");
-   actions.addView(listButton,new LinearLayout.LayoutParams(0,-2,1));LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(0,-2,1);rp.leftMargin=Ui.dp(activity,8);actions.addView(rateButton,rp);Ui.add(root,actions,12);
-   ratingText=Ui.text(activity,"Оценки пользователей Yoru загружаются…",13,Ui.MUTED);Ui.add(root,ratingText,12);
-   reviewsBox=Ui.column(activity);Ui.add(root,reviewsBox,4);
+   actions.addView(listButton,new LinearLayout.LayoutParams(0,-2,1));LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(0,-2,1);rp.leftMargin=Ui.dp(activity,10);actions.addView(rateButton,rp);Ui.add(root,actions,16);
+   ratingText=Ui.text(activity,"Оценки пользователей Yoru загружаются…",13,Ui.MUTED);Ui.add(root,ratingText,16);
+   reviewsBox=Ui.column(activity);Ui.add(root,reviewsBox,8);
    listButton.setOnClickListener(v->chooseList());rateButton.setOnClickListener(v->reviewSheet());
    refresh();
   }

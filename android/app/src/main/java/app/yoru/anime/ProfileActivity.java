@@ -26,10 +26,10 @@ public final class ProfileActivity extends Activity {
   root=Ui.root(this);
   LinearLayout toolbar=Ui.row(this);toolbar.setPadding(Ui.dp(this,8),Ui.dp(this,4),Ui.dp(this,12),Ui.dp(this,4));
   Button back=Ui.iconButton(this,"back","Назад");back.setOnClickListener(v->finish());toolbar.addView(back);
-  TextView heading=Ui.title(this,viewing.isEmpty()?"Профиль":"@"+viewing,19);if(android.os.Build.VERSION.SDK_INT>=28)heading.setAccessibilityHeading(true);LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(0,-2,1);hp.leftMargin=Ui.dp(this,4);toolbar.addView(heading,hp);
+  TextView heading=Ui.title(this,viewing.isEmpty()?"Профиль":"@"+viewing,20);if(android.os.Build.VERSION.SDK_INT>=28)heading.setAccessibilityHeading(true);LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(0,-2,1);hp.leftMargin=Ui.dp(this,4);toolbar.addView(heading,hp);
   busyBar=new ProgressBar(this);busyBar.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(Ui.ACCENT));busyBar.setVisibility(View.INVISIBLE);toolbar.addView(busyBar,new LinearLayout.LayoutParams(Ui.dp(this,24),Ui.dp(this,24)));
   root.addView(toolbar);
-  scroll=new ScrollView(this);scroll.setVerticalScrollBarEnabled(false);content=Ui.padded(this,16);content.setPadding(Ui.dp(this,16),Ui.dp(this,4),Ui.dp(this,16),Ui.dp(this,32));scroll.addView(content);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+  scroll=new ScrollView(this);scroll.setVerticalScrollBarEnabled(false);content=Ui.padded(this,16);content.setPadding(Ui.dp(this,Ui.GUTTER),Ui.dp(this,8),Ui.dp(this,Ui.GUTTER),Ui.dp(this,48));scroll.addView(content);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
   show();
  }
  @Override protected void onSaveInstanceState(Bundle state){state.putString("tab",tab);state.putBoolean("registering",registering);super.onSaveInstanceState(state);}
@@ -78,20 +78,20 @@ public final class ProfileActivity extends Activity {
   stats.addView(stat("moon",String.valueOf(level),"уровень",Ui.ACCENT),new LinearLayout.LayoutParams(0,-1,1));
   stats.addView(stat("play",String.valueOf(p.optInt("episodes_watched")),"серий",Ui.LIVE),margin(new LinearLayout.LayoutParams(0,-1,1)));
   stats.addView(stat("calendar",String.valueOf(p.optInt("streak_days")),"дней подряд",0xFFFF8A5B),margin(new LinearLayout.LayoutParams(0,-1,1)));
-  Ui.add(content,stats,12);
+  Ui.add(content,stats,16);
   JSONObject lists=data.optJSONObject("lists");if(lists==null)lists=new JSONObject();
-  LinearLayout listCard=card();listCard.addView(section("Списки"));StringBuilder line=new StringBuilder();for(String key:Account.LISTS){if(line.length()>0)line.append(" · ");line.append(Account.listLabel(key)).append(": ").append(lists.optInt(key));}line.append(" · Отзывов: ").append(data.optInt("reviews"));Ui.add(listCard,Ui.text(this,line.toString(),13,Ui.MUTED),8);Ui.add(content,listCard,12);
-  JSONArray showcase=p.optJSONArray("showcase");if(showcase!=null&&showcase.length()>0){Ui.add(content,section("Любимое аниме"),22);HorizontalScrollView strip=new HorizontalScrollView(this);strip.setHorizontalScrollBarEnabled(false);LinearLayout row=Ui.row(this);row.setGravity(Gravity.TOP);strip.addView(row);for(int i=0;i<showcase.length();i++){JSONObject item=showcase.optJSONObject(i);if(item!=null)row.addView(showcaseItem(item),new LinearLayout.LayoutParams(Ui.dp(this,104),-2));}Ui.add(content,strip,8);}
+  LinearLayout listCard=card();listCard.addView(section("Списки"));StringBuilder line=new StringBuilder();for(String key:Account.LISTS){if(line.length()>0)line.append(" · ");line.append(Account.listLabel(key)).append(": ").append(lists.optInt(key));}line.append(" · Отзывов: ").append(data.optInt("reviews"));Ui.add(listCard,Ui.text(this,line.toString(),13,Ui.MUTED),8);Ui.add(content,listCard,16);
+  JSONArray showcase=p.optJSONArray("showcase");if(showcase!=null&&showcase.length()>0){Ui.add(content,section("Любимое аниме"),32);HorizontalScrollView strip=new HorizontalScrollView(this);strip.setHorizontalScrollBarEnabled(false);LinearLayout row=Ui.row(this);row.setGravity(Gravity.TOP);strip.addView(row);for(int i=0;i<showcase.length();i++){JSONObject item=showcase.optJSONObject(i);if(item!=null)row.addView(showcaseItem(item),new LinearLayout.LayoutParams(Ui.dp(this,104),-2));}Ui.add(content,strip,8);}
   Set<String> theirs=new HashSet<>();JSONArray ids=data.optJSONArray("achievements");if(ids!=null)for(int i=0;i<ids.length();i++)theirs.add(ids.optString(i));
-  Ui.add(content,Extras.stats(this,account,p.optString("username")),12);
-  JSONArray favorites=data.optJSONArray("favorites");if(favorites!=null&&favorites.length()>0){Ui.add(content,section("Любимые"),22);for(int i=0;i<Math.min(6,favorites.length());i++){JSONObject f=favorites.optJSONObject(i);try{JSONObject raw=new JSONObject().put("anime_id",f.optLong("anime_id")).put("title",f.optString("title")).put("poster",new JSONObject().put("fullsize",f.optString("poster")));Ui.add(content,Extras.animeRow(this,raw,""),8);}catch(JSONException ignored){}}}
+  Ui.add(content,Extras.stats(this,account,p.optString("username")),24);
+  JSONArray favorites=data.optJSONArray("favorites");if(favorites!=null&&favorites.length()>0){Ui.add(content,section("Любимые"),32);for(int i=0;i<Math.min(6,favorites.length());i++){JSONObject f=favorites.optJSONObject(i);try{JSONObject raw=new JSONObject().put("anime_id",f.optLong("anime_id")).put("title",f.optString("title")).put("poster",new JSONObject().put("fullsize",f.optString("poster")));Ui.add(content,Extras.animeRow(this,raw,""),8);}catch(JSONException ignored){}}}
   achievementGrid(theirs);
  }
 
  /** Сетка достижений: открытые — в цвете, закрытые — приглушены. */
  void achievementGrid(Set<String> got){
   if(achievements.length()==0)return;
-  Ui.add(content,section("Достижения · "+got.size()+" из "+achievements.length()),22);
+  Ui.add(content,section("Достижения · "+got.size()+" из "+achievements.length()),32);
   int columns=getResources().getConfiguration().screenWidthDp>=600?5:3;LinearLayout row=null;
   for(int i=0;i<achievements.length();i++){JSONObject a=achievements.optJSONObject(i);if(a==null)continue;boolean open=got.contains(a.optString("id"));
    if(i%columns==0){row=Ui.row(this);row.setGravity(Gravity.TOP);row.setBaselineAligned(false);Ui.add(content,row,8);}
@@ -130,22 +130,22 @@ public final class ProfileActivity extends Activity {
   stats.addView(stat("gem",Rewards.points(points),"очков",Ui.WARM),new LinearLayout.LayoutParams(0,-1,1));
   stats.addView(stat("moon",String.valueOf(level),"уровень",Ui.ACCENT),margin(new LinearLayout.LayoutParams(0,-1,1)));
   int streak=profile.optInt("streak_days");stats.addView(stat("calendar",String.valueOf(streak),streak>0?"🔥 дней подряд":"дней подряд",0xFFFF8A5B),margin(new LinearLayout.LayoutParams(0,-1,1)));
-  Ui.add(content,stats,12);
+  Ui.add(content,stats,16);
   LinearLayout progress=card();
   LinearLayout pr=Ui.row(this);pr.addView(Ui.title(this,"Уровень "+level,15),new LinearLayout.LayoutParams(0,-2,1));pr.addView(Ui.text(this,"ещё "+Rewards.points(Rewards.toNext(total))+" до "+(level+1),12,Ui.MUTED));progress.addView(pr);
   ProgressBar bar=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);bar.setMax(1000);bar.setProgress(Rewards.progress(total));bar.setProgressTintList(android.content.res.ColorStateList.valueOf(Ui.ACCENT));bar.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(Ui.LINE));bar.setContentDescription("Прогресс уровня "+level);Ui.add(progress,bar,10);
   Ui.add(progress,Ui.text(this,"Засчитано серий: "+profile.optInt("episodes_watched")+". Очки начисляются за просмотр в плеере Yoru: "+Rewards.EPISODE_POINTS+" за серию, +"+Rewards.NEW_ANIME_BONUS+" за новое аниме и до +20 за дни подряд. Серия засчитывается после 5–12 минут просмотра. Ещё очки дают достижения.",12,Ui.MUTED),10);
-  Ui.add(content,progress,12);
+  Ui.add(content,progress,16);
 
   // Рейтинг, подарки, «Год в Yoru» и перенос со старого сайта.
   String[][] tools={{"trophy","Рейтинг недели"},{"gift","Подарки"},{"spark","Год в Yoru"},{"party","Смотреть вместе"},{"catalog","Для тебя"},{"download","Перенос с YummyAnime"}};
   for(int i=0;i<tools.length;i+=2){LinearLayout row=Ui.row(this);for(int j=0;j<2;j++){String[] tool=tools[i+j];Button b=Ui.tonal(this,tool[1]);b.setTextSize(13);b.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,tool[0],Ui.ACCENT,18),null,null,null);b.setCompoundDrawablePadding(Ui.dp(this,6));
     b.setOnClickListener(v->{switch(tool[1]){case "Рейтинг недели":Extras.leaderboard(this,account);break;case "Подарки":Extras.inbox(this,account,this::refresh);break;case "Год в Yoru":startActivity(new Intent(this,WrappedActivity.class));break;case "Смотреть вместе":joinRoom();break;case "Для тебя":Extras.forYou(this,account);break;default:Extras.importOld(this,account,this::refresh);}});
-    LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);if(j>0)lp.leftMargin=Ui.dp(this,8);row.addView(b,lp);}Ui.add(content,row,i==0?12:8);}
-  Ui.add(content,Extras.stats(this,account,profile.optString("username")),12);
+    LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);if(j>0)lp.leftMargin=Ui.dp(this,10);row.addView(b,lp);}Ui.add(content,row,i==0?24:10);}
+  Ui.add(content,Extras.stats(this,account,profile.optString("username")),24);
 
   // Витрина любимых аниме.
-  LinearLayout showHead=Ui.row(this);showHead.addView(section("Любимое аниме"),new LinearLayout.LayoutParams(0,-2,1));Button change=Ui.textButton(this,"Изменить");change.setOnClickListener(v->editShowcase());showHead.addView(change);Ui.add(content,showHead,22);
+  LinearLayout showHead=Ui.row(this);showHead.addView(section("Любимое аниме"),new LinearLayout.LayoutParams(0,-2,1));Button change=Ui.textButton(this,"Изменить");change.setOnClickListener(v->editShowcase());showHead.addView(change);Ui.add(content,showHead,32);
   JSONArray showcase=profile.optJSONArray("showcase");
   if(showcase==null||showcase.length()==0){TextView empty=Ui.text(this,"Выбери до 6 аниме из избранного — они появятся здесь.",13,Ui.MUTED);Ui.add(content,empty,4);}
   else{HorizontalScrollView strip=new HorizontalScrollView(this);strip.setHorizontalScrollBarEnabled(false);LinearLayout row=Ui.row(this);row.setGravity(Gravity.TOP);strip.addView(row);
@@ -155,7 +155,7 @@ public final class ProfileActivity extends Activity {
   achievementGrid(unlocked);
 
   // Магазин украшений.
-  LinearLayout decoHead=Ui.row(this);decoHead.addView(section("Украшения"),new LinearLayout.LayoutParams(0,-2,1));TextView balance=Ui.text(this,Rewards.points(points),14,Ui.WARM);balance.setTypeface(Ui.MEDIUM);balance.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"gem",Ui.WARM,16),null,null,null);balance.setCompoundDrawablePadding(Ui.dp(this,6));balance.setContentDescription("Баланс: "+points+" очков");decoHead.addView(balance);Ui.add(content,decoHead,22);
+  LinearLayout decoHead=Ui.row(this);decoHead.addView(section("Украшения"),new LinearLayout.LayoutParams(0,-2,1));TextView balance=Ui.text(this,Rewards.points(points),14,Ui.WARM);balance.setTypeface(Ui.MEDIUM);balance.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"gem",Ui.WARM,16),null,null,null);balance.setCompoundDrawablePadding(Ui.dp(this,6));balance.setContentDescription("Баланс: "+points+" очков");decoHead.addView(balance);Ui.add(content,decoHead,32);
   LinearLayout tabs=Ui.row(this);String[][] kinds={{"avatar_deco","Украшения аватара"},{"profile_effect","Эффекты профиля"},{"profile_frame","Рамки профиля"},{"frame","Обводка аватара"},{"badge","Значки"},{"name_color","Цвет ника"}};
   for(String[] kind:kinds){Button chip=Ui.chip(this,kind[1]);chip.setCompoundDrawablesRelativeWithIntrinsicBounds(null,null,null,null);Ui.chipState(chip,tab.equals(kind[0]));chip.setCompoundDrawablesRelativeWithIntrinsicBounds(null,null,null,null);chip.setContentDescription(kind[1]+(tab.equals(kind[0])?", выбрано":""));chip.setOnClickListener(v->{tab=kind[0];renderProfile();});LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-2,-2);cp.rightMargin=Ui.dp(this,8);tabs.addView(chip,cp);}
   HorizontalScrollView tabScroll=new HorizontalScrollView(this);tabScroll.setHorizontalScrollBarEnabled(false);tabScroll.addView(tabs);Ui.add(content,tabScroll,4);
@@ -246,7 +246,7 @@ public final class ProfileActivity extends Activity {
   Decor.AvatarView avatar=new Decor.AvatarView(this);avatar.frame(Decor.style(byId,p.optString("equipped_frame","frame_moon")));avatar.deco(Decor.style(byId,p.optString("equipped_deco")));avatar.person(Decor.name(p),p.optString("avatar_url"));
   int avatarSide=avatar.hasDeco()?132:96;FrameLayout.LayoutParams ap=new FrameLayout.LayoutParams(Ui.dp(this,avatarSide),Ui.dp(this,avatarSide),Gravity.BOTTOM|Gravity.START);ap.leftMargin=Ui.dp(this,16-(avatarSide-96)/2);top.addView(avatar,ap);
   LinearLayout body=Ui.column(this);body.setPadding(Ui.dp(this,18),Ui.dp(this,8),Ui.dp(this,18),Ui.dp(this,18));card.addView(body);
-  LinearLayout nameRow=Ui.row(this);TextView name=Ui.title(this,Decor.name(p),22);name.setMaxLines(2);name.setEllipsize(TextUtils.TruncateAt.END);Decor.nameColor(name,Decor.style(byId,p.optString("equipped_color","color_default")));nameRow.addView(name,new LinearLayout.LayoutParams(-2,-2));
+  LinearLayout nameRow=Ui.row(this);TextView name=Ui.title(this,Decor.name(p),24);name.setMaxLines(2);name.setEllipsize(TextUtils.TruncateAt.END);Decor.nameColor(name,Decor.style(byId,p.optString("equipped_color","color_default")));nameRow.addView(name,new LinearLayout.LayoutParams(-2,-2));
   CharSequence badge=Decor.badge(Decor.style(byId,p.optString("equipped_badge")));if(badge.length()>0){TextView glyph=Ui.text(this,"",20,Ui.TEXT);glyph.setText(badge);glyph.setPadding(Ui.dp(this,8),0,0,0);JSONObject d=byId.get(p.optString("equipped_badge"));glyph.setContentDescription("Значок: "+(d==null?"":d.optString("title")));nameRow.addView(glyph);}
   body.addView(nameRow);
   String handle="@"+p.optString("username")+(p.optString("pronouns").isEmpty()?"":"  ·  "+p.optString("pronouns"));Ui.add(body,Ui.text(this,handle,13,0xCCFFFFFF),4);
@@ -351,13 +351,13 @@ public final class ProfileActivity extends Activity {
  // ───── Мелкие элементы ─────
  LinearLayout card(){LinearLayout card=Ui.padded(this,20);card.setBackground(Ui.outlined(this,Ui.PANEL,24));return card;}
  ImageView icon(String name){ImageView v=new ImageView(this);v.setImageDrawable(new Ui.AppIcon(this,name,Ui.ACCENT,28));v.setScaleType(ImageView.ScaleType.CENTER);v.setBackground(Ui.shape(this,Ui.SOFT,28));v.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);v.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this,56),Ui.dp(this,56)));return v;}
- TextView section(String text){TextView t=Ui.title(this,text,17);if(android.os.Build.VERSION.SDK_INT>=28)t.setAccessibilityHeading(true);return t;}
+ TextView section(String text){TextView t=Ui.title(this,text,19);if(android.os.Build.VERSION.SDK_INT>=28)t.setAccessibilityHeading(true);return t;}
  TextView label(String text){TextView t=Ui.text(this,text,12,Ui.MUTED);t.setTypeface(Ui.MEDIUM);return t;}
- LinearLayout.LayoutParams margin(LinearLayout.LayoutParams p){p.leftMargin=Ui.dp(this,10);return p;}
+ LinearLayout.LayoutParams margin(LinearLayout.LayoutParams p){p.leftMargin=Ui.dp(this,12);return p;}
  View stat(String icon,String value,String caption,int color){
-  LinearLayout box=Ui.column(this);box.setPadding(Ui.dp(this,14),Ui.dp(this,12),Ui.dp(this,10),Ui.dp(this,12));box.setBackground(Ui.outlined(this,Ui.PANEL,18));
-  TextView v=Ui.title(this,value,19);v.setTextColor(color);v.setMaxLines(1);v.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,icon,color,16),null,null,null);v.setCompoundDrawablePadding(Ui.dp(this,6));box.addView(v);
-  Ui.add(box,Ui.text(this,caption,12,Ui.MUTED),4);box.setContentDescription(value+" "+caption);box.setFocusable(true);return box;
+  LinearLayout box=Ui.column(this);box.setPadding(Ui.dp(this,16),Ui.dp(this,14),Ui.dp(this,12),Ui.dp(this,14));box.setBackground(Ui.outlined(this,Ui.PANEL,20));
+  TextView v=Ui.title(this,value,21);v.setTextColor(color);v.setMaxLines(1);v.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,icon,color,16),null,null,null);v.setCompoundDrawablePadding(Ui.dp(this,6));box.addView(v);
+  Ui.add(box,Ui.text(this,caption,12,Ui.MUTED),6);box.setContentDescription(value+" "+caption);box.setFocusable(true);return box;
  }
  EditText input(String hint,int type){
   EditText e=new EditText(this);e.setHint(hint);e.setHintTextColor(Ui.MUTED);e.setTextColor(Ui.TEXT);e.setTextSize(15);e.setSingleLine(true);e.setInputType(type);e.setContentDescription(hint);
