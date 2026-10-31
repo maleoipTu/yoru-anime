@@ -1,11 +1,12 @@
 // Рендер украшений в спрайт-листы: node art/render.mjs → art/build/decor/*.png и manifest.json.
 // Каждый лист — горизонтальная лента кадров одинакового размера с прозрачным фоном.
-import { chromium } from 'playwright';
+import { createRequire } from 'node:module';
+const { chromium } = createRequire(import.meta.url)(process.env.PLAYWRIGHT_PATH || 'playwright');
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
-const out = path.join(here, 'build', 'decor'), raw = path.join(here, 'build', 'raw');
+const out = path.join(here, 'assets', 'decor'), raw = path.join(here, 'build', 'raw');
 fs.mkdirSync(out, { recursive: true }); fs.mkdirSync(raw, { recursive: true });
 const sets = [];
 for (const file of ['avatar.mjs', 'effects.mjs', 'frames.mjs']) if (fs.existsSync(path.join(here, file))) sets.push(...(await import('./' + file)).default);

@@ -18,6 +18,7 @@ public sealed class OrnamentLayer : FrameworkElement
     readonly double avatarRadius;
     public double CornerRadius { get; set; } = 22;
     bool subscribed;
+    readonly Sprites.Sheet? sheet;
     static readonly DateTime Start = DateTime.UtcNow;
 
     public OrnamentLayer(Kind kind, JsonObject? style, double avatarRadius = 0)
@@ -25,7 +26,8 @@ public sealed class OrnamentLayer : FrameworkElement
         this.kind = kind; this.avatarRadius = avatarRadius;
         type = AccountClient.Text(style, "type"); glyph = AccountClient.Text(style, "glyph");
         colors = style == null ? [Colors.White] : Decor.Colors(style, kind == Kind.Effect ? Colors.White : Color.FromRgb(0xFF, 0x4D, 0x67));
-        IsHitTestVisible = false; SnapsToDevicePixels = false;
+        if (kind == Kind.Avatar) sheet = Sprites.Get(Sprites.AvatarName(style));
+        IsHitTestVisible = false; SnapsToDevicePixels = false; RenderOptions.SetBitmapScalingMode(this, BitmapScalingMode.HighQuality);
         Loaded += (_, _) => Subscribe(true); Unloaded += (_, _) => Subscribe(false);
     }
     public bool Empty => type.Length == 0;
@@ -45,9 +47,12 @@ public sealed class OrnamentLayer : FrameworkElement
         if (w <= 0 || h <= 0 || Empty) return;
         switch (kind)
         {
-            case Kind.Avatar: AvatarDeco(dc, type, glyph, colors, w / 2, h / 2, avatarRadius > 0 ? avatarRadius : Math.Min(w, h) * 0.36, seconds % 6 / 6); break;
-            case Kind.Effect: Effect(dc, type, colors, w, h, seconds); break;
-            default: Frame(dc, type, colors, w, h, CornerRadius, seconds); break;
+            case Kind.Avatar:
+                if (sheet != null) Sprites.Draw(dc, sheet, sheet.FrameAt(Environment.TickCount64), w / 2, h / 2, w, h);
+                else AvatarDeco(dc, type, glyph, colors, w / 2, h / 2, avatarRadius > 0 ? avatarRadius : Math.Min(w, h) * 0.36, seconds % 6 / 6);
+                break;
+            case Kind.Effect: if (!Sprites.Effect(dc, type, w, h)) Effect(dc, type, colors, w, h, seconds); break;
+            default: if (!Sprites.Frame(dc, type, colors, w, h, CornerRadius)) Frame(dc, type, colors, w, h, CornerRadius, seconds); break;
         }
     }
 

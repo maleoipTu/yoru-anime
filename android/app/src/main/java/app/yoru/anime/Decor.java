@@ -37,7 +37,7 @@ final class Decor {
   final Paint ring=new Paint(Paint.ANTI_ALIAS_FLAG),glow=new Paint(Paint.ANTI_ALIAS_FLAG),fill=new Paint(Paint.ANTI_ALIAS_FLAG),letterPaint=new Paint(Paint.ANTI_ALIAS_FLAG),border=new Paint(Paint.ANTI_ALIAS_FLAG);
   final Path clip=new Path();
   int[] frame={Ui.ACCENT};boolean animated,glowing;float angle;ValueAnimator spinner;
-  String decoType="",decoGlyph="",decoUrl="";int[] decoColors={Ui.ACCENT};boolean decoAnimated;android.graphics.drawable.Drawable decoImage;
+  String decoType="",decoGlyph="",decoUrl="";int[] decoColors={Ui.ACCENT};boolean decoAnimated;android.graphics.drawable.Drawable decoImage;Sprites.Sheet decoSheet;
   String letter="?",pictureUrl="";android.graphics.drawable.Drawable picture;Media.VideoSurface video;
 
   AvatarView(Context c){super(c);setWillNotDraw(false);ring.setStyle(Paint.Style.STROKE);glow.setStyle(Paint.Style.STROKE);border.setStyle(Paint.Style.STROKE);border.setColor(Ui.BG);fill.setColor(Ui.SOFT);letterPaint.setColor(Ui.TEXT);letterPaint.setTextAlign(Paint.Align.CENTER);letterPaint.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);}
@@ -47,6 +47,7 @@ final class Decor {
   void deco(JSONObject style){
    if(style==null)style=new JSONObject();
    decoType=style.optString("type");decoGlyph=style.optString("glyph");decoColors=colors(style,Ui.ACCENT);decoAnimated=Ornaments.animatedAvatar(decoType)||style.optBoolean("animated");
+   decoSheet=decoType.isEmpty()?null:Sprites.get(getContext(),Sprites.avatarName(style),getLayoutParams()!=null&&getLayoutParams().width>0&&getLayoutParams().width<Ui.dp(getContext(),110));if(decoSheet!=null&&decoSheet.frames>1)decoAnimated=true;
    String url=style.optString("image_url");
    if(!url.equals(decoUrl)){decoUrl=url;if(decoImage!=null)decoImage.setCallback(null);decoImage=null;if(url.startsWith("https://")&&getContext() instanceof Activity)Media.drawable((Activity)getContext(),url,512,d->{if(url.equals(decoUrl)){decoImage=d;d.setCallback(this);invalidate();}});}
    updateAnimation();requestLayout();invalidate();
@@ -98,6 +99,7 @@ final class Decor {
    if(glowing){glow.setStrokeWidth(stroke*2.6f);glow.setShader(shader);glow.setColor(frame[0]);glow.setAlpha(70);canvas.drawCircle(cx,cy,radius,glow);}
    ring.setStrokeWidth(stroke);ring.setShader(shader);ring.setColor(frame[0]);canvas.drawCircle(cx,cy,radius,ring);
    if(decoImage!=null){decoImage.setBounds(0,0,getWidth(),getHeight());decoImage.draw(canvas);}
+   else if(decoSheet!=null)Sprites.draw(canvas,decoSheet,decoSheet.frameAt(android.os.SystemClock.uptimeMillis()),cx,cy,getWidth(),getHeight(),0,1,false,false);
    else if(!decoType.isEmpty())Ornaments.avatar(canvas,decoType,decoGlyph,decoColors,cx,cy,radius+stroke/2f,angle/360f);
   }
  }
