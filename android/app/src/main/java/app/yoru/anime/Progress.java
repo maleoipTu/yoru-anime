@@ -114,9 +114,13 @@ final class Progress {
    if(!seen)bg.setColor(Ui.RAISED);bg.setCornerRadius(Ui.dp(a,14));bg.setStroke(Ui.dp(a,here?2:1),here?Ui.ACCENT:seen?0x55FF8A9B:Ui.LINE);
    body.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x24FFFFFF),bg,null));body.setClipToOutline(true);
    TextView label=Ui.text(a,episode.number,16,seen?0xFFFFB3C1:Ui.TEXT);label.setTypeface(Ui.MEDIUM);label.setGravity(Gravity.CENTER);label.setMaxLines(1);body.addView(label,new FrameLayout.LayoutParams(-1,-1));
-   if(here){TextView now=Ui.text(a,"сейчас",9,Ui.ACCENT);FrameLayout.LayoutParams np=new FrameLayout.LayoutParams(-2,-2,Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);np.bottomMargin=Ui.dp(a,5);body.addView(now,np);}
+   if(here){TextView now=Ui.text(a,"сейчас",9,Ui.ACCENT);FrameLayout.LayoutParams np=new FrameLayout.LayoutParams(-2,-2,Gravity.TOP|Gravity.CENTER_HORIZONTAL);np.topMargin=Ui.dp(a,4);body.addView(now,np);}
    float fill=seen?1:started;
-   if(fill>0){View bar=new View(a);bar.setBackground(new android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,new int[]{Ui.ACCENT,Ui.ACCENT2}));FrameLayout.LayoutParams bp=new FrameLayout.LayoutParams((int)(Ui.dp(a,66)*fill),Ui.dp(a,3),Gravity.BOTTOM|Gravity.START);body.addView(bar,bp);}
+   if(fill>0){
+    // Тонкая скруглённая полоска внутри плитки, а не по краю.
+    View track=new View(a);track.setBackground(Ui.shape(a,0x33FFFFFF,2));FrameLayout.LayoutParams tp=new FrameLayout.LayoutParams(Ui.dp(a,46),Ui.dp(a,3),Gravity.BOTTOM|Gravity.START);tp.leftMargin=Ui.dp(a,10);tp.bottomMargin=Ui.dp(a,6);body.addView(track,tp);
+    android.graphics.drawable.GradientDrawable g=new android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,new int[]{Ui.ACCENT,Ui.ACCENT2});g.setCornerRadius(Ui.dp(a,2));View bar=new View(a);bar.setBackground(g);
+    FrameLayout.LayoutParams bp=new FrameLayout.LayoutParams(Math.max(Ui.dp(a,3),(int)(Ui.dp(a,46)*fill)),Ui.dp(a,3),Gravity.BOTTOM|Gravity.START);bp.leftMargin=Ui.dp(a,10);bp.bottomMargin=Ui.dp(a,6);body.addView(bar,bp);}
    body.setContentDescription(episode.label()+(seen?", просмотрено":started>0?", просмотрено "+Math.round(started*100)+"%":"")+(here?", сейчас":"")+". Долгое нажатие — отметить просмотренной");
    body.setOnClickListener(v->open.accept(episode));body.setOnLongClickListener(v->{toggle.accept(episode);return true;});
    tile.addView(body,new FrameLayout.LayoutParams(Ui.dp(a,66),Ui.dp(a,52)));
