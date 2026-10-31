@@ -53,7 +53,7 @@ public partial class DetailPage : UserControl
         var progress = Progress.Get(store, anime.Id);
         EpisodesSection.Visibility = Visibility.Visible;
         var seen = list.Count(v => progress?.IsWatched(v.Number) == true);
-        WatchedText.Text = $"просмотрено {seen} из {list.Count} · кружок в углу — отметить вручную";
+        WatchedText.Text = $"просмотрено {seen} из {list.Count} · луна в углу или правый клик — отметить вручную";
         EpisodeTiles.Content = EpisodeGrid.Build(list, progress, (EpisodeBox.SelectedItem as Episode)?.Number,
             episode => { EpisodeBox.SelectedItem = episode; WatchClick(this, new RoutedEventArgs()); },
             episode => { Progress.Toggle(store, anime, episode.Number); RenderEpisodes(); RenderFranchise(); });

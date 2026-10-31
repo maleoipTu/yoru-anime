@@ -15,6 +15,14 @@ public static class EpisodeGrid
     static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(0x9C, 0x9C, 0xA8));
     static readonly Brush Accent = new SolidColorBrush(Color.FromRgb(0xFF, 0x4D, 0x67));
 
+    static readonly Brush SeenTile = new LinearGradientBrush(Color.FromRgb(0x3A, 0x17, 0x2B), Color.FromRgb(0x1E, 0x15, 0x2C), 45);
+    static readonly Brush SeenText = new SolidColorBrush(Color.FromRgb(0xFF, 0xB3, 0xC1));
+
+    /// <summary>
+    /// Плитки серий в духе Yoru: просмотренная серия «засыпает» — тёплый ночной градиент, луна в углу и полная полоска снизу;
+    /// начатая серия показывает, сколько уже просмотрено; текущая — подсвечена. Луна в углу (появляется при наведении)
+    /// или правый клик по плитке — отметить вручную.
+    /// </summary>
     public static FrameworkElement Build(IReadOnlyList<Episode> episodes, AnimeProgress? progress, string? current, Action<Episode> open, Action<Episode> toggle)
     {
         var wrap = new WrapPanel();
@@ -22,28 +30,50 @@ public static class EpisodeGrid
         {
             var watched = progress?.IsWatched(episode.Number) ?? false;
             var isCurrent = episode.Number == current;
-            var grid = new Grid { Width = 66, Height = 46, Margin = new Thickness(0, 0, 7, 7) };
-            var main = new Button
+            var started = !watched && progress != null && progress.Episode == episode.Number && progress.Duration > 0 && progress.Position > 5 ? Math.Min(1, progress.Position / progress.Duration) : 0;
+            var tile = new Grid { Width = 70, Height = 54, Margin = new Thickness(0, 0, 8, 8), Cursor = System.Windows.Input.Cursors.Hand, Background = Brushes.Transparent };
+            var body = new Border
             {
-                Content = new TextBlock { Text = episode.Number, FontSize = 15, FontWeight = FontWeights.SemiBold, Foreground = watched ? Muted : Brushes.White, TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap },
-                Background = watched ? Seen : Tile, Padding = new Thickness(4, 0, 12, 0), HorizontalContentAlignment = HorizontalAlignment.Center,
-                BorderBrush = isCurrent ? Accent : Brushes.Transparent, BorderThickness = new Thickness(isCurrent ? 2 : 0),
-                ToolTip = (watched ? "Просмотрено · " : "") + episode.Label + (isCurrent ? " · сейчас" : "")
+                CornerRadius = new CornerRadius(12), Background = watched ? SeenTile : Tile, ClipToBounds = true,
+                BorderBrush = isCurrent ? Accent : watched ? new SolidColorBrush(Color.FromArgb(0x55, 0xFF, 0x8A, 0x9B)) : new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x33)),
+                BorderThickness = new Thickness(isCurrent ? 2 : 1),
+                Effect = isCurrent ? new System.Windows.Media.Effects.DropShadowEffect { Color = Color.FromRgb(0xFF, 0x4D, 0x67), BlurRadius = 14, ShadowDepth = 0, Opacity = 0.6 } : null
             };
-            AutomationProperties(main, episode.Label + (watched ? ", просмотрено" : ""));
-            main.Click += (_, _) => open(episode);
-            if (isCurrent) main.Template = Outlined(main);
-            var mark = new Button
+            var inner = new Grid();
+            inner.Children.Add(new TextBlock { Text = episode.Number, FontSize = 17, FontWeight = FontWeights.SemiBold, Foreground = watched ? SeenText : Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap, Margin = new Thickness(6, 0, 6, 2) });
+            if (isCurrent) inner.Children.Add(new TextBlock { Text = "сейчас", FontSize = 9, Foreground = Accent, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 6) });
+            // Полоска снизу: целиком — просмотрено, частично — где остановился.
+            var fill = watched ? 1 : started;
+            if (fill > 0)
             {
-                Width = 20, Height = 20, Padding = new Thickness(0), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 3, 3, 0),
-                Background = watched ? SeenMark : new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF)),
-                Content = new TextBlock { Text = watched ? "✓" : "", FontSize = 11, FontWeight = FontWeights.Bold, Foreground = new SolidColorBrush(Color.FromRgb(0x0E, 0x0E, 0x11)), HorizontalAlignment = HorizontalAlignment.Center },
-                ToolTip = watched ? "Снять отметку «просмотрено»" : "Отметить просмотренной", Template = Round()
+                var bar = new Border { Height = 3, VerticalAlignment = VerticalAlignment.Bottom, HorizontalAlignment = HorizontalAlignment.Left, Background = (Brush)Application.Current.FindResource("AccentGradient") };
+                inner.SizeChanged += (_, e) => bar.Width = e.NewSize.Width * fill;
+                inner.Children.Add(bar);
+            }
+            body.Child = inner;
+            tile.Children.Add(body);
+            // Луна в углу: у просмотренной — всегда, у остальных — при наведении.
+            var moon = new Border
+            {
+                Width = 22, Height = 22, CornerRadius = new CornerRadius(11), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, -6, -6, 0),
+                Background = watched ? (Brush)Application.Current.FindResource("AccentGradient") : new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x33)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0x0E, 0x0E, 0x11)), BorderThickness = new Thickness(2),
+                Child = new TextBlock { Text = "☾", FontSize = 12, Foreground = watched ? Brushes.White : SeenText, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, -2, 0, 0) },
+                Opacity = watched ? 1 : 0, ToolTip = watched ? "Снять отметку «просмотрено»" : "Отметить просмотренной"
             };
-            AutomationProperties(mark, watched ? $"Снять отметку с серии {episode.Number}" : $"Отметить серию {episode.Number} просмотренной");
-            mark.Click += (_, e) => { e.Handled = true; toggle(episode); };
-            grid.Children.Add(main); grid.Children.Add(mark);
-            wrap.Children.Add(grid);
+            moon.MouseLeftButtonUp += (_, e) => { e.Handled = true; toggle(episode); };
+            moon.MouseLeftButtonDown += (_, e) => e.Handled = true;
+            tile.Children.Add(moon);
+            tile.MouseEnter += (_, _) => { if (!watched) moon.Opacity = 1; body.Background = watched ? SeenTile : new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x33)); };
+            tile.MouseLeave += (_, _) => { if (!watched) moon.Opacity = 0; body.Background = watched ? SeenTile : Tile; };
+            tile.MouseLeftButtonUp += (_, _) => open(episode);
+            tile.MouseRightButtonUp += (_, e) => { e.Handled = true; toggle(episode); };
+            tile.ToolTip = episode.Label + (watched ? " · просмотрено" : started > 0 ? $" · просмотрено {started:P0}" : "") + (isCurrent ? " · сейчас" : "") + "\nПравый клик или луна — отметить";
+            // Клавиатура: плитка фокусируемая, Enter — открыть, пробел — отметить.
+            tile.Focusable = true; tile.FocusVisualStyle = (Style)Application.Current.FindResource("KeyboardFocus");
+            tile.KeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Enter) { e.Handled = true; open(episode); } else if (e.Key == System.Windows.Input.Key.Space) { e.Handled = true; toggle(episode); } };
+            AutomationProperties(tile, episode.Label + (watched ? ", просмотрено" : "") + (isCurrent ? ", сейчас" : "") + ". Enter — открыть, пробел — отметить просмотренной");
+            wrap.Children.Add(tile);
         }
         return wrap;
     }
@@ -100,7 +130,7 @@ public static class EpisodeGrid
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             row.Children.Add(new TextBlock { Text = (i + 1).ToString(), Foreground = Muted, FontSize = 13, VerticalAlignment = VerticalAlignment.Center });
-            var state = p?.Complete == true ? "✓ просмотрено" : p is { Episode.Length: > 0 } ? $"▶ серия {p.Episode}" : p?.WatchedCount > 0 ? $"просмотрено серий: {p.WatchedCount}" : "";
+            var state = p?.Complete == true ? "☾ просмотрено" : p is { Episode.Length: > 0 } ? $"▶ серия {p.Episode}" : p?.WatchedCount > 0 ? $"просмотрено серий: {p.WatchedCount}" : "";
             var info = new StackPanel();
             info.Children.Add(new TextBlock { Text = part.Title, FontSize = 14, FontWeight = here ? FontWeights.SemiBold : FontWeights.Normal, Foreground = here ? Accent : Brushes.White, TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap });
             info.Children.Add(new TextBlock { Text = string.Join("  ·  ", new[] { part.Relation, part.Type, part.Year > 0 ? part.Year.ToString() : "", here ? "открыто сейчас" : "", state }.Where(s => s.Length > 0)), FontSize = 12, Foreground = Muted, TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis });
@@ -108,7 +138,7 @@ public static class EpisodeGrid
             openButton.Click += (_, _) => open(part);
             Grid.SetColumn(openButton, 1); row.Children.Add(openButton);
             var complete = p?.Complete == true;
-            var check = new Button { Content = complete ? "✓" : "○", Width = 38, Margin = new Thickness(8, 0, 0, 0), Foreground = complete ? SeenMark : Muted, FontSize = 16, ToolTip = complete ? "Снять отметку" : "Отметить часть просмотренной" };
+            var check = new Button { Content = complete ? "☾" : "○", Width = 38, Margin = new Thickness(8, 0, 0, 0), Foreground = complete ? SeenText : Muted, Background = complete ? SeenTile : Tile, FontSize = 16, ToolTip = complete ? "Снять отметку" : "Отметить часть просмотренной" };
             System.Windows.Automation.AutomationProperties.SetName(check, (complete ? "Снять отметку: " : "Отметить просмотренной: ") + part.Title);
             check.Click += (_, _) => { Progress.SetWatched(store, new Anime { Id = part.AnimeId, Title = part.Title, Poster = part.Poster }, Progress.All, !complete); refresh(); };
             Grid.SetColumn(check, 2); row.Children.Add(check);
