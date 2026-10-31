@@ -150,6 +150,27 @@ internal static class Program
         Check(aksor.Streams.Count == 2 && aksor.Streams[0].Label == "1080p" && aksor.Streams[0].Mime == "application/dash+xml" && !aksor.Streams[0].Url.Contains(' ') && (int?)aksor.Intro?["opening"]?["end"] == 150, "Aksor DASH qualities and intro marks");
         var shuffled = MainWindow.ShuffledPages(new Random(7));
         Check(shuffled.Count == 400 && shuffled.Distinct().Count() == 400 && shuffled.Take(50).All(p => p < 50) && !shuffled.Take(50).SequenceEqual(Enumerable.Range(0, 50)), "random catalog: popular pages first, shuffled, endless");
+        Check(MainWindow.AdvancedQuery(1, new Studio(58, "MAPPA"), "dubbing") == "&ep_from=1&ep_to=12&studio_ids=58&translates=dubbing" && MainWindow.AdvancedQuery(3, null, "") == "&ep_from=27" && MainWindow.AdvancedQuery(0, null, "") == "", "advanced filters: length, studio, translation");
+        using (var detail = JsonDocument.Parse("{\"anime_id\":5,\"title\":\"A\",\"studios\":[{\"id\":58,\"title\":\"MAPPA\"}],\"viewing_order\":[{\"anime_id\":5,\"title\":\"A\",\"data\":{\"text\":\"адаптация\"},\"poster\":{\"medium\":\"//p/1.jpg\"},\"year\":2020,\"type\":{\"shortname\":\"ТВ\"}},{\"anime_id\":6,\"title\":\"A 2\",\"data\":{\"text\":\"продолжение\"}}]}"))
+        {
+            var parsed = ApiParser.Anime(detail.RootElement);
+            Check(parsed.Studios.Count == 1 && parsed.Studios[0].Id == 58 && parsed.Franchise.Count == 2 && parsed.Franchise[0].Poster == "https://p/1.jpg" && parsed.Franchise[1].Relation == "продолжение", "studios and franchise order parsed");
+        }
+        var progressStore = new LocalStore(Path.Combine(root, "progress"));
+        var tv = new Anime { Id = 77, Title = "Тест", EpisodeCount = 2 };
+        var vids = new List<Episode> { new(1, "1", 1, "AniLibria", "Kodik", "https://kodik.info/a"), new(2, "2", 2, "AniLibria", "Kodik", "https://kodik.info/b"), new(3, "1", 1, "Amedia", "Kodik", "https://kodik.info/c"), new(4, "2", 2, "Amedia", "Kodik", "https://kodik.info/d") };
+        Progress.Track(progressStore, tv, vids[3], 300, 1400);
+        var pick = Progress.Preferred(vids, Progress.Get(progressStore, 77), null);
+        Check(pick?.Dubbing == "Amedia" && pick.Number == "2" && Progress.StartPosition(progressStore, 77, vids[3]) == 300 && Progress.StartPosition(progressStore, 77, vids[1]) == 300 && Progress.StartPosition(progressStore, 77, vids[0]) == 0, "favourite voice per title and synced start position");
+        Progress.SetWatched(progressStore, tv, "1", true); Progress.SetWatched(progressStore, tv, "2", true);
+        Check(Progress.Get(progressStore, 77)!.Complete, "all episodes watched marks the title complete");
+        Progress.SetWatched(progressStore, tv, "2", false);
+        Check(!Progress.Get(progressStore, 77)!.Complete && Progress.Get(progressStore, 77)!.IsWatched("1"), "unwatching an episode clears the title mark");
+        Progress.Get(progressStore, 77)!.Position = 1300; Progress.Get(progressStore, 77)!.Watched.Add("2");
+        Check(Progress.Preferred(vids, Progress.Get(progressStore, 77), null)?.Number == "2", "finished last episode stays selected when there is no next one");
+        var older = Progress.Merge(progressStore, System.Text.Json.Nodes.JsonNode.Parse("{\"anime_id\":77,\"episode\":\"1\",\"updated_at\":\"2000-01-01T00:00:00Z\"}"));
+        var newer = Progress.Merge(progressStore, System.Text.Json.Nodes.JsonNode.Parse("{\"anime_id\":88,\"episode\":\"5\",\"dubbing\":\"Amedia\",\"player\":\"Kodik\",\"position\":42.5,\"watched\":[\"1\",\"2\"],\"title\":\"С телефона\",\"updated_at\":\"2999-01-01T00:00:00Z\"}"));
+        Check(!older && newer && Progress.Get(progressStore, 88)!.Position == 42.5 && progressStore.Data.History.First().Anime.Title == "С телефона" && progressStore.Data.History.First().Number == "5", "synced progress merges newest and appears in continue watching");
         var unsafeRejected = false; try { StreamResolver.SafeUri("https://127.0.0.1/x"); } catch (InvalidOperationException) { unsafeRejected = true; }
         Check(unsafeRejected, "proxy refuses local addresses");
         var store2 = new LocalStore(Path.Combine(root, "positions")); store2.Data.Positions["5"] = 42; store2.Save();

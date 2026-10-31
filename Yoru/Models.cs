@@ -21,6 +21,10 @@ public sealed record Anime
     public int EpisodeCount { get; init; }
     public long NextEpisode { get; init; }
     public string DisplayNote { get; init; } = "";
+    /// <summary>Студии (только в карточке аниме).</summary>
+    [System.Text.Json.Serialization.JsonIgnore] public IReadOnlyList<Studio> Studios { get; init; } = [];
+    /// <summary>Порядок просмотра франшизы (только в карточке аниме).</summary>
+    [System.Text.Json.Serialization.JsonIgnore] public IReadOnlyList<FranchisePart> Franchise { get; init; } = [];
     public string Meta => string.Join("  ·  ", new[] { Year > 0 ? Year.ToString() : "", Type, StatusLabel }.Where(x => x.Length > 0));
     /** Статус с заглавной буквы: «Онгоинг», «Вышел». */
     public string StatusLabel => Status.Length > 0 ? char.ToUpper(Status[0], CultureInfo.GetCultureInfo("ru-RU")) + Status[1..] : "";
@@ -30,6 +34,8 @@ public sealed record Anime
         ? Path.Combine(AppContext.BaseDirectory, "Assets", $"{Id}.jpg") : Poster;
     public string ScheduleText => NextEpisode > 0 ? DateTimeOffset.FromUnixTimeSeconds(NextEpisode).ToLocalTime().ToString("dd MMM, HH:mm", CultureInfo.GetCultureInfo("ru-RU")) : "Дата серии пока неизвестна";
 }
+public sealed record Studio(int Id, string Title);
+public sealed record FranchisePart(long AnimeId, string Title, string Poster, string Relation, int Year, string Type, string Status);
 public sealed record Episode(long Id, string Number, int Index, string Dubbing, string Player, string Url)
 {
     public override string ToString() => Label;
@@ -55,7 +61,12 @@ public static class ApiParser
         StatusAlias = Text(Field(Field(e, "anime_status"), "alias")), Age = Text(Field(Field(e, "min_age"), "title_long")),
         AgeValue = Field(Field(e, "min_age"), "value").ValueKind == JsonValueKind.Number ? Field(Field(e, "min_age"), "value").GetInt32() : -1,
         Genres = string.Join(" · ", Array(Field(e, "genres")).Select(g => Text(Field(g, "title")))),
-        EpisodeCount = (int)Number(Field(Field(e, "episodes"), "count")), NextEpisode = (long)Number(Field(Field(e, "episodes"), "next_date"))
+        EpisodeCount = (int)Number(Field(Field(e, "episodes"), "count")), NextEpisode = (long)Number(Field(Field(e, "episodes"), "next_date")),
+        Studios = Array(Field(e, "studios")).Select(s => new Studio((int)Number(Field(s, "id")), Text(Field(s, "title")))).Where(s => s.Id > 0 && s.Title.Length > 0).ToList(),
+        Franchise = Array(Field(e, "viewing_order")).Select(v => new FranchisePart((long)Number(Field(v, "anime_id")), Text(Field(v, "title")),
+            Https(Text(Field(Field(v, "poster"), "medium")) is { Length: > 0 } m ? m : Text(Field(Field(v, "poster"), "fullsize"))),
+            Text(Field(Field(v, "data"), "text")), (int)Number(Field(v, "year")), Text(Field(Field(v, "type"), "shortname")), Text(Field(Field(v, "anime_status"), "title"))))
+            .Where(f => f.AnimeId > 0 && f.Title.Length > 0).ToList()
     };
     public static List<Anime> Catalog(JsonElement root) => Array(Field(root, "response")).Select(Anime).Where(a => a.Id > 0).ToList();
     public static List<Episode> Videos(JsonElement e) => Array(e).Select(v => new Episode(

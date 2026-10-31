@@ -10,18 +10,21 @@
    <Grid x:Name="Selectors" Margin="0,18,0,0" Visibility="Collapsed"><Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="1.3*"/><ColumnDefinition Width="1*"/></Grid.ColumnDefinitions>
     <StackPanel Margin="0,0,12,0"><TextBlock Text="Озвучка" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,0,0,7"/><ComboBox x:Name="TrackBox" MinWidth="0" MaxDropDownHeight="280" SelectionChanged="TrackChanged" AutomationProperties.Name="Озвучка"/></StackPanel>
     <StackPanel Grid.Column="1" Margin="0,0,12,0"><TextBlock Text="Плеер" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,0,0,7"/><ComboBox x:Name="ProviderBox" MinWidth="0" MaxDropDownHeight="240" SelectionChanged="ProviderChanged" AutomationProperties.Name="Плеер"/></StackPanel>
-    <StackPanel Grid.Column="2"><TextBlock Text="Серия" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,0,0,7"/><ComboBox x:Name="EpisodeBox" MinWidth="0" MaxDropDownHeight="280" DisplayMemberPath="Label" AutomationProperties.Name="Серия"/></StackPanel>
+    <StackPanel Grid.Column="2"><TextBlock Text="Серия" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,0,0,7"/><ComboBox x:Name="EpisodeBox" MinWidth="0" MaxDropDownHeight="280" DisplayMemberPath="Label" SelectionChanged="EpisodeChanged" AutomationProperties.Name="Серия"/></StackPanel>
    </Grid>
+   <StackPanel x:Name="EpisodesSection" Margin="0,16,0,0" Visibility="Collapsed"><DockPanel Margin="0,0,0,8"><TextBlock Text="Серии" FontSize="14" FontWeight="SemiBold"/><TextBlock x:Name="WatchedText" Foreground="{StaticResource Muted}" FontSize="12" Margin="12,0,0,0" VerticalAlignment="Center"/></DockPanel><ScrollViewer MaxHeight="112"><ContentControl x:Name="EpisodeTiles" Focusable="False"/></ScrollViewer></StackPanel>
    <DockPanel Margin="0,17,0,0"><Button x:Name="WatchButton" Content="▶  Смотреть" Style="{StaticResource Primary}" HorizontalAlignment="Left" Padding="28,12" Click="WatchClick" Visibility="Collapsed"/><TextBlock Text="Озвучку и плеер можно поменять во время просмотра." Foreground="{StaticResource Muted}" FontSize="12" Margin="18,0,0,0" VerticalAlignment="Center"/></DockPanel>
    <Button x:Name="SetupButton" Content="Подключить API" Style="{StaticResource Primary}" HorizontalAlignment="Left" Visibility="Collapsed" Click="SetupClick"/>
    <Button x:Name="RetryButton" Content="Повторить загрузку" HorizontalAlignment="Left" Visibility="Collapsed" Click="RetryClick"/>
   </StackPanel></Border>
   <ScrollViewer Grid.Row="2"><StackPanel x:Name="ScrollBody" Margin="0,0,8,0">
-   <TextBlock x:Name="GenresText" Foreground="#FF9AA8" FontSize="13" Margin="0,0,0,15"/>
+   <TextBlock x:Name="GenresText" Foreground="#FF9AA8" FontSize="13" Margin="0,0,0,10"/>
+   <WrapPanel x:Name="StudioChips" Margin="0,0,0,8"/>
    <TextBlock Text="О чём эта история" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
    <TextBlock x:Name="DescriptionText" Foreground="#C9C9D2" FontSize="14" LineHeight="24" MaxHeight="96" TextTrimming="CharacterEllipsis"/>
    <Button x:Name="ExpandButton" Content="Развернуть описание ↓" Background="Transparent" Foreground="#FF8A9B" Padding="0,10" Click="ExpandClick" HorizontalAlignment="Left"/>
    <TextBlock x:Name="AgeText" Foreground="{StaticResource Muted}" FontSize="12" Margin="0,12,0,0"/>
+   <ContentControl x:Name="FranchiseHost" Focusable="False"/>
   </StackPanel></ScrollViewer>
   <DockPanel Grid.Row="3" Margin="0,20,0,0"><StackPanel Orientation="Horizontal"><Button x:Name="FavoriteButton" Click="FavoriteClick"/><Button Content="Открыть на сайте ↗" Margin="12,0,0,0" Click="SiteClick"/></StackPanel><Button Content="Закрыть" HorizontalAlignment="Right" IsCancel="True" Click="CloseClick"/></DockPanel>
  </Grid>

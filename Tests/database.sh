@@ -19,3 +19,5 @@ run supabase/migrations/20261031000000_admin_customization.sql; run supabase/mig
 psql -q -v ON_ERROR_STOP=1 -d "$db" -f supabase/tests/admin_test.sql | tail -1
 run supabase/migrations/20261101000000_party_stats.sql; run supabase/migrations/20261101000000_party_stats.sql
 psql -q -v ON_ERROR_STOP=1 -d "$db" -f supabase/tests/party_test.sql | tail -1
+run supabase/migrations/20261102000000_progress_sync.sql; run supabase/migrations/20261102000000_progress_sync.sql
+psql -q -v ON_ERROR_STOP=1 -d "$db" -f supabase/tests/progress_test.sql | tail -1

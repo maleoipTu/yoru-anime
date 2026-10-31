@@ -79,6 +79,10 @@ public sealed class LibraryData
     public bool NotifyEpisodes { get; set; } = true;
     /// <summary>Сколько серий уже вышло у отслеживаемых аниме — для уведомлений о новых.</summary>
     public Dictionary<string, int> Aired { get; set; } = [];
+    /// <summary>Прогресс по аниме (ключ — ID аниме): серия, позиция, любимая озвучка, просмотренные серии. Синхронизируется с аккаунтом.</summary>
+    public Dictionary<string, AnimeProgress> Progress { get; set; } = [];
+    /// <summary>Время последнего изменения на сервере, которое уже получено (для синхронизации).</summary>
+    public string ProgressSince { get; set; } = "";
 }
 public sealed class LocalStore
 {

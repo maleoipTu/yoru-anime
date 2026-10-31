@@ -71,6 +71,11 @@ public partial class MainWindow : Window
         suggestTimer.Tick += async (_, _) => { suggestTimer.Stop(); await ShowSuggestions(); };
         AccountClient.Shared.Changed += UpdateAuthGate; UpdateAuthGate();
         Loaded += (_, _) => { ready = true; CatalogNav.IsChecked = true; if (store.LoadWarning != null) StatusText.Text = store.LoadWarning; };
+        // Синхронизация прогресса просмотра с аккаунтом: при запуске и раз в 2 минуты (и когда окно снова активно).
+        Loaded += async (_, _) => await SyncProgress();
+        Activated += async (_, _) => { if ((DateTime.Now - lastSync).TotalSeconds > 30) await SyncProgress(); };
+        var syncTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMinutes(2) };
+        syncTimer.Tick += async (_, _) => await SyncProgress(); syncTimer.Start();
         Loaded += async (_, _) => await CheckUpdates();
         Loaded += (_, _) => { NotifyBox.IsChecked = store.Data.NotifyEpisodes; DiscordBox.IsChecked = store.Data.DiscordPresence; DiscordIdBox.Text = store.Data.DiscordClientId; EpisodeNotifier.Start(store); };
         Closed += (_, _) => EpisodeNotifier.Stop();
@@ -154,7 +159,7 @@ public partial class MainWindow : Window
             else if ((string)((ComboBoxItem)SortBox.SelectedItem).Tag == "random" && query.Length == 0)
             {
                 if (!append) randomPages = ShuffledPages(Random.Shared);
-                var status = (string)((ComboBoxItem)StatusBox.SelectedItem).Tag;
+                var status = CatalogStatus();
                 items = [];
                 while (randomPages.Count > 0 && items.Count == 0)
                 {
@@ -169,7 +174,7 @@ public partial class MainWindow : Window
             }
             else
             {
-                var rawItems = await api.Catalog(query, (string)((ComboBoxItem)SortBox.SelectedItem).Tag, (string)((ComboBoxItem)StatusBox.SelectedItem).Tag, offset, ct, FilterQuery());
+                var rawItems = await api.Catalog(query, (string)((ComboBoxItem)SortBox.SelectedItem).Tag, CatalogStatus(), offset, ct, FilterQuery());
                 items = filterAge >= 0 ? rawItems.Where(a => a.AgeValue == filterAge).ToList() : rawItems;
                 hasMore = rawItems.Count == 24;
                 offset += rawItems.Count - items.Count;
@@ -361,14 +366,51 @@ public partial class MainWindow : Window
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException or InvalidOperationException or JsonException) { SuggestPopup.IsOpen = false; }
     }
 
-    // ───── Фильтры: жанры, годы, возрастной рейтинг ─────
+    DateTime lastSync;
+    async Task SyncProgress()
+    {
+        lastSync = DateTime.Now;
+        if (await Progress.Pull(store) && ready && pages.Count == 0 && page == "catalog") RefreshContinue();
+    }
+    void RefreshContinue()
+    {
+        var recent = store.Data.History.FirstOrDefault();
+        if (recent == null || query.Length > 0) return;
+        ContinueTitle.Text = recent.Anime.Title; ContinueMeta.Text = $"Серия {recent.Number} · {recent.Track}";
+        ContinuePanel.Visibility = Visibility.Visible; Hero.Visibility = Visibility.Collapsed;
+    }
+    /// <summary>Открывает каталог со всеми аниме студии (кнопка «Студия» в карточке аниме).</summary>
+    public async void ShowStudio(Studio studio)
+    {
+        filterStudio = studio; ClearPages(); query = ""; SearchBox.Text = "";
+        if (page != "catalog") CatalogNav.IsChecked = true;
+        UpdateFilterButton(); await LoadPage();
+    }
+
+    // ───── Фильтры: жанры, годы, возрастной рейтинг, длительность, студия, завершённые, тип озвучки ─────
     readonly HashSet<int> filterGenres = []; int filterFrom, filterTo, filterAge = -1; List<(int Id, string Title)>? genreList;
-    string FilterQuery() => (filterGenres.Count > 0 ? "&genres=" + string.Join(",", filterGenres) : "") + (filterFrom > 0 ? $"&from_year={filterFrom}" : "") + (filterTo > 0 ? $"&to_year={filterTo}" : "");
+    int filterLength; Studio? filterStudio; bool filterFinished; string filterTranslate = "";
+    public static readonly (string Label, int From, int To)[] Lengths = [("Любая", 0, 0), ("До 12 серий", 1, 12), ("13–26 серий", 13, 26), ("Длинные (27+)", 27, 0)];
+    public static readonly (string Label, string Value)[] Translates = [("Любая", ""), ("Полный дубляж", "dubbing"), ("Многоголосая", "multivoice"), ("Двухголосая", "duet"), ("Одноголосая", "single"), ("Субтитры", "subtitles")];
+    /// <summary>Популярные студии YummyAnime (ID из API) — для фильтра; любую другую можно выбрать кнопкой «Студия» в карточке аниме.</summary>
+    public static readonly Studio[] PopularStudios = [new(31, "J.C.Staff"), new(1, "A-1 Pictures"), new(19, "Madhouse"), new(58, "MAPPA"), new(81, "Bones"), new(177, "TMS Entertainment"),
+        new(447, "David Production"), new(96, "CloverWorks"), new(36, "White Fox"), new(72, "OLM"), new(9, "8bit"), new(52, "Production I.G"), new(421, "Zero-G"), new(66688, "Studio Pierrot"),
+        new(171, "Passione"), new(23, "P.A. Works"), new(50, "Wit Studio"), new(73, "Lidenfilms"), new(278, "Kyoto Animation"), new(30, "Sunrise"), new(97, "Studio Deen"), new(224, "ufotable"),
+        new(414, "Brain's Base"), new(623, "Doga Kobo"), new(838, "Bibury Animation Studios"), new(872, "Studio Bind"), new(13, "Trigger"), new(49, "Lerche"), new(143, "Bandai Namco Pictures"),
+        new(146, "Science SARU"), new(341, "C2C"), new(459, "Kinema Citrus"), new(876, "Studio Comet"), new(1409, "Felix Film"), new(1939, "Studio Kai"), new(7462, "Gekkou"), new(7, "Project No.9"),
+        new(33, "SILVER LINK."), new(39, "asread."), new(160, "Asahi Production"), new(174, "Lay-duce"), new(710, "Pierrot"), new(145, "Toei Animation"), new(94, "Satelight"), new(161, "Gainax"),
+        new(168, "TNK"), new(178, "Connect"), new(1458, "Studio Mir"), new(1581, "Studio Gokumi")];
+    string CatalogStatus() => filterFinished ? "released" : (string)((ComboBoxItem)StatusBox.SelectedItem).Tag;
+    public static string AdvancedQuery(int length, Studio? studio, string translate) =>
+        (Lengths[length].From > 0 ? $"&ep_from={Lengths[length].From}" : "") + (Lengths[length].To > 0 ? $"&ep_to={Lengths[length].To}" : "")
+        + (studio != null ? $"&studio_ids={studio.Id}" : "") + (translate.Length > 0 ? "&translates=" + Uri.EscapeDataString(translate) : "");
+    string FilterQuery() => (filterGenres.Count > 0 ? "&genres=" + string.Join(",", filterGenres) : "") + (filterFrom > 0 ? $"&from_year={filterFrom}" : "") + (filterTo > 0 ? $"&to_year={filterTo}" : "")
+        + AdvancedQuery(filterLength, filterStudio, filterTranslate);
     async void FiltersClick(object sender, RoutedEventArgs e)
     {
         if (genreList == null) try { genreList = await api.Genres(default); } catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidOperationException or JsonException) { genreList = []; }
         var chosen = new HashSet<int>(filterGenres);
-        var panel = new StackPanel { Width = 560 };
+        var panel = new StackPanel { Width = 600 };
         panel.Children.Add(new TextBlock { Text = "Жанры", FontSize = 15, FontWeight = FontWeights.SemiBold });
         var wrap = new WrapPanel { Margin = new Thickness(0, 10, 0, 0) };
         foreach (var (id, title) in genreList)
@@ -388,6 +430,18 @@ public partial class MainWindow : Window
         foreach (var (label, box) in new (string, ComboBox)[] { ("С года", from), ("По год", to), ("Рейтинг", age) })
         { var col = new StackPanel(); col.Children.Add(new TextBlock { Text = label, FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0x9C, 0x9C, 0xA8)), Margin = new Thickness(0, 0, 0, 6) }); col.Children.Add(box); row.Children.Add(col); }
         panel.Children.Add(row);
+        var studios = PopularStudios.OrderBy(x => x.Title, StringComparer.OrdinalIgnoreCase).ToList();
+        if (filterStudio != null && studios.All(x => x.Id != filterStudio.Id)) studios.Insert(0, filterStudio);
+        var studioNames = studios.Select(x => x.Title).Prepend("Любая").ToList();
+        var length = new ComboBox { ItemsSource = Lengths.Select(l => l.Label).ToList(), SelectedIndex = filterLength, Margin = new Thickness(0, 0, 12, 0), MinWidth = 150 };
+        var studioBox = new ComboBox { ItemsSource = studioNames, SelectedItem = filterStudio?.Title ?? "Любая", Margin = new Thickness(0, 0, 12, 0), MinWidth = 170, MaxDropDownHeight = 300 };
+        var translate = new ComboBox { ItemsSource = Translates.Select(t => t.Label).ToList(), SelectedIndex = Math.Max(0, Array.FindIndex(Translates, t => t.Value == filterTranslate)), MinWidth = 150 };
+        var row2 = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 14, 0, 0) };
+        foreach (var (label, box) in new (string, ComboBox)[] { ("Длительность", length), ("Студия", studioBox), ("Озвучка", translate) })
+        { var col = new StackPanel(); col.Children.Add(new TextBlock { Text = label, FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0x9C, 0x9C, 0xA8)), Margin = new Thickness(0, 0, 0, 6) }); col.Children.Add(box); row2.Children.Add(col); }
+        panel.Children.Add(row2);
+        var finished = new CheckBox { Content = "Только завершённые", IsChecked = filterFinished, Margin = new Thickness(0, 14, 0, 0) };
+        panel.Children.Add(finished);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 18, 0, 0) };
         var apply = new Button { Content = "Показать", Style = (Style)FindResource("Primary") }; var reset = new Button { Content = "Сбросить", Margin = new Thickness(10, 0, 0, 0) };
         actions.Children.Add(apply); actions.Children.Add(reset); panel.Children.Add(actions);
@@ -399,14 +453,16 @@ public partial class MainWindow : Window
             filterGenres.Clear(); filterGenres.UnionWith(chosen); filterFrom = Parse(from.SelectedItem); filterTo = Parse(to.SelectedItem);
             if (filterFrom > 0 && filterTo > 0 && filterFrom > filterTo) (filterFrom, filterTo) = (filterTo, filterFrom);
             filterAge = age.SelectedItem is string a && a.EndsWith('+') ? int.Parse(a.TrimEnd('+')) : -1;
+            filterLength = Math.Max(0, length.SelectedIndex); filterTranslate = Translates[Math.Max(0, translate.SelectedIndex)].Value; filterFinished = finished.IsChecked == true;
+            filterStudio = studioBox.SelectedIndex > 0 ? studios[studioBox.SelectedIndex - 1] : null;
             popup.IsOpen = false; UpdateFilterButton(); await LoadPage();
         };
-        reset.Click += async (_, _) => { filterGenres.Clear(); filterFrom = filterTo = 0; filterAge = -1; popup.IsOpen = false; UpdateFilterButton(); await LoadPage(); };
+        reset.Click += async (_, _) => { filterGenres.Clear(); filterFrom = filterTo = 0; filterAge = -1; filterLength = 0; filterStudio = null; filterFinished = false; filterTranslate = ""; popup.IsOpen = false; UpdateFilterButton(); await LoadPage(); };
         popup.IsOpen = true;
     }
     void UpdateFilterButton()
     {
-        var n = (filterGenres.Count > 0 ? 1 : 0) + (filterFrom > 0 || filterTo > 0 ? 1 : 0) + (filterAge >= 0 ? 1 : 0);
+        var n = (filterGenres.Count > 0 ? 1 : 0) + (filterFrom > 0 || filterTo > 0 ? 1 : 0) + (filterAge >= 0 ? 1 : 0) + (filterLength > 0 ? 1 : 0) + (filterStudio != null ? 1 : 0) + (filterFinished ? 1 : 0) + (filterTranslate.Length > 0 ? 1 : 0);
         FilterButton.Content = n == 0 ? "⚲  Фильтры" : $"⚲  Фильтры · {n}";
         FilterButton.Background = n == 0 ? (Brush)FindResource("ButtonBackground") : new SolidColorBrush(Color.FromRgb(0x3A, 0x18, 0x20));
     }
