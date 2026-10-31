@@ -102,7 +102,7 @@ final class Ornaments {
   @Override protected void onAttachedToWindow(){super.onAttachedToWindow();restart();}
   @Override protected void onDetachedFromWindow(){if(clock!=null){clock.cancel();clock=null;}super.onDetachedFromWindow();}
   @Override protected void onDraw(Canvas canvas){
-   float seconds=SystemClock.uptimeMillis()/1000f,density=getResources().getDisplayMetrics().density,w=getWidth(),h=getHeight();
+   float seconds=SystemClock.uptimeMillis()/1000f*Sprites.EFFECT_PACE,density=getResources().getDisplayMetrics().density,w=getWidth(),h=getHeight();
    if(effectImage!=null){effectImage.setBounds(0,0,getWidth(),getHeight());effectImage.draw(canvas);}else if(!effectType.isEmpty()&&!Sprites.effect(canvas,getContext(),effectType,w,h,density))effect(canvas,effectType,effectColors,w,h,seconds,density);
    if(frameImage!=null){frameImage.setBounds(0,0,getWidth(),getHeight());frameImage.draw(canvas);}else if(!frameType.isEmpty()&&!Sprites.frame(canvas,getContext(),frameType,frameColors,w,h,radius,density))frame(canvas,frameType,frameColors,w,h,radius,seconds,density);
   }

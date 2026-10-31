@@ -98,10 +98,10 @@ const cloud = () => {
 
 export default [
   { name: 'pf_cobweb', w: 230, h: 230, frames: 1, draw: cobweb },
-  { name: 'pf_spider', w: 56, h: 64, frames: 8, fps: 10, draw: spider },
+  { name: 'pf_spider', w: 56, h: 64, frames: 16, fps: 20, draw: spider },
   { name: 'pf_vines', w: 190, h: 190, frames: 1, draw: vines },
   { name: 'pf_constellation', w: 170, h: 170, frames: 1, draw: constellation },
-  { name: 'pf_flame', w: 72, h: 112, frames: 12, fps: 16, draw: flame },
+  { name: 'pf_flame', w: 72, h: 112, frames: 24, fps: 30, draw: flame },
   { name: 'pf_crystal', w: 170, h: 170, frames: 1, draw: crystal },
   { name: 'pf_moon', w: 150, h: 150, frames: 1, draw: moon },
   { name: 'pf_cloud', w: 190, h: 84, frames: 1, draw: cloud },

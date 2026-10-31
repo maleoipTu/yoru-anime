@@ -1,7 +1,7 @@
 // Украшения аватара: холст 240×240, аватар — круг в центре (120,120) радиусом ~86.
 // Рисунок выходит за круг и частично ложится на аватар, как в Discord.
 import { TAU, sin, cos, f, shadow, glow, blur, lin, rad, sparkle, star5, heartPath, svg } from './lib.mjs';
-const W = 240, C = 120, R = 86, N = 24, FPS = 14;
+const W = 240, C = 120, R = 86, N = 40, FPS = 30;
 const at = (deg, r = R) => [C + Math.cos(deg * Math.PI / 180) * r, C + Math.sin(deg * Math.PI / 180) * r];
 const twinkles = (t, pts, color = '#FFFFFF') => pts.map(([x, y, s, ph]) => { const a = Math.max(0, sin(t + ph)); return a > .02 ? sparkle(x, y, s * (.4 + .6 * a), color, a) : ''; }).join('');
 

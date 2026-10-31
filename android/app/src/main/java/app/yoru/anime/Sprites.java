@@ -12,6 +12,8 @@ import java.util.Random;
  * Лист — горизонтальная лента кадров; manifest.json хранит размер кадра, число кадров и частоту.
  */
 final class Sprites {
+ /** Темп движения частиц эффектов и деталей рамок (1 — исходный, медленный). */
+ static final float EFFECT_PACE=1.6f,FRAME_PACE=1.4f;
  private Sprites(){}
  static final class Sheet {
   final Bitmap bitmap;final int w,h,frames,fps;final float scale;
@@ -62,7 +64,7 @@ final class Sprites {
  /** Частицы с глубиной: дальние мельче и бледнее, ближние крупнее. Возвращает false, если рисунка нет. */
  static boolean effect(Canvas canvas,Context c,String type,float w,float h,float density){
   Sheet s=get(c,effectSheet(type),false);if(s==null)return false;
-  long now=SystemClock.uptimeMillis();float sec=now/1000f;Random r=new Random(type.hashCode());
+  long now=SystemClock.uptimeMillis();float sec=now/1000f*EFFECT_PACE;Random r=new Random(type.hashCode());
   int count;float base;
   switch(type){case "snow":count=34;base=16;break;case "starfall":count=5;base=90;break;case "bats":count=6;base=46;break;case "fireflies":count=16;base=30;break;case "bubbles":count=14;base=30;break;case "sparkles":count=18;base=24;break;case "hearts":count=12;base=24;break;default:count=20;base=20;}
   for(int i=0;i<count;i++){
@@ -84,7 +86,7 @@ final class Sprites {
  // ───────── Рамки профиля с нарисованными деталями ─────────
  /** Возвращает false, если для типа нет рисунка (тогда рисуется процедурная рамка). */
  static boolean frame(Canvas canvas,Context c,String type,int[] colors,float w,float h,float radius,float density){
-  long now=SystemClock.uptimeMillis();float sec=now/1000f;float corner=Math.min(Math.min(w,h)*.62f,170*density);
+  long now=SystemClock.uptimeMillis();float sec=now/1000f*FRAME_PACE;float corner=Math.min(Math.min(w,h)*.62f,170*density);
   Paint line=new Paint(Paint.ANTI_ALIAS_FLAG);line.setStyle(Paint.Style.STROKE);RectF box=new RectF(density,density,w-density,h-density);
   switch(type){
    case "cobweb":{Sheet web=get(c,"pf_cobweb",false),spider=get(c,"pf_spider",false);if(web==null)return false;
