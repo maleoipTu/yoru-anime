@@ -38,7 +38,7 @@ public partial class DetailPage : UserControl
         StudioChips.Children.Clear();
         foreach (var studio in anime.Studios)
         {
-            var chip = new Button { Content = "Студия: " + studio.Title, Padding = new Thickness(12, 5, 12, 5), Margin = new Thickness(0, 0, 6, 6), FontSize = 12, ToolTip = "Показать все аниме студии" };
+            var chip = new Button { Content = "Студия: " + studio.Title, Padding = new Thickness(14, 8, 14, 8), Margin = new Thickness(0, 0, 8, 8), FontSize = 12, BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x2A, 0x2A, 0x33)), BorderThickness = new Thickness(1), ToolTip = "Показать все аниме студии" };
             chip.Click += (_, _) => Shell.Main?.ShowStudio(studio);
             StudioChips.Children.Add(chip);
         }
