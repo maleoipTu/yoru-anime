@@ -33,6 +33,15 @@ public partial class MainWindow : Window
     string page = "catalog";
     string query = "";
     int offset;
+    bool hasMore;
+    /// <summary>«Случайные»: страницы популярного каталога в случайном порядке (сначала самые смотрибельные), внутри — перемешанные аниме.</summary>
+    List<int> randomPages = [];
+    public static List<int> ShuffledPages(Random random)
+    {
+        var top = Enumerable.Range(0, 50).OrderBy(_ => random.Next());
+        var rest = Enumerable.Range(50, 350).OrderBy(_ => random.Next());
+        return top.Concat(rest).ToList();
+    }
     bool ready;
     bool busy;
     CancellationTokenSource? request;
@@ -113,7 +122,7 @@ public partial class MainWindow : Window
         StatusText.Text = "";
         SetBusy(false);
         if (page == "settings") return;
-        if (!append) { offset = 0; displayed = []; Cards.ItemsSource = null; BrowseScroll.ScrollToTop(); }
+        if (!append) { offset = 0; hasMore = false; displayed = []; Cards.ItemsSource = null; BrowseScroll.ScrollToTop(); }
         PageTitle.Text = page switch { "favorites" => ListPicker.SelectedItem is ComboBoxItem { Tag: string l } && l.Length > 0 ? "Список: " + AccountClient.ListLabel(l) : "Твои любимые истории", "history" => "Вернись к своей истории", "schedule" => "Когда следующая серия?", _ => query.Length > 0 ? $"Поиск: {query}" : "Найди свою следующую историю" };
         PageSubtitle.Text = page switch { "favorites" => "Всё, что хочется сохранить на потом", "history" => "Последние открытые серии · запоминаем серию и озвучку", "schedule" => "Ближайшие серии · время указано для этого компьютера", _ => IsPreview ? "Знакомство с интерфейсом · образец каталога YummyAnime" : "Большие миры начинаются с одной серии" };
         try
@@ -142,11 +151,27 @@ public partial class MainWindow : Window
                 selection = sort switch { "year" => selection.OrderByDescending(a => a.Year), "random" => selection.OrderBy(_ => Random.Shared.Next()), _ => selection.OrderByDescending(a => a.Rating) };
                 items = selection.ToList();
             }
+            else if ((string)((ComboBoxItem)SortBox.SelectedItem).Tag == "random" && query.Length == 0)
+            {
+                if (!append) randomPages = ShuffledPages(Random.Shared);
+                var status = (string)((ComboBoxItem)StatusBox.SelectedItem).Tag;
+                items = [];
+                while (randomPages.Count > 0 && items.Count == 0)
+                {
+                    var next = randomPages[0]; randomPages.RemoveAt(0);
+                    var found = await api.Catalog("", "views", status, next * 24, ct, FilterQuery());
+                    ct.ThrowIfCancellationRequested();
+                    // Пустая страница — каталог (с фильтрами) короче: дальние страницы можно не запрашивать.
+                    if (found.Count == 0) { randomPages.RemoveAll(p => p > next); continue; }
+                    items = found.Where(a => filterAge < 0 || a.AgeValue == filterAge).Where(a => displayed.All(d => d.Id != a.Id)).OrderBy(_ => Random.Shared.Next()).ToList();
+                }
+                hasMore = randomPages.Count > 0;
+            }
             else
             {
                 var rawItems = await api.Catalog(query, (string)((ComboBoxItem)SortBox.SelectedItem).Tag, (string)((ComboBoxItem)StatusBox.SelectedItem).Tag, offset, ct, FilterQuery());
                 items = filterAge >= 0 ? rawItems.Where(a => a.AgeValue == filterAge).ToList() : rawItems;
-                MoreButton.Visibility = rawItems.Count == 24 ? Visibility.Visible : Visibility.Collapsed;
+                hasMore = rawItems.Count == 24;
                 offset += rawItems.Count - items.Count;
                 ct.ThrowIfCancellationRequested();
                 offset += items.Count;
@@ -155,6 +180,7 @@ public partial class MainWindow : Window
             if (page is "favorites" or "history") items = items.Where(a => a.Title.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
             displayed = append ? displayed.Concat(items).DistinctBy(a => a.Id).ToList() : items;
             ShowCards(displayed);
+            if (hasMore) _ = Dispatcher.BeginInvoke(FillViewport, System.Windows.Threading.DispatcherPriority.Loaded);
             if (IsPreview && page == "catalog") StatusText.Text = "Предпросмотр: поиск работает только по загруженному образцу. Для полного каталога и видео подключите свой ключ.";
         }
         catch (OperationCanceledException) { if (!ct.IsCancellationRequested) StatusText.Text = "Сервер не ответил вовремя. Нажмите «Обновить»."; }
@@ -162,6 +188,7 @@ public partial class MainWindow : Window
         catch (Exception ex) when (ex is HttpRequestException or JsonException or InvalidOperationException)
         {
             ShowCards(displayed);
+            if (append && hasMore) MoreButton.Visibility = Visibility.Visible;
             if (displayed.Count == 0) EmptyText.Text = "Не получилось загрузить данные. Можно повторить запрос.";
             StatusText.Text = ex is HttpRequestException ? "Не удалось связаться с YummyAnime. Проверьте подключение и попробуйте снова." : ex.Message;
         }
@@ -187,6 +214,17 @@ public partial class MainWindow : Window
     async void ListChanged(object sender, SelectionChangedEventArgs e) { if (ready && page == "favorites") await LoadPage(); }
     async void RefreshClick(object sender, RoutedEventArgs e) => await LoadPage();
     async void MoreClick(object sender, RoutedEventArgs e) { if (!busy) await LoadPage(true); }
+    /// <summary>Бесконечная лента: у нижнего края подгружаем следующую порцию.</summary>
+    async void BrowseScrolled(object sender, ScrollChangedEventArgs e)
+    {
+        if (e.OriginalSource != BrowseScroll || !ready || busy || !hasMore || page is "settings" || MoreButton.Visibility == Visibility.Visible) return;
+        if (BrowseScroll.VerticalOffset >= BrowseScroll.ScrollableHeight - Math.Max(600, BrowseScroll.ViewportHeight)) await LoadPage(true);
+    }
+    /// <summary>Если карточки не заполнили окно, прокрутки нет — догружаем, пока не появится.</summary>
+    async void FillViewport()
+    {
+        if (!busy && hasMore && page is not "settings" && BrowseScroll.ScrollableHeight < BrowseScroll.ViewportHeight * 0.5) await LoadPage(true);
+    }
     void SettingsClick(object sender, RoutedEventArgs e) => SettingsNav.IsChecked = true;
     void RouletteClick(object sender, RoutedEventArgs e) => PushPage(new RoulettePage(AccountClient.Shared));
     void ForYouClick(object sender, RoutedEventArgs e) => PushPage(new ForYouPage(AccountClient.Shared));

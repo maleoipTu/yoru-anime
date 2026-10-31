@@ -148,6 +148,8 @@ internal static class Program
         var aksor = await StreamResolver.Resolve("https://player.aksor.tv/video/abc123", (url, body, referer, ct) => Task.FromResult((url, url == "https://player.aksor.tv/api/video/abc123"
             ? "{\"qualities\":{\"q720\":\"https://cdn.aksor.tv/a b/720.mpd\",\"q1080\":\"https://cdn.aksor.tv/a b/1080.mpd\",\"q4k\":null},\"opening_start\":60,\"opening_length\":90}" : "{}")));
         Check(aksor.Streams.Count == 2 && aksor.Streams[0].Label == "1080p" && aksor.Streams[0].Mime == "application/dash+xml" && !aksor.Streams[0].Url.Contains(' ') && (int?)aksor.Intro?["opening"]?["end"] == 150, "Aksor DASH qualities and intro marks");
+        var shuffled = MainWindow.ShuffledPages(new Random(7));
+        Check(shuffled.Count == 400 && shuffled.Distinct().Count() == 400 && shuffled.Take(50).All(p => p < 50) && !shuffled.Take(50).SequenceEqual(Enumerable.Range(0, 50)), "random catalog: popular pages first, shuffled, endless");
         var unsafeRejected = false; try { StreamResolver.SafeUri("https://127.0.0.1/x"); } catch (InvalidOperationException) { unsafeRejected = true; }
         Check(unsafeRejected, "proxy refuses local addresses");
         var store2 = new LocalStore(Path.Combine(root, "positions")); store2.Data.Positions["5"] = 42; store2.Save();
