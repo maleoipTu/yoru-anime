@@ -73,7 +73,13 @@ jobs:
           YORU_KEY_PASSWORD: ${{ secrets.YORU_KEY_PASSWORD }}
         run: |
           if [ "$YORU_SIGNED" = "true" ]; then tasks="assembleRelease lintRelease"; else tasks="assembleDebug lintDebug"; fi
-          bash gradlew $tasks testDebugUnitTest --console plain
+          set -o pipefail
+          if ! bash gradlew $tasks testDebugUnitTest --console plain 2>&1 | tee ../gradle.log; then
+            # Ошибки компиляции, тестов и Lint — в аннотации, чтобы их было видно без полного журнала.
+            grep -E "error:|\.java:[0-9]+:|Error:|FAILED|expected:|Exception" ../gradle.log | head -60 | sed 's/^/::error::/' || true
+            for f in app/build/reports/lint-results-*.txt; do [ -f "$f" ] && grep -E "Error:" -A2 "$f" | head -40 | sed 's/^/::error::/'; done || true
+            exit 1
+          fi
           mkdir -p ../outputs
           if [ "$YORU_SIGNED" = "true" ]; then cp app/build/outputs/apk/release/app-release.apk ../outputs/Yoru-Android.apk; else cp app/build/outputs/apk/debug/app-debug.apk ../outputs/Yoru-Android.apk; fi
           echo "$YORU_SIGNED" > ../outputs/signed.txt
