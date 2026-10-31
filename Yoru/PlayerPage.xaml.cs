@@ -80,7 +80,8 @@ public partial class PlayerPage : UserControl
                 Browser=new Microsoft.Web.WebView2.Wpf.WebView2 { DefaultBackgroundColor=System.Drawing.Color.FromArgb(8,8,13) };
                 VideoSurface.Children.Insert(0,Browser); recreateBrowser=false;
             }
-            var environment=await CoreWebView2Environment.CreateAsync(null,Path.Combine(store.Root,"Player"));
+            // Серия запускается сама, без лишнего нажатия ▶ (иначе встроенный браузер ждёт жеста пользователя).
+            var environment=await CoreWebView2Environment.CreateAsync(null,Path.Combine(store.Root,"Player"),new CoreWebView2EnvironmentOptions("--autoplay-policy=no-user-gesture-required"));
             if(closed) return;
             await Browser.EnsureCoreWebView2Async(environment);
             if(closed) return;
