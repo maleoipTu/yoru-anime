@@ -20,7 +20,7 @@ public static class Extras
     public static readonly Brush Warm = new SolidColorBrush(Color.FromRgb(0xFF, 0xC7, 0x68));
     public static readonly Brush Raised = new SolidColorBrush(Color.FromRgb(0x21, 0x22, 0x2D));
     public static readonly Brush Soft = new SolidColorBrush(Color.FromRgb(0x3A, 0x18, 0x20));
-    public static Border Card(UIElement child) => new() { Background = new SolidColorBrush(Color.FromRgb(0x16, 0x16, 0x1B)), BorderBrush = new SolidColorBrush(Color.FromRgb(0x2C, 0x2D, 0x3A)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(18), Padding = new Thickness(22), Margin = new Thickness(0, 0, 0, 16), Child = child };
+    public static Border Card(UIElement child) => new() { Background = (Brush)Application.Current.Resources["SectionGradient"], BorderBrush = new SolidColorBrush(Color.FromRgb(0x26, 0x26, 0x30)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(20), Padding = new Thickness(28), Margin = new Thickness(0, 0, 0, 24), Child = child };
     public static TextBlock Text(string text, double size = 14, Brush? color = null, bool bold = false) => new() { Text = text, FontSize = size, Foreground = color ?? Brushes.WhiteSmoke, FontWeight = bold ? FontWeights.SemiBold : FontWeights.Normal, TextWrapping = TextWrapping.Wrap };
     public static string Plural(int n, string one, string few, string many) { int m = n % 100, k = n % 10; return m is >= 11 and <= 14 ? many : k == 1 ? one : k is >= 2 and <= 4 ? few : many; }
     public static bool Failure(Exception e) => e is AccountException or HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException or IOException;
@@ -28,14 +28,14 @@ public static class Extras
     /// <summary>Постер с подписью; нажатие открывает карточку аниме.</summary>
     public static Button PosterTile(long id, string title, string poster, string reason)
     {
-        var stack = new StackPanel { Width = 132 };
-        var art = new Border { Height = 186, CornerRadius = new CornerRadius(12), Background = Raised, ClipToBounds = true };
+        var stack = new StackPanel { Width = 140 };
+        var art = new Border { Height = 198, CornerRadius = new CornerRadius(14), Background = Raised, ClipToBounds = true, Clip = new RectangleGeometry(new Rect(0, 0, 140, 198), 14, 14) };
         if (Uri.TryCreate(poster.StartsWith("//") ? "https:" + poster : poster, UriKind.Absolute, out var uri) && uri.Scheme == "https")
             try { art.Child = new Image { Source = new BitmapImage(uri), Stretch = Stretch.UniformToFill }; } catch (Exception e) when (e is NotSupportedException or IOException) { }
         stack.Children.Add(art);
-        stack.Children.Add(new TextBlock { Text = title, FontSize = 12, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 7, 0, 0), MaxHeight = 34, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis });
-        if (reason.Length > 0) stack.Children.Add(new TextBlock { Text = reason, FontSize = 11, Foreground = Accent, Margin = new Thickness(0, 4, 0, 0), TextWrapping = TextWrapping.Wrap });
-        var button = new Button { Content = stack, Background = Brushes.Transparent, BorderThickness = new Thickness(0), Padding = new Thickness(0), Margin = new Thickness(0, 0, 14, 14), Cursor = Cursors.Hand };
+        stack.Children.Add(new TextBlock { Text = title, FontSize = 13, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 12, 0, 0), MaxHeight = 36, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis });
+        if (reason.Length > 0) stack.Children.Add(new TextBlock { Text = reason, FontSize = 12, Foreground = Accent, Margin = new Thickness(0, 6, 0, 0), TextWrapping = TextWrapping.Wrap });
+        var button = new Button { Style = (Style)Application.Current.Resources["CatalogCard"], Content = stack, Background = Brushes.Transparent, BorderThickness = new Thickness(0), Padding = new Thickness(0), Margin = new Thickness(0, 8, 20, 28), Cursor = Cursors.Hand };
         System.Windows.Automation.AutomationProperties.SetName(button, title + (reason.Length > 0 ? ". " + reason : ""));
         button.Click += (_, _) => Open(new Anime { Id = id, Title = title, Poster = poster.StartsWith("//") ? "https:" + poster : poster });
         return button;
@@ -46,8 +46,8 @@ public static class Extras
     public static Border StatsCard(AccountClient account, string username)
     {
         var panel = new StackPanel();
-        panel.Children.Add(Text("Статистика", 18, null, true));
-        var wait = Text("Считаем…", 13, Muted); wait.Margin = new Thickness(0, 8, 0, 0); panel.Children.Add(wait);
+        panel.Children.Add(Text("Статистика", 20, null, true));
+        var wait = Text("Считаем…", 13, Muted); wait.Margin = new Thickness(0, 12, 0, 0); panel.Children.Add(wait);
         var card = Card(panel);
         card.Loaded += async (_, _) =>
         {
@@ -56,25 +56,25 @@ public static class Extras
             try { s = await account.PublicRpc("watch_stats", new JsonObject { ["p_username"] = username }) as JsonObject; } catch (Exception e) when (Failure(e)) { }
             panel.Children.Remove(wait);
             if (s == null) { panel.Children.Add(Text("Статистика пока недоступна.", 13, Muted)); return; }
-            var numbers = new System.Windows.Controls.Primitives.UniformGrid { Columns = 4, Margin = new Thickness(0, 14, 0, 0) };
+            var numbers = new System.Windows.Controls.Primitives.UniformGrid { Columns = 4, Margin = new Thickness(0, 18, 0, 0) };
             var avg = s["avg_score"] is JsonValue v && v.TryGetValue<double>(out var a) ? a.ToString("0.0", CultureInfo.InvariantCulture) : "—";
             foreach (var (value, caption, color) in new (string, string, Brush)[] { (AccountClient.Text(s, "hours") is { Length: > 0 } h ? h : s["hours"]?.ToString() ?? "0", "часов", Accent), (AccountClient.Int(s, "episodes").ToString(), "серий", Brushes.WhiteSmoke), (AccountClient.Int(s, "anime").ToString(), "аниме", Brushes.WhiteSmoke), (avg, "средняя оценка", Warm) })
             {
                 var cell = new StackPanel();
-                cell.Children.Add(new TextBlock { Text = value, FontSize = 24, FontWeight = FontWeights.Bold, Foreground = color });
-                cell.Children.Add(new TextBlock { Text = caption, FontSize = 12, Foreground = Muted });
-                numbers.Children.Add(new Border { Background = Raised, CornerRadius = new CornerRadius(12), Padding = new Thickness(14, 10, 10, 10), Margin = new Thickness(0, 0, 10, 0), Child = cell });
+                cell.Children.Add(new TextBlock { Text = value, FontSize = 26, FontWeight = FontWeights.Bold, Foreground = color });
+                cell.Children.Add(new TextBlock { Text = caption, FontSize = 12, Foreground = Muted, Margin = new Thickness(0, 4, 0, 0) });
+                numbers.Children.Add(new Border { Background = Raised, BorderBrush = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x33)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(14), Padding = new Thickness(18, 14, 12, 14), Margin = new Thickness(0, 0, 12, 0), Child = cell });
             }
             panel.Children.Add(numbers);
             if (s["genres"] is JsonArray genres && genres.Count > 0)
             {
-                var head = Text("Любимые жанры", 14, null, true); head.Margin = new Thickness(0, 18, 0, 8); panel.Children.Add(head);
+                var head = Text("Любимые жанры", 15, null, true); head.Margin = new Thickness(0, 28, 0, 12); panel.Children.Add(head);
                 var max = Math.Max(1, genres.Max(g => AccountClient.Int(g, "count")));
                 var palette = new[] { "#FF4D67", "#FF8A3D", "#FFC14D", "#4ADE80", "#6FC3FF", "#B388FF", "#FF8FB8", "#7EDCA9", "#9FD8FF", "#FFE08A" };
                 var i = 0;
                 foreach (var g in genres.Take(7))
                 {
-                    var row = new Grid { Margin = new Thickness(0, 4, 0, 4) };
+                    var row = new Grid { Margin = new Thickness(0, 5, 0, 5) };
                     row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(150) }); row.ColumnDefinitions.Add(new ColumnDefinition()); row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(40) });
                     row.Children.Add(new TextBlock { Text = AccountClient.Text(g, "genre"), FontSize = 13, TextTrimming = TextTrimming.CharacterEllipsis });
                     var track = new Grid { Height = 12, VerticalAlignment = VerticalAlignment.Center }; Grid.SetColumn(track, 1);
@@ -89,7 +89,7 @@ public static class Extras
             }
             if (s["weekdays"] is JsonArray week && week.Count == 7 && week.Sum(d => d?.GetValue<int>() ?? 0) > 0)
             {
-                var head = Text("Когда смотрит", 14, null, true); head.Margin = new Thickness(0, 18, 0, 8); panel.Children.Add(head);
+                var head = Text("Когда смотрит", 15, null, true); head.Margin = new Thickness(0, 28, 0, 12); panel.Children.Add(head);
                 var max = Math.Max(1, week.Max(d => d?.GetValue<int>() ?? 0));
                 var bars = new System.Windows.Controls.Primitives.UniformGrid { Columns = 7, Height = 96 };
                 var days = new[] { "Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс" };
@@ -111,13 +111,13 @@ public static class Extras
     public static FrameworkElement Comments(AccountClient account, Anime anime, Func<string> episode, Func<double> now, Action<double> seek)
     {
         var root = new StackPanel();
-        var input = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 64, MaxLength = 500 };
+        var input = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 72, MaxLength = 500 };
         System.Windows.Automation.AutomationProperties.SetName(input, "Комментарий к серии");
-        var stamp = new CheckBox { Content = "С таймкодом", IsChecked = true, Foreground = Muted, Margin = new Thickness(0, 8, 0, 0) };
-        var spoiler = new CheckBox { Content = "Спойлер", Foreground = Muted, Margin = new Thickness(0, 4, 0, 0) };
-        var send = new Button { Content = "Отправить", Style = (Style)Application.Current.Resources["Primary"], Margin = new Thickness(0, 10, 0, 0), Padding = new Thickness(10, 9, 10, 9) };
+        var stamp = new CheckBox { Content = "С таймкодом", IsChecked = true, Foreground = Muted, Margin = new Thickness(0, 12, 0, 0) };
+        var spoiler = new CheckBox { Content = "Спойлер", Foreground = Muted, Margin = new Thickness(0, 8, 0, 0) };
+        var send = new Button { Content = "Отправить", Style = (Style)Application.Current.Resources["Primary"], Margin = new Thickness(0, 14, 0, 0), Padding = new Thickness(12, 12, 12, 12) };
         var status = Text("", 12, new SolidColorBrush(Color.FromRgb(0xFF, 0x9A, 0x8B)));
-        var list = new StackPanel { Margin = new Thickness(0, 14, 0, 0) };
+        var list = new StackPanel { Margin = new Thickness(0, 20, 0, 0) };
         root.Children.Add(input); root.Children.Add(stamp); root.Children.Add(spoiler); root.Children.Add(send); root.Children.Add(status); root.Children.Add(list);
         string shown = "";
         async Task Reload()
@@ -152,7 +152,7 @@ public static class Extras
                 if (at >= 0) { var jump = new Button { Content = "▶ К моменту", Padding = new Thickness(7, 3, 7, 3), Margin = new Thickness(0, 0, 5, 5), FontSize = 12, Foreground = Accent, Background = Brushes.Transparent }; jump.Click += (_, _) => seek(at); reacts.Children.Add(jump); }
                 if (AccountClient.Bool(c, "mine")) { var del = new Button { Content = "Удалить", Padding = new Thickness(7, 3, 7, 3), FontSize = 12, Foreground = Muted, Background = Brushes.Transparent }; var id = AccountClient.Long(c, "id"); del.Click += async (_, _) => { try { await account.Rpc("delete_comment", new JsonObject { ["p_id"] = id }); await Reload(); } catch (Exception e) when (Failure(e)) { status.Text = Rewards.Error(e.Message); } }; reacts.Children.Add(del); }
                 box.Children.Add(reacts);
-                list.Children.Add(new Border { Background = Raised, CornerRadius = new CornerRadius(12), Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 8, 0, 0), Child = box });
+                list.Children.Add(new Border { Background = Raised, CornerRadius = new CornerRadius(14), Padding = new Thickness(14, 10, 14, 8), Margin = new Thickness(0, 10, 0, 0), Child = box });
             }
         }
         send.Click += async (_, _) =>
@@ -186,14 +186,16 @@ public abstract class ExtrasPage : UserControl
     protected ExtrasPage(AccountClient client, string title, string subtitle)
     {
         account = client;
-        var root = new DockPanel { Margin = new Thickness(28, 22, 28, 16) };
+        var root = new DockPanel { Margin = new Thickness(40, 32, 40, 20) };
         var header = new StackPanel();
-        var back = new Button { Content = "←  Назад", HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 0, 12) }; back.Click += (_, _) => Shell.Back(); header.Children.Add(back);
-        header.Children.Add(new TextBlock { Text = title, FontSize = 28, FontWeight = FontWeights.SemiBold });
-        if (subtitle.Length > 0) header.Children.Add(Extras.Text(subtitle, 13, Extras.Muted));
+        var back = new Button { Content = "←  Назад", HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 0, 24) }; back.Click += (_, _) => Shell.Back(); header.Children.Add(back);
+        header.Children.Add(new TextBlock { Text = title, Style = (Style)Application.Current.Resources["PageTitle"] });
+        header.Children.Add(new Border { Style = (Style)Application.Current.Resources["Dawn"] });
+        if (subtitle.Length > 0) { var sub = Extras.Text(subtitle, 14, Extras.Muted); sub.Margin = new Thickness(0, 12, 0, 0); sub.MaxWidth = 760; sub.HorizontalAlignment = HorizontalAlignment.Left; header.Children.Add(sub); }
         header.Children.Add(Status);
         DockPanel.SetDock(header, Dock.Top); root.Children.Add(header);
-        Scroll = new ScrollViewer { Content = Body, Margin = new Thickness(0, 14, 0, 0), VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+        Body.Margin = new Thickness(0, 0, 12, 0);
+        Scroll = new ScrollViewer { Content = Body, Margin = new Thickness(0, 28, 0, 0), VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         root.Children.Add(Scroll);
         Content = root;
         Unloaded += (_, _) => Closed = true;
@@ -217,10 +219,10 @@ public sealed class LeaderboardPage(AccountClient client) : ExtrasPage(client, "
     {
         if (NeedAccount()) return;
         Body.Children.Clear();
-        var tabs = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 14) };
+        var tabs = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 20) };
         foreach (var (key, title) in new[] { ("friends", "Друзья"), ("global", "Все") })
         {
-            var b = new Button { Content = title, Padding = new Thickness(18, 7, 18, 7), Margin = new Thickness(0, 0, 8, 0), Background = scope == key ? Extras.Soft : Brushes.Transparent, Foreground = scope == key ? Extras.Accent : Brushes.WhiteSmoke };
+            var b = new Button { Content = title, Padding = new Thickness(20, 10, 20, 10), Margin = new Thickness(0, 0, 10, 0), Background = scope == key ? Extras.Soft : Brushes.Transparent, Foreground = scope == key ? Extras.Accent : Brushes.WhiteSmoke };
             b.Click += async (_, _) => { scope = key; await Load(); };
             tabs.Children.Add(b);
         }
@@ -235,7 +237,7 @@ public sealed class LeaderboardPage(AccountClient client) : ExtrasPage(client, "
             var medal = new TextBlock { Text = place switch { 1 => "🥇", 2 => "🥈", 3 => "🥉", _ => "#" + place }, FontSize = place <= 3 ? 26 : 16, Width = 52, VerticalAlignment = VerticalAlignment.Center, FontWeight = FontWeights.SemiBold };
             DockPanel.SetDock(medal, Dock.Left); row.Children.Add(medal);
             row.Children.Add(Decor.Person(r, account, $"◆ {Rewards.Points(AccountClient.Int(r, "points"))} · {AccountClient.Int(r, "episodes")} {Extras.Plural(AccountClient.Int(r, "episodes"), "серия", "серии", "серий")} · {r["hours"]} ч"));
-            var button = new Button { Content = row, HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(12, 4, 12, 4), Margin = new Thickness(0, 0, 0, 6), Background = AccountClient.Bool(r, "me") ? Extras.Soft : Extras.Raised };
+            var button = new Button { Content = row, HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(16, 10, 16, 10), Margin = new Thickness(0, 0, 0, 10), Background = AccountClient.Bool(r, "me") ? Extras.Soft : Extras.Raised };
             var username = AccountClient.Text(r, "username");
             button.Click += (_, _) => Shell.Navigate(new ProfilePage(account, Shell.Store, username));
             Body.Children.Add(button);
@@ -277,23 +279,23 @@ public sealed class GiftPage(AccountClient client, JsonObject friend) : ExtrasPa
         Body.Children.Clear();
         await Run(account.EnsureCatalog);
         var balance = AccountClient.Int(account.Profile, "points");
-        var note = new TextBox { MaxLength = 140, Margin = new Thickness(0, 6, 0, 16), MaxWidth = 520, HorizontalAlignment = HorizontalAlignment.Left, MinWidth = 380 };
+        var note = new TextBox { MaxLength = 140, Margin = new Thickness(0, 8, 0, 24), MaxWidth = 520, HorizontalAlignment = HorizontalAlignment.Left, MinWidth = 380 };
         System.Windows.Automation.AutomationProperties.SetName(note, "Подпись к подарку");
         var top = new StackPanel();
         top.Children.Add(Extras.Text($"Твой баланс: ◆ {Rewards.Points(balance)}", 14, Extras.Warm, true));
         top.Children.Add(Extras.Text("Подпись (необязательно)", 12, Extras.Muted)); top.Children.Add(note);
         top.Children.Add(Extras.Text("Очки", 16, null, true));
-        var amounts = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
+        var amounts = new WrapPanel { Margin = new Thickness(0, 12, 0, 0) };
         foreach (var value in new[] { 50, 100, 250, 500 })
         {
-            var b = new Button { Content = "◆ " + value, Padding = new Thickness(18, 9, 18, 9), Margin = new Thickness(0, 0, 10, 10), IsEnabled = balance >= value };
+            var b = new Button { Content = "◆ " + value, Padding = new Thickness(22, 12, 22, 12), Margin = new Thickness(0, 0, 12, 12), IsEnabled = balance >= value };
             b.Click += async (_, _) => { if (await Run(() => account.Rpc("gift_points", new JsonObject { ["p_user"] = AccountClient.Text(friend, "id"), ["p_amount"] = value, ["p_message"] = note.Text }))) { await account.Refresh(); Done($"🎁 Отправлено ◆ {value}"); } };
             amounts.Children.Add(b);
         }
         top.Children.Add(amounts);
         Body.Children.Add(Extras.Card(top));
         var shop = new StackPanel(); shop.Children.Add(Extras.Text("Украшение", 16, null, true));
-        var grid = new WrapPanel { Margin = new Thickness(0, 10, 0, 0) };
+        var grid = new WrapPanel { Margin = new Thickness(0, 14, 0, 0) };
         var level = Rewards.Level(AccountClient.Int(account.Profile, "total_earned"));
         foreach (var d in account.Decorations.OfType<JsonObject>().Where(d => !AccountClient.Bool(d, "exclusive") && AccountClient.Int(d, "price") > 0 && Rewards.OnSale(AccountClient.Text(d, "available_from"), AccountClient.Text(d, "available_until"), DateTimeOffset.Now)))
         {
@@ -302,7 +304,7 @@ public sealed class GiftPage(AccountClient client, JsonObject friend) : ExtrasPa
             stack.Children.Add(new TextBlock { Text = title, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
             stack.Children.Add(new TextBlock { Text = AdminPage.KindLabel(AccountClient.Text(d, "kind")) + " · " + Rewards.Rarity(AccountClient.Text(d, "rarity")), FontSize = 11, Foreground = Extras.Muted, Margin = new Thickness(0, 3, 0, 0) });
             stack.Children.Add(new TextBlock { Text = "◆ " + Rewards.Points(price), Foreground = Extras.Warm, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 6, 0, 0) });
-            var b = new Button { Content = stack, Padding = new Thickness(12, 10, 12, 10), Margin = new Thickness(0, 0, 10, 10), IsEnabled = balance >= price && level >= Math.Max(1, AccountClient.Int(d, "min_level")), HorizontalContentAlignment = HorizontalAlignment.Left };
+            var b = new Button { Content = stack, Padding = new Thickness(16, 14, 16, 14), Margin = new Thickness(0, 0, 12, 12), IsEnabled = balance >= price && level >= Math.Max(1, AccountClient.Int(d, "min_level")), HorizontalContentAlignment = HorizontalAlignment.Left };
             b.Click += async (_, _) => { if (await Run(() => account.Rpc("gift_decoration", new JsonObject { ["p_user"] = AccountClient.Text(friend, "id"), ["p_decoration"] = id, ["p_message"] = note.Text }))) { await account.Refresh(); Done($"🎁 «{title}» отправлено"); } };
             grid.Children.Add(b);
         }
@@ -329,11 +331,11 @@ public sealed class ImportPage(AccountClient client) : ExtrasPage(client, "Пе�
         Body.Children.Clear();
         var panel = new StackPanel { MaxWidth = 640, HorizontalAlignment = HorizontalAlignment.Left };
         panel.Children.Add(Extras.Text("Уже добавленное в Yoru не перезапишется. Очки за перенос не начисляются.", 14, Extras.Muted));
-        var link = new TextBox { Margin = new Thickness(0, 14, 0, 6) }; System.Windows.Automation.AutomationProperties.SetName(link, "Ссылка на профиль YummyAnime");
-        panel.Children.Add(Extras.Text("Ссылка на профиль (например, old.yummyani.me/users/id529123)", 12, Extras.Muted)); panel.Children.Add(link);
+        var link = new TextBox { Margin = new Thickness(0, 8, 0, 10) }; System.Windows.Automation.AutomationProperties.SetName(link, "Ссылка на профиль YummyAnime");
+        { var label = Extras.Text("Ссылка на профиль (например, old.yummyani.me/users/id529123)", 12, Extras.Muted); label.Margin = new Thickness(0, 20, 0, 0); panel.Children.Add(label); } panel.Children.Add(link);
         panel.Children.Add(Extras.Text("Открой свой профиль на YummyAnime и скопируй адрес из браузера. Списки должны быть открыты для всех.", 12, Extras.Muted));
         var progress = Extras.Text("", 14); progress.Margin = new Thickness(0, 12, 0, 0);
-        var go = new Button { Content = "Перенести", Style = (Style)Application.Current.Resources["Primary"], HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 16, 0, 0) };
+        var go = new Button { Content = "Перенести", Style = (Style)Application.Current.Resources["Primary"], HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 24, 0, 0) };
         panel.Children.Add(go); panel.Children.Add(progress);
         go.Click += async (_, _) =>
         {
@@ -421,9 +423,9 @@ public sealed class ForYouPage(AccountClient client) : ExtrasPage(client, "Дл�
 public sealed class RoulettePage(AccountClient client) : ExtrasPage(client, "Рулетка", "Шесть случайных аниме на барабане — какое выпадет?")
 {
     readonly ComboBox genre = new() { MinWidth = 220 }, status = new() { MinWidth = 180 };
-    readonly TextBlock title = new() { FontSize = 24, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, MaxWidth = 560 };
-    readonly TextBlock meta = new() { FontSize = 13, Foreground = Extras.Muted, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, MaxWidth = 560, Margin = new Thickness(0, 6, 0, 0) };
-    readonly Button spin = new() { Content = "🎲  Крутить", Margin = new Thickness(0, 0, 10, 0) }, open = new() { Content = "Смотреть  →", IsEnabled = false };
+    readonly TextBlock title = new() { FontSize = 26, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, MaxWidth = 560 };
+    readonly TextBlock meta = new() { FontSize = 14, Foreground = Extras.Muted, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, MaxWidth = 560, Margin = new Thickness(0, 10, 0, 0), LineHeight = 22 };
+    readonly Button spin = new() { Content = "🎲  Крутить", Margin = new Thickness(0, 0, 12, 0), Padding = new Thickness(24, 13, 24, 13) }, open = new() { Content = "Смотреть  →", IsEnabled = false, Padding = new Thickness(24, 13, 24, 13) };
     readonly Canvas reel = new() { Height = 300, ClipToBounds = true, Background = Brushes.Transparent };
     readonly List<Border> cards = [];
     List<(int Id, string Title)> genres = [];
@@ -436,9 +438,9 @@ public sealed class RoulettePage(AccountClient client) : ExtrasPage(client, "Р�
     protected override async Task Load()
     {
         Body.Children.Clear();
-        var filters = new WrapPanel { Margin = new Thickness(0, 0, 0, 12) };
-        filters.Children.Add(new TextBlock { Text = "Жанр", Foreground = Extras.Muted, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) }); filters.Children.Add(genre);
-        filters.Children.Add(new TextBlock { Text = "Статус", Foreground = Extras.Muted, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(18, 0, 8, 0) }); filters.Children.Add(status);
+        var filters = new WrapPanel { Margin = new Thickness(0, 0, 0, 20) };
+        filters.Children.Add(new TextBlock { Text = "Жанр", Foreground = Extras.Muted, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0) }); filters.Children.Add(genre);
+        filters.Children.Add(new TextBlock { Text = "Статус", Foreground = Extras.Muted, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(24, 0, 10, 0) }); filters.Children.Add(status);
         status.ItemsSource = new[] { "Любой", "Вышедшие", "Онгоинги" }; status.SelectedIndex = 0;
         Body.Children.Add(filters);
         // Барабан: карточки на вращающемся цилиндре, по центру — указатель.
@@ -452,8 +454,8 @@ public sealed class RoulettePage(AccountClient client) : ExtrasPage(client, "Р�
         Body.Children.Add(drum);
         reel.SizeChanged += (_, _) => Layout();
         var stage = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
-        title.Margin = new Thickness(0, 10, 0, 0); stage.Children.Add(title); stage.Children.Add(meta);
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 18, 0, 0) };
+        title.Margin = new Thickness(0, 16, 0, 0); stage.Children.Add(title); stage.Children.Add(meta);
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 24, 0, 0) };
         open.Style = (Style)Application.Current.Resources["Primary"];
         actions.Children.Add(spin); actions.Children.Add(open); stage.Children.Add(actions);
         Body.Children.Add(stage);
@@ -569,7 +571,7 @@ public sealed class JoinRoomPage(AccountClient client) : ExtrasPage(client, "С�
     {
         Body.Children.Clear();
         var panel = new StackPanel { MaxWidth = 420, HorizontalAlignment = HorizontalAlignment.Left };
-        var code = new TextBox { MaxLength = 6, FontSize = 22, CharacterCasing = CharacterCasing.Upper, Margin = new Thickness(0, 8, 0, 14) };
+        var code = new TextBox { MaxLength = 6, FontSize = 22, CharacterCasing = CharacterCasing.Upper, Margin = new Thickness(0, 10, 0, 20) };
         System.Windows.Automation.AutomationProperties.SetName(code, "Код комнаты");
         var go = new Button { Content = "Войти в комнату", Style = (Style)Application.Current.Resources["Primary"], HorizontalAlignment = HorizontalAlignment.Left, IsDefault = true };
         panel.Children.Add(Extras.Text("Код комнаты от друга", 13, Extras.Muted)); panel.Children.Add(code); panel.Children.Add(go);

@@ -37,7 +37,7 @@ public sealed class AuthView : UserControl
         root.Children.Add(new Border { Background = new RadialGradientBrush(Color.FromArgb(0x55, 0xFF, 0x4D, 0x67), Colors.Transparent) { Center = new Point(0.15, 0.4), GradientOrigin = new Point(0.15, 0.4), RadiusX = 0.6, RadiusY = 0.8 } });
         root.Children.Add(new Border { Background = new RadialGradientBrush(Color.FromArgb(0x40, 0xFF, 0x8A, 0x3D), Colors.Transparent) { Center = new Point(0.9, 0.8), GradientOrigin = new Point(0.9, 0.8), RadiusX = 0.5, RadiusY = 0.7 } });
 
-        var page = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Width = 440 };
+        var page = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Width = 460, Margin = new Thickness(0, 40, 0, 40) };
         page.Children.Add(new Image { Source = new BitmapImage(new Uri("pack://application:,,,/Assets/yoru-256.png")), Width = 88, Height = 88, Effect = new DropShadowEffect { BlurRadius = 30, ShadowDepth = 0, Color = Color.FromRgb(0xFF, 0x4D, 0x67), Opacity = 0.6 } });
         title.Margin = new Thickness(0, 18, 0, 0); page.Children.Add(title); page.Children.Add(subtitle);
 
@@ -45,16 +45,16 @@ public sealed class AuthView : UserControl
         var tabs = new UniformGrid2(); tabs.Add(signIn); tabs.Add(signUp);
         signIn.Click += (_, _) => Mode(false); signUp.Click += (_, _) => Mode(true);
         card.Children.Add(new Border { Background = new SolidColorBrush(Color.FromRgb(0x1F, 0x1F, 0x26)), CornerRadius = new CornerRadius(14), Padding = new Thickness(4), Child = tabs.Grid });
-        card.Children.Add(Field("Почта", email, 18));
-        nickRow.Children.Add(Field("Ник — латиница, цифры и _", nick, 12)); card.Children.Add(nickRow);
-        card.Children.Add(Field("Пароль", password, 12));
+        card.Children.Add(Field("Почта", email, 24));
+        nickRow.Children.Add(Field("Ник — латиница, цифры и _", nick, 16)); card.Children.Add(nickRow);
+        card.Children.Add(Field("Пароль", password, 16));
         card.Children.Add(message);
-        submit.Style = (Style)Application.Current.Resources["Primary"]; submit.Margin = new Thickness(0, 18, 0, 0);
+        submit.Style = (Style)Application.Current.Resources["Primary"]; submit.Margin = new Thickness(0, 24, 0, 0);
         submit.Click += async (_, _) => await Submit();
         card.Children.Add(submit);
         forgot.Click += async (_, _) => await Recover();
         card.Children.Add(forgot);
-        page.Children.Add(new Border { Margin = new Thickness(0, 26, 0, 0), Padding = new Thickness(24), CornerRadius = new CornerRadius(24), Background = (Brush)Application.Current.Resources["PanelGradient"], BorderBrush = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x33)), BorderThickness = new Thickness(1), Effect = (Effect)Application.Current.Resources["Shadow"], Child = card });
+        page.Children.Add(new Border { Margin = new Thickness(0, 32, 0, 0), Padding = new Thickness(32), CornerRadius = new CornerRadius(24), Background = (Brush)Application.Current.Resources["PanelGradient"], BorderBrush = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x33)), BorderThickness = new Thickness(1), Effect = (Effect)Application.Current.Resources["Shadow"], Child = card });
         page.Children.Add(new TextBlock { Text = "Профиль, очки, списки и украшения хранятся в аккаунте Yoru и синхронизируются между ПК и телефоном.", FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0x9C, 0x9C, 0xA8)), TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 18, 0, 0) });
         root.Children.Add(new ScrollViewer { Content = page, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
         Content = root;
@@ -67,7 +67,7 @@ public sealed class AuthView : UserControl
     static FrameworkElement Field(string label, Control input, double top)
     {
         var box = new StackPanel { Margin = new Thickness(0, top, 0, 0) };
-        box.Children.Add(new TextBlock { Text = label, FontSize = 12, FontWeight = FontWeights.SemiBold, Foreground = new SolidColorBrush(Color.FromRgb(0x9C, 0x9C, 0xA8)), Margin = new Thickness(0, 0, 0, 6) });
+        box.Children.Add(new TextBlock { Text = label, FontSize = 12, FontWeight = FontWeights.SemiBold, Foreground = new SolidColorBrush(Color.FromRgb(0x9C, 0x9C, 0xA8)), Margin = new Thickness(0, 0, 0, 8) });
         input.Padding = new Thickness(14, 12, 14, 12); System.Windows.Automation.AutomationProperties.SetName(input, label);
         box.Children.Add(input);
         return box;
