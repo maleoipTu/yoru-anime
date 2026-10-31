@@ -76,7 +76,7 @@
      <ItemsControl x:Name="Cards">
       <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
       <ItemsControl.ItemTemplate><DataTemplate>
-       <Button Style="{StaticResource CatalogCard}" Width="180" Margin="0,8,24,36" Click="CardClick" ToolTip="{Binding Title}" AutomationProperties.Name="{Binding Title}">
+       <Button x:Name="Card" Style="{StaticResource CatalogCard}" Width="180" Margin="0,8,24,36" Click="CardClick" ToolTip="{Binding Title}" AutomationProperties.Name="{Binding Title}">
         <StackPanel>
          <Border x:Name="Poster" CornerRadius="14" Height="252" Background="#1F1F26" BorderBrush="#1FFFFFFF" BorderThickness="1" Effect="{StaticResource Shadow}"><Grid><Grid.Clip><RectangleGeometry Rect="0,0,178,250" RadiusX="13" RadiusY="13"/></Grid.Clip><Image Source="{Binding ImagePath}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/><Border Background="#D90E0E11" HorizontalAlignment="Left" VerticalAlignment="Top" CornerRadius="8" Padding="8,4" Margin="10"><TextBlock Text="{Binding Score}" FontSize="11" FontWeight="SemiBold" Foreground="#FFC14D"/></Border></Grid></Border>
          <TextBlock x:Name="CardTitle" Text="{Binding Title}" FontWeight="SemiBold" FontSize="15" Margin="2,14,0,0" Height="42" TextTrimming="CharacterEllipsis"/>
@@ -85,7 +85,7 @@
         </StackPanel>
        </Button>
        <DataTemplate.Triggers>
-        <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}" Value="True">
+        <DataTrigger Binding="{Binding IsMouseOver, ElementName=Card}" Value="True">
          <Setter TargetName="Poster" Property="Effect" Value="{StaticResource CardGlow}"/>
          <Setter TargetName="Poster" Property="BorderBrush" Value="{StaticResource AccentGradient}"/>
          <Setter TargetName="CardTitle" Property="Foreground" Value="#FFB3C1"/>
