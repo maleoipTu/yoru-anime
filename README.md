@@ -49,19 +49,6 @@
 
 Чтобы друзья в Discord видели «Смотрит …» с названием и серией, создайте приложение на [discord.com/developers/applications](https://discord.com/developers/applications) (имя — «Yoru»), скопируйте **Application ID** и вставьте его в Yoru → Настройки → «Уведомления и Discord». Discord должен быть запущен на этом же ПК.
 
-## Админ-панель
-
-Доступ выдаётся только через базу данных. В Supabase → SQL Editor:
-
-```sql
--- выдать доступ
-insert into public.admins (user_id, note) select id, 'владелец' from public.profiles where username = 'ваш_ник';
--- забрать доступ
-delete from public.admins where user_id = (select id from public.profiles where username = 'ваш_ник');
-```
-
-После этого в профиле появится кнопка «Админ-панель». Каждое действие дополнительно проверяется на сервере и записывается в журнал.
-
 ## Как устроено
 
 - **Windows** — C# / WPF (.NET 10), одно окно со страницами; плеер — HTML5 + hls.js внутри WebView2, видео идёт через встроенный прокси приложения.
