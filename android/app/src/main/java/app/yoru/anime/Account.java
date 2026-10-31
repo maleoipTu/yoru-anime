@@ -62,6 +62,10 @@ final class Account {
  }
  JSONArray decorations() throws Exception {
   JSONArray result=new JSONArray(call("GET","/rest/v1/decorations?select=*&order=kind.asc,sort.asc",null,token(),null));
+  // Набор администрации каталог обычным пользователям не отдаёт; стили надетых админами украшений
+  // добавляются из worn_decorations(), чтобы они рисовались у всех (в магазине скрыты по admin_only).
+  try{Object worn=anonRpc("worn_decorations",new JSONObject());if(worn instanceof JSONArray){Set<String> known=new HashSet<>();for(int i=0;i<result.length();i++)known.add(result.optJSONObject(i)==null?"":result.optJSONObject(i).optString("id"));
+   JSONArray extra=(JSONArray)worn;for(int i=0;i<extra.length();i++){JSONObject d=extra.optJSONObject(i);if(d!=null&&known.add(d.optString("id")))result.put(d);}}}catch(Exception ignored){}
   prefs.edit().putString("decorations",result.toString()).apply();return result;
  }
  Set<String> inventory() throws Exception {

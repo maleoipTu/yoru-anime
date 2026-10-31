@@ -71,6 +71,7 @@ final class Rewards {
   if(text.contains("user_not_found"))return "Пользователь с таким ником не найден.";
   if(text.contains("self_friend"))return "Себя в друзья добавить нельзя.";
   if(text.contains("achievement_only"))return "Это украшение выдаётся только за достижение.";
+  if(text.contains("admin_only"))return "Это доступно только администрации.";
   if(text.contains("not_available"))return "Это сезонное украшение сейчас не продаётся.";
   if(text.contains("too_many_requests"))return "Слишком много неотвеченных заявок.";
   if(text.contains("username_taken"))return "Этот ник уже занят.";

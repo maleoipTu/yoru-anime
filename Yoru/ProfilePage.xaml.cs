@@ -37,7 +37,13 @@ public partial class ProfilePage : UserControl
         if (viewing.Length > 0 && viewing != AccountClient.Text(account.Profile, "username"))
         {
             JsonObject? data = null;
-            await Run(async () => { await account.EnsureCatalog(); data = await account.PublicProfile(viewing); }, () => RenderPublic(data));
+            await Run(async () =>
+            {
+                data = await account.PublicProfile(viewing);
+                // Надетое украшение, которого нет в сохранённом каталоге (например, новое админское), — обновляем каталог.
+                var equipped = new[] { "equipped_frame", "equipped_badge", "equipped_color", "equipped_deco", "equipped_effect", "equipped_pframe" }.Select(k => AccountClient.Text(data?["profile"], k));
+                await account.EnsureCatalog(equipped);
+            }, () => RenderPublic(data));
             return;
         }
         if (!account.SignedIn) { AuthForm(); return; }
@@ -215,7 +221,9 @@ public partial class ProfilePage : UserControl
         }
         shop.Children.Add(tabs);
         var grid = new WrapPanel();
+        // Набор администрации обычным пользователям не показывается совсем (база тоже его не отдаёт, кроме надетого у админов).
         foreach (var d in account.Decorations.OfType<JsonObject>().Where(d => AccountClient.Text(d, "kind") == tab
+            && (!AccountClient.Bool(d, "admin_only") || account.IsAdmin)
             && (account.Owned.Contains(AccountClient.Text(d, "id")) || Rewards.OnSale(AccountClient.Text(d, "available_from"), AccountClient.Text(d, "available_until"), DateTimeOffset.Now))))
             grid.Children.Add(Tile(d, points, level));
         if (grid.Children.Count == 0) shop.Children.Add(Text(busy ? "Загружаем украшения…" : "Украшения пока не загрузились.", 13, Muted));
@@ -231,6 +239,17 @@ public partial class ProfilePage : UserControl
         Dispatcher.BeginInvoke(() => Scroll.ScrollToVerticalOffset(offset));
     }
     string Frame => Field(account.Profile, "equipped_frame", "frame_moon");
+    static readonly Brush StaffText = Frozen(new SolidColorBrush(Color.FromRgb(0xFF, 0xB3, 0x6B)));
+    static readonly Brush StaffBorder = Frozen(new LinearGradientBrush(Color.FromRgb(0xFF, 0x4D, 0x67), Color.FromRgb(0xFF, 0xC2, 0x7A), 30));
+    static Brush StaffBackground(bool worn)
+    {
+        var sky = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
+        sky.GradientStops.Add(new GradientStop(Color.FromRgb(0x1E, 0x17, 0x30), 0));
+        sky.GradientStops.Add(new GradientStop(worn ? Color.FromRgb(0x30, 0x18, 0x26) : Color.FromRgb(0x19, 0x14, 0x22), .65));
+        sky.GradientStops.Add(new GradientStop(Color.FromRgb(0x3A, 0x1A, 0x22), 1));
+        return Frozen(sky);
+    }
+    static Brush Frozen(Brush brush) { brush.Freeze(); return brush; }
     static FrameworkElement Ornaments_Overlay(JsonObject? effect, JsonObject? frame, double radius) => OrnamentLayer.Overlay(effect, frame, radius);
     public static string EquippedField(string kind) => kind switch { "frame" => "equipped_frame", "badge" => "equipped_badge", "avatar_deco" => "equipped_deco", "profile_effect" => "equipped_effect", "profile_frame" => "equipped_pframe", _ => "equipped_color" };
     static string Field(JsonNode? node, string key, string fallback) => AccountClient.Text(node, key) is { Length: > 0 } v ? v : fallback;
@@ -259,6 +278,7 @@ public partial class ProfilePage : UserControl
         int price = AccountClient.Int(d, "price"), minLevel = Math.Max(1, AccountClient.Int(d, "min_level"));
         var style = d["style"] as JsonObject ?? new JsonObject();
         var exclusive = AccountClient.Bool(d, "exclusive");
+        var staff = AccountClient.Bool(d, "admin_only");
         var have = (price == 0 && !exclusive) || account.Owned.Contains(id);
         var until = AccountClient.Text(d, "available_until");
         var equipped = AccountClient.Text(account.Profile, EquippedField(kind));
@@ -268,21 +288,26 @@ public partial class ProfilePage : UserControl
         var preview = Preview(kind, style, 1);
         panel.Children.Add(preview);
         panel.Children.Add(new TextBlock { Text = AccountClient.Text(d, "title"), FontSize = 14, FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0) });
-        panel.Children.Add(new TextBlock { Text = Rewards.Rarity(rarity) + (until.Length > 0 && !have ? " · до " + Rewards.Until(until) : ""), FontSize = 11, Foreground = new SolidColorBrush(Decor.Parse(Rewards.RarityColor(rarity), Colors.Gray)), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 3, 0, 0) });
+        if (staff) panel.Children.Add(new TextBlock { Text = "☾ Только для администрации", FontSize = 11, FontWeight = FontWeights.SemiBold, Foreground = StaffText, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 3, 0, 0) });
+        else panel.Children.Add(new TextBlock { Text = Rewards.Rarity(rarity) + (until.Length > 0 && !have ? " · до " + Rewards.Until(until) : ""), FontSize = 11, Foreground = new SolidColorBrush(Decor.Parse(Rewards.RarityColor(rarity), Colors.Gray)), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 3, 0, 0) });
         string state; Brush color;
         if (worn) { state = removable ? "✓ Надето · снять" : "✓ Надето"; color = AccentBrush; }
         else if (have) { state = "Надеть"; color = Brushes.WhiteSmoke; }
+        else if (staff) { state = "Выдаётся администрации"; color = Muted; }
         else if (exclusive) { state = "🏆 За достижение"; color = Muted; }
         else if (level < minLevel) { state = "С уровня " + minLevel; color = Muted; }
         else { state = "◆ " + Rewards.Points(price); color = points >= price ? Warm : Muted; }
         panel.Children.Add(new TextBlock { Text = state, FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = color, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0) });
         var button = new Button { Content = panel, Padding = new Thickness(12, 18, 12, 16), Margin = new Thickness(0, 0, 14, 14), Background = worn ? new SolidColorBrush(Color.FromRgb(0x3A, 0x18, 0x20)) : new SolidColorBrush(Color.FromRgb(0x21, 0x22, 0x2D)), ToolTip = AccountClient.Text(d, "description") };
-        System.Windows.Automation.AutomationProperties.SetName(button, $"{AccountClient.Text(d, "title")}, {Rewards.Rarity(rarity)}. {state.Replace("◆", "цена")}");
+        // Своя подложка у набора администрации: ночное небо с отсветом зари и тонкий кант цвета зари.
+        if (staff) { button.Background = StaffBackground(worn); button.BorderBrush = StaffBorder; button.BorderThickness = new Thickness(1); }
+        System.Windows.Automation.AutomationProperties.SetName(button, $"{AccountClient.Text(d, "title")}, {(staff ? "только для администрации" : Rewards.Rarity(rarity))}. {state.Replace("◆", "цена")}");
         button.Click += async (_, _) =>
         {
             if (busy) return;
             if (worn) { if (removable) await Run(() => account.Equip(kind, ""), RenderProfile); return; }
             if (have) { await Run(() => account.Equip(kind, id), RenderProfile); return; }
+            if (staff) { StatusText.Text = "Это украшение выдаётся только администрации."; return; }
             if (exclusive) { StatusText.Text = AccountClient.Text(d, "description"); return; }
             if (level < minLevel) { StatusText.Text = $"«{AccountClient.Text(d, "title")}» откроется на уровне {minLevel}."; return; }
             if (points < price) { StatusText.Text = $"Не хватает {Rewards.Points(price - points)} очков."; return; }

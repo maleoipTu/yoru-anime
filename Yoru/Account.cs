@@ -91,6 +91,7 @@ public static class Rewards
         if (text.Contains("user_not_found")) return "Пользователь с таким ником не найден.";
         if (text.Contains("self_friend")) return "Себя в друзья добавить нельзя.";
         if (text.Contains("achievement_only")) return "Это украшение выдаётся только за достижение.";
+        if (text.Contains("admin_only")) return "Это доступно только администрации.";
         if (text.Contains("not_available")) return "Это сезонное украшение сейчас не продаётся.";
         if (text.Contains("too_many_requests")) return "Слишком много неотвеченных заявок.";
         if (text.Contains("username_taken")) return "Этот ник уже занят.";
@@ -234,7 +235,7 @@ public sealed class AccountClient : IDisposable
     {
         var token = await Token();
         var profile = JsonNode.Parse(await Send(HttpMethod.Get, $"/rest/v1/profiles?id=eq.{session.User}&select=*", null, token, "application/vnd.pgrst.object+json"))!.AsObject();
-        var decorations = JsonNode.Parse(await Send(HttpMethod.Get, "/rest/v1/decorations?select=*&order=kind.asc,sort.asc", null, token))!.AsArray();
+        var decorations = await WithWorn(JsonNode.Parse(await Send(HttpMethod.Get, "/rest/v1/decorations?select=*&order=kind.asc,sort.asc", null, token))!.AsArray(), token);
         var owned = JsonNode.Parse(await Send(HttpMethod.Get, $"/rest/v1/inventory?user_id=eq.{session.User}&select=decoration_id", null, token))!.AsArray();
         Profile = profile; Decorations = decorations;
         Owned = owned.Select(o => o?["decoration_id"]?.GetValue<string>() ?? "").ToHashSet();
@@ -309,9 +310,12 @@ public sealed class AccountClient : IDisposable
         Achievements = await Get("/rest/v1/achievements?select=*&order=sort.asc");
         if (SignedIn) Unlocked = (await Get($"/rest/v1/user_achievements?user_id=eq.{UserId}&select=achievement_id")).Select(r => Text(r, "achievement_id")).ToHashSet();
     }
-    public async Task EnsureCatalog()
+    public Task EnsureCatalog() => EnsureCatalog(null);
+    /// <summary>Загружает каталог, если его нет или в нём нет нужных украшений (например, надетых в чужом профиле).</summary>
+    public async Task EnsureCatalog(IEnumerable<string>? needed)
     {
-        if (Decorations.Count == 0) { Decorations = await Get("/rest/v1/decorations?select=*&order=kind.asc,sort.asc"); }
+        var known = Decorations.Select(d => Text(d, "id")).ToHashSet();
+        if (Decorations.Count == 0 || (needed?.Any(id => id.Length > 0 && !known.Contains(id)) ?? false)) { Decorations = await WithWorn(await Get("/rest/v1/decorations?select=*&order=kind.asc,sort.asc"), await Bearer()); }
         if (Achievements.Count == 0) Achievements = await Get("/rest/v1/achievements?select=*&order=sort.asc");
     }
     /// <summary>Текст про только что открытые достижения из ответа сервера, или пустая строка.</summary>
@@ -366,6 +370,24 @@ public sealed class AccountClient : IDisposable
     public static string Text(JsonNode? node, string key) => node?[key] is JsonValue v && v.TryGetValue<string>(out var s) ? s : "";
     public static int Int(JsonNode? node, string key) => node?[key] is JsonValue v && v.TryGetValue<int>(out var i) ? i : 0;
     public string DisplayName => Text(Profile, "display_name").Trim() is { Length: > 0 } name ? name : Text(Profile, "username") is { Length: > 0 } nick ? nick : "Гость";
+    /// <summary>
+    /// Каталог не отдаёт набор администрации обычным пользователям; чтобы надетые админами украшения
+    /// рисовались у всех, их стили добавляются из worn_decorations() (в магазине они скрыты по admin_only).
+    /// </summary>
+    async Task<JsonArray> WithWorn(JsonArray catalog, string? bearer)
+    {
+        try
+        {
+            var text = await Send(HttpMethod.Post, "/rest/v1/rpc/worn_decorations", new JsonObject(), bearer);
+            if (!string.IsNullOrWhiteSpace(text) && JsonNode.Parse(text) is JsonArray worn)
+            {
+                var known = catalog.Select(d => Text(d, "id")).ToHashSet();
+                foreach (var d in worn.OfType<JsonObject>()) if (known.Add(Text(d, "id"))) catalog.Add(d.DeepClone());
+            }
+        }
+        catch (Exception e) when (e is AccountException or HttpRequestException or TaskCanceledException or System.Text.Json.JsonException) { }
+        return catalog;
+    }
     public JsonObject Style(string id) => Decorations.FirstOrDefault(d => Text(d, "id") == id)?["style"] as JsonObject ?? new JsonObject();
 
     public void Dispose() => http.Dispose();
