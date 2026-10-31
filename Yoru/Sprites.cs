@@ -135,7 +135,7 @@ public static class Sprites
     }
 
     /// <summary>«Ночной дозор» (набор администрации): три слоя глубины — дальние звёзды, огоньки зари, размытое боке
-    /// у «камеры», плюс полумесяц и кометы. Дальние слои движутся медленнее (параллакс).</summary>
+    /// у «камеры», плюс кометы. Дальние слои движутся медленнее (параллакс).</summary>
     static bool NightWatch(DrawingContext dc, double w, double h)
     {
         var s = Get("fx_night"); if (s == null) return false;
@@ -161,8 +161,6 @@ public static class Sprites
             var p = (sec * .02 + phase) % 1;
             Draw(dc, s, 4, w * (rx * .8 - .1 + p * .4), h * (.15 + ry * .7) + Math.Sin(sec * .3 + i) * 12, size, size, 0, .45 * Math.Sin(p * Math.PI));
         }
-        var ms = Math.Min(42, h * .16);
-        Draw(dc, s, 5, w - ms * 1.4 + Math.Sin(sec * .35) * 6, ms * 1.3 + Math.Cos(sec * .45) * 5, ms, ms, Math.Sin(sec * .5) * 8, .85);
         if (comet != null)
             for (var i = 0; i < 2; i++)
             {

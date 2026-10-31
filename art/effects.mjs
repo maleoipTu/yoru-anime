@@ -109,7 +109,7 @@ const snow = (t, i) => {
 
 // ───── Набор администрации: «Ночной дозор» ─────
 // Варианты частиц: 0 — холодная звезда, 1 — тёплая звезда с лучами, 2 — огонёк зари, 3 — янтарный огонёк,
-// 4 — размытое боке переднего плана (глубина), 5 — крошечный полумесяц.
+// 4 — размытое боке переднего плана (глубина).
 const night = (t, i) => {
   const S = 64, c = S / 2;
   const body = [
@@ -119,10 +119,7 @@ const night = (t, i) => {
       <g transform="rotate(45 ${c} ${c})">${sparkle(c, c, 12, '#FFE3B8', .8)}</g>${sparkle(c, c, 25, '#FFB36B', .5).replace('/>', ' filter="url(#b)"/>')}${sparkle(c, c, 21, '#FFF7EA')}<circle cx="${c}" cy="${c}" r="3.2" fill="#FFF"/>`,
     () => `${rad('h', [[0, '#FFFFFF', 1], [.12, '#FFD0C0', 1], [.3, '#FF6A5A', .55], [.65, '#FF4D67', .15], [1, '#FF4D67', 0]])}</defs><circle cx="${c}" cy="${c}" r="${c}" fill="url(#h)"/>`,
     () => `${rad('h', [[0, '#FFFFFF', 1], [.12, '#FFE3B8', 1], [.32, '#FF9A45', .5], [.7, '#FF8A3D', .12], [1, '#FF8A3D', 0]])}</defs><circle cx="${c}" cy="${c}" r="${c}" fill="url(#h)"/>`,
-    () => `${rad('h', [[0, '#FF8A6A', .16], [.78, '#FF6A5A', .2], [.9, '#FFB08A', .42], [1, '#FFB08A', 0]])}</defs><circle cx="${c}" cy="${c}" r="${c - 2}" fill="url(#h)"/>`,
-    () => `${rad('h', [[0, '#FFD9A8', .6], [.5, '#FF8A3D', .18], [1, '#FF8A3D', 0]])}${rad('m', [[0, '#FFFBF2'], [.6, '#FFE3B8'], [1, '#FF9A55']], .3, .3, .9)}
-      <mask id="cut"><rect width="${S}" height="${S}" fill="#FFF"/><circle cx="${c + 8}" cy="${c - 6}" r="12.5" fill="#000"/></mask></defs>
-      <circle cx="${c}" cy="${c}" r="${c}" fill="url(#h)"/><g mask="url(#cut)" transform="rotate(-20 ${c} ${c})"><circle cx="${c}" cy="${c}" r="15" fill="url(#m)"/></g>`,
+    () => `${rad('h', [[0, '#FF8A6A', .2], [.6, '#FF7A5A', .2], [.85, '#FFB08A', .16], [1, '#FFB08A', 0]])}</defs><circle cx="${c}" cy="${c}" r="${c}" fill="url(#h)"/>`,
   ][i];
   return svg(S, S, `<defs>${blur('b', 1.4)}${body()}`);
 };
@@ -149,6 +146,6 @@ export default [
   { name: 'fx_starfall', w: 200, h: 48, frames: 1, draw: starfall },
   { name: 'fx_bat', w: 104, h: 72, frames: 16, fps: 30, draw: bats },
   { name: 'fx_snow', w: 48, h: 48, frames: 6, draw: snow },
-  { name: 'fx_night', w: 64, h: 64, frames: 6, draw: night },
+  { name: 'fx_night', w: 64, h: 64, frames: 5, draw: night },
   { name: 'fx_night_comet', w: 220, h: 56, frames: 1, draw: nightComet },
 ];

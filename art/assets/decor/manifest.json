@@ -164,7 +164,7 @@
  "fx_night": {
   "w": 64,
   "h": 64,
-  "frames": 6,
+  "frames": 5,
   "fps": 0
  },
  "fx_night_comet": {

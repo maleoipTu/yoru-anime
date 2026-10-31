@@ -94,7 +94,7 @@ final class Sprites {
   return true;
  }
 
- /** «Ночной дозор» (набор администрации): дальние звёзды, огоньки зари, размытое боке у «камеры», полумесяц и кометы; дальние слои медленнее. */
+ /** «Ночной дозор» (набор администрации): дальние звёзды, огоньки зари, размытое боке у «камеры» и кометы; дальние слои медленнее. */
  static boolean nightWatch(Canvas canvas,Context c,float w,float h,float density){
   Sheet s=get(c,"fx_night",false);if(s==null)return false;Sheet comet=get(c,"fx_night_comet",false);
   float sec=SystemClock.uptimeMillis()/1000f*EFFECT_PACE;Random r=new Random(4242);
@@ -106,7 +106,6 @@ final class Sprites {
    draw(canvas,s,variant,rx*w+(float)Math.sin(sec*.7f*speed+phase*9)*16*density*depth,h*(1.08f-p*1.2f),size,size,0,(float)Math.sin(p*Math.PI)*(.5f+.45f*depth),false,false);}
   for(int i=0;i<3;i++){float rx=r.nextFloat(),ry=r.nextFloat(),phase=r.nextFloat(),size=(64+40*r.nextFloat())*density;float p=(sec*.02f+phase)%1f;
    draw(canvas,s,4,w*(rx*.8f-.1f+p*.4f),h*(.15f+ry*.7f)+(float)Math.sin(sec*.3f+i)*12*density,size,size,0,.45f*(float)Math.sin(p*Math.PI),false,false);}
-  float ms=Math.min(36*density,h*.16f);draw(canvas,s,5,w-ms*1.4f+(float)Math.sin(sec*.35f)*6*density,ms*1.3f+(float)Math.cos(sec*.45f)*5*density,ms,ms,(float)Math.sin(sec*.5f)*8,.85f,false,false);
   if(comet!=null)for(int i=0;i<2;i++){float rx=r.nextFloat(),ry=r.nextFloat(),phase=r.nextFloat();float p=(sec*.085f+phase)%1f;if(p>.32f)continue;float q=p/.32f,dx=-w*.55f,dy=h*.5f,len=Math.min(200*density,w*.34f);
    draw(canvas,comet,0,w*(.6f+rx*.45f)+q*dx,h*(ry*.3f-.08f)+q*dy,len,len*comet.h/comet.w,(float)Math.toDegrees(Math.atan2(dy,dx)),(float)Math.sin(q*Math.PI),false,false);}
   return true;
