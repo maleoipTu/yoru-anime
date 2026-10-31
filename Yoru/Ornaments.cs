@@ -365,6 +365,8 @@ public sealed class OrnamentLayer : FrameworkElement
     public static FrameworkElement Overlay(JsonObject? effect, JsonObject? frame, double radius)
     {
         var grid = new Grid { IsHitTestVisible = false };
+        // Эффекты (летучие мыши, снег…) не вылетают за скруглённые края карточки.
+        grid.SizeChanged += (_, e) => grid.Clip = new RectangleGeometry(new Rect(0, 0, e.NewSize.Width, e.NewSize.Height), radius, radius);
         foreach (var (style, kind) in new[] { (effect, Kind.Effect), (frame, Kind.Frame) })
         {
             if (style == null) continue;

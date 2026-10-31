@@ -304,7 +304,10 @@ public partial class ProfilePage : UserControl
         var bannerUrl = AccountClient.Text(p, "banner_url");
         if (bannerUrl.Length > 0) banner.Children.Add(Media.View(bannerUrl));
         banner.Children.Add(new Border { Background = new LinearGradientBrush(Colors.Transparent, Color.FromArgb(0x99, 0x0E, 0x0E, 0x11), 90) });
-        root.Children.Add(new Border { CornerRadius = new CornerRadius(20, 20, 0, 0), ClipToBounds = true, Child = banner });
+        // CornerRadius у Border содержимое не обрезает — баннер торчал квадратными углами за скруглённую рамку карточки.
+        // Обрезаем геометрией: скруглены только верхние углы (прямоугольник ниже края баннера).
+        banner.SizeChanged += (_, e) => banner.Clip = new RectangleGeometry(new Rect(0, 0, e.NewSize.Width, e.NewSize.Height + 24), 20, 20);
+        root.Children.Add(banner);
         var body = new StackPanel { Margin = new Thickness(26, -58, 26, 24) };
         var decoId = AccountClient.Text(p, "equipped_deco");
         var avatarHolder = new Border { Width = 124, Height = 124, CornerRadius = new CornerRadius(62), Background = new SolidColorBrush(Color.FromRgb(0x16, 0x16, 0x1B)), HorizontalAlignment = HorizontalAlignment.Left, Padding = new Thickness(6),
