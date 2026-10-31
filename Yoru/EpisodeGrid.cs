@@ -40,7 +40,7 @@ public static class EpisodeGrid
                 Effect = isCurrent ? new System.Windows.Media.Effects.DropShadowEffect { Color = Color.FromRgb(0xFF, 0x4D, 0x67), BlurRadius = 14, ShadowDepth = 0, Opacity = 0.6 } : null
             };
             var inner = new Grid();
-            inner.Children.Add(new TextBlock { Text = episode.Number, FontSize = 17, FontWeight = FontWeights.SemiBold, Foreground = watched ? SeenText : Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap, Margin = new Thickness(6, 0, 6, 2) });
+            inner.Children.Add(new TextBlock { Text = episode.Number, FontSize = 17, FontWeight = FontWeights.SemiBold, Foreground = watched ? SeenText : Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap, Margin = new Thickness(8, 0, 8, 2) });
             if (isCurrent) inner.Children.Add(new TextBlock { Text = "сейчас", FontSize = 9, Foreground = Accent, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 6) });
             // Полоска снизу: целиком — просмотрено, частично — где остановился.
             var fill = watched ? 1 : started;
@@ -55,10 +55,10 @@ public static class EpisodeGrid
             // Луна в углу: у просмотренной — всегда, у остальных — при наведении.
             var moon = new Border
             {
-                Width = 22, Height = 22, CornerRadius = new CornerRadius(11), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, -6, -6, 0),
+                Width = 20, Height = 20, CornerRadius = new CornerRadius(10), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 4, 4, 0),
                 Background = watched ? (Brush)Application.Current.FindResource("AccentGradient") : new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x33)),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(0x0E, 0x0E, 0x11)), BorderThickness = new Thickness(2),
-                Child = new TextBlock { Text = "☾", FontSize = 12, Foreground = watched ? Brushes.White : SeenText, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, -2, 0, 0) },
+                BorderThickness = new Thickness(0),
+                Child = new TextBlock { Text = "☾", FontSize = 11, Foreground = watched ? Brushes.White : SeenText, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, -2, 0, 0) },
                 Opacity = watched ? 1 : 0, ToolTip = watched ? "Снять отметку «просмотрено»" : "Отметить просмотренной"
             };
             moon.MouseLeftButtonUp += (_, e) => { e.Handled = true; toggle(episode); };
