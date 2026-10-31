@@ -38,13 +38,13 @@
  "orbit_hearts": {
   "w": 240,
   "h": 240,
-  "frames": 40,
+  "frames": 20,
   "fps": 30
  },
  "orbit_stars": {
   "w": 240,
   "h": 240,
-  "frames": 40,
+  "frames": 20,
   "fps": 30
  },
  "sakura_wreath": {
@@ -151,6 +151,36 @@
  },
  "pf_cloud": {
   "w": 190,
+  "h": 84,
+  "frames": 1,
+  "fps": 0
+ },
+ "night_keeper": {
+  "w": 240,
+  "h": 240,
+  "frames": 40,
+  "fps": 30
+ },
+ "fx_night": {
+  "w": 64,
+  "h": 64,
+  "frames": 6,
+  "fps": 0
+ },
+ "fx_night_comet": {
+  "w": 220,
+  "h": 56,
+  "frames": 1,
+  "fps": 0
+ },
+ "pf_night_corner": {
+  "w": 180,
+  "h": 180,
+  "frames": 1,
+  "fps": 0
+ },
+ "pf_night_crest": {
+  "w": 168,
   "h": 84,
   "frames": 1,
   "fps": 0

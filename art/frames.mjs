@@ -96,6 +96,70 @@ const cloud = () => {
     <path d="M22 50 C22 40 34 36 42 42 M54 34 C62 24 80 22 88 34 M98 32 C108 26 120 30 124 40" stroke="#9FA8FF" stroke-opacity=".7" stroke-width="2.4" fill="none" stroke-linecap="round"/>`);
 };
 
+// ───── Набор администрации: «Полуночная грань» ─────
+// Угол: узор из сужающихся линий и завитков вдоль двух краёв (симметрично по диагонали), полумесяц в самом углу.
+const nightCorner = () => {
+  const S = 180;
+  const edge = `<g>
+    <path d="M16 5.6 C70 6.4 120 7.2 176 8 C120 8.8 70 9.6 16 10.4Z" fill="url(#gold)"/>
+    <path d="M30 17 C70 17.4 96 17.8 128 18.2" stroke="url(#gold)" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".75"/>
+    <path d="M44 8.5 C66 9 76 24 66 33 C58 40 47 32 53 26 C57 22.5 62 26 60 29" stroke="url(#gold)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <path d="M78 8.5 C90 9 96 16 92 21 C89 24.5 84 21.5 86.5 18.5" stroke="url(#gold)" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    <path d="M104 8 C110 2 118 2 122 8 C118 14 110 14 104 8Z" fill="url(#leaf)" stroke="#6E2414" stroke-width=".7"/>
+    <path d="M138 8 C142 4 147 4 150 8 C147 12 142 12 138 8Z" fill="url(#leaf)" stroke="#6E2414" stroke-width=".6"/>
+    <circle cx="96" cy="8" r="2.2" fill="url(#stud)"/><circle cx="130" cy="8" r="1.7" fill="url(#stud)"/><circle cx="160" cy="8" r="1.3" fill="url(#stud)"/>
+    ${sparkle(176, 8, 5, '#FFF1DC', .95)}
+  </g>`;
+  return svg(S, S, `<defs>${lin('gold', [[0, '#FFF1DC'], [.35, '#FFC27A'], [.7, '#FF8A3D'], [1, '#FF4D67']], 0, 0, 1, 1)}
+    ${lin('leaf', [[0, '#FFE3B8'], [1, '#FF6A4D']], 0, 0, 1, 1)}
+    ${rad('stud', [[0, '#FFF7EA'], [.55, '#FFB36B'], [1, '#C2502A']], .35, .3, .8)}
+    ${rad('glow', [[0, '#FFD9A8', .7], [.45, '#FF8A3D', .25], [1, '#FF4D67', 0]])}
+    ${rad('m', [[0, '#FFFBF2'], [.45, '#FFE3B8'], [.8, '#FFA35C'], [1, '#FF5A55']], .3, .3, .9)}
+    ${shadow('sh', 1.5, 1.6, .6)}${glow('g', 1.6)}
+    <g id="side">${edge}</g>
+    <mask id="cut"><rect width="${S}" height="${S}" fill="#FFF"/><circle cx="35" cy="22" r="11" fill="#000"/></mask></defs>
+    <circle cx="28" cy="28" r="34" fill="url(#glow)"/>
+    <g filter="url(#sh)">
+      <use href="#side"/><use href="#side" transform="matrix(0 1 1 0 0 0)"/>
+      <path d="M6 6 L30 6 M6 6 L6 30" stroke="url(#gold)" stroke-width="3" stroke-linecap="round" fill="none"/>
+      <g mask="url(#cut)" transform="rotate(-8 28 28)"><circle cx="28" cy="28" r="13" fill="url(#m)"/>
+        <path d="M18 22 A13 13 0 0 0 24 40" stroke="#FFFFFF" stroke-opacity=".8" stroke-width="1.6" fill="none" stroke-linecap="round"/></g>
+      <path d="M50 50 L55 44 L60 50 L55 56Z" fill="url(#leaf)" stroke="#6E2414" stroke-width=".8"/>
+    </g>
+    ${sparkle(46, 18, 5, '#FFFFFF', .95)}${sparkle(16, 50, 3.6, '#FFE3B8', .9)}`);
+};
+
+// Герб по центру верхнего края: полумесяц с лучами и узорные «крылья» в обе стороны.
+const nightCrest = () => {
+  const W = 168, H = 84, cx = W / 2, cy = 40;
+  const wing = `<g>
+    <path d="M${cx + 20} ${cy + 4} C${cx + 40} ${cy + 4} ${cx + 52} ${cy - 10} ${cx + 66} ${cy - 6} C${cx + 74} ${cy - 3} ${cx + 72} ${cy + 6} ${cx + 66} ${cy + 5} C${cx + 61} ${cy + 4} ${cx + 62} ${cy - 1} ${cx + 66} ${cy}" stroke="url(#gold)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <path d="M${cx + 20} ${cy + 10} C${cx + 36} ${cy + 12} ${cx + 48} ${cy + 8} ${cx + 58} ${cy + 14}" stroke="url(#gold)" stroke-width="1.4" fill="none" stroke-linecap="round" opacity=".8"/>
+    <path d="M${cx + 40} ${cy + 1} C${cx + 44} ${cy - 5} ${cx + 50} ${cy - 5} ${cx + 53} ${cy - 1} C${cx + 49} ${cy + 2} ${cx + 44} ${cy + 3} ${cx + 40} ${cy + 1}Z" fill="url(#leaf)" stroke="#6E2414" stroke-width=".6"/>
+    <circle cx="${cx + 76}" cy="${cy + 2}" r="1.8" fill="url(#stud)"/>
+  </g>`;
+  const rays = [-60, -30, 0, 30, 60].map((a, k) => { const L = k === 2 ? 30 : k % 2 ? 22 : 16; return `<path d="M-2 0 Q-.5 ${-L * .5} 0 ${-L} Q.5 ${-L * .5} 2 0Z" transform="translate(${cx} ${cy}) rotate(${a})" fill="url(#ray)" opacity=".9"/>`; }).join('');
+  return svg(W, H, `<defs>${lin('gold', [[0, '#FFF1DC'], [.4, '#FFC27A'], [.75, '#FF8A3D'], [1, '#FF4D67']], 0, 0, 1, 1)}
+    ${lin('leaf', [[0, '#FFE3B8'], [1, '#FF6A4D']], 0, 0, 1, 1)}${lin('ray', [[0, '#FFF1DC', 0], [1, '#FFE3B8']], 0, 0, 0, 1)}
+    ${rad('stud', [[0, '#FFF7EA'], [.55, '#FFB36B'], [1, '#C2502A']], .35, .3, .8)}
+    ${rad('glow', [[0, '#FFD9A8', .75], [.4, '#FF8A3D', .28], [1, '#FF4D67', 0]])}
+    ${rad('m', [[0, '#FFFBF2'], [.45, '#FFE3B8'], [.8, '#FFA35C'], [1, '#FF5A55']], .3, .3, .9)}
+    ${rad('gem', [[0, '#FFD0D8'], [.35, '#FF4D67'], [1, '#7A0A26']], .4, .3, .8)}
+    ${shadow('sh', 1.5, 1.6, .6)}
+    <g id="wing">${wing}</g>
+    <mask id="cut"><rect width="${W}" height="${H}" fill="#FFF"/><circle cx="${cx + 8}" cy="${cy - 6}" r="14" fill="#000"/></mask></defs>
+    <ellipse cx="${cx}" cy="${cy}" rx="60" ry="34" fill="url(#glow)"/>
+    ${rays}
+    <g filter="url(#sh)">
+      <use href="#wing"/><use href="#wing" transform="matrix(-1 0 0 1 ${W} 0)"/>
+      <g mask="url(#cut)" transform="rotate(-20 ${cx} ${cy})"><circle cx="${cx}" cy="${cy}" r="16" fill="url(#m)"/>
+        <path d="M${cx - 12} ${cy - 8} A16 16 0 0 0 ${cx - 5} ${cy + 14}" stroke="#FFFFFF" stroke-opacity=".85" stroke-width="1.8" fill="none" stroke-linecap="round"/></g>
+      <path d="M${cx} ${cy + 20} L${cx + 5} ${cy + 27} L${cx} ${cy + 36} L${cx - 5} ${cy + 27}Z" fill="url(#gem)" stroke="#5E0A1E" stroke-width="1"/>
+      <circle cx="${cx - 1.5}" cy="${cy + 25.5}" r="1.3" fill="#FFF" opacity=".85"/>
+    </g>
+    ${sparkle(cx + 10, cy - 12, 4.5, '#FFFFFF')}`);
+};
+
 export default [
   { name: 'pf_cobweb', w: 230, h: 230, frames: 1, draw: cobweb },
   { name: 'pf_spider', w: 56, h: 64, frames: 16, fps: 20, draw: spider },
@@ -105,4 +169,6 @@ export default [
   { name: 'pf_crystal', w: 170, h: 170, frames: 1, draw: crystal },
   { name: 'pf_moon', w: 150, h: 150, frames: 1, draw: moon },
   { name: 'pf_cloud', w: 190, h: 84, frames: 1, draw: cloud },
+  { name: 'pf_night_corner', w: 180, h: 180, frames: 1, draw: nightCorner },
+  { name: 'pf_night_crest', w: 168, h: 84, frames: 1, draw: nightCrest },
 ];
