@@ -418,26 +418,41 @@ public sealed class ForYouPage(AccountClient client) : ExtrasPage(client, "Дл�
 }
 
 /// <summary>Рулетка: случайное аниме с фильтрами, которого ещё нет в списках и истории.</summary>
-public sealed class RoulettePage(AccountClient client) : ExtrasPage(client, "Рулетка", "Случайное аниме, которое ты ещё не смотрел")
+public sealed class RoulettePage(AccountClient client) : ExtrasPage(client, "Рулетка", "Шесть случайных аниме на барабане — какое выпадет?")
 {
     readonly ComboBox genre = new() { MinWidth = 220 }, status = new() { MinWidth = 180 };
-    readonly Image poster = new() { Stretch = Stretch.UniformToFill };
-    readonly TextBlock title = new() { FontSize = 24, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, MaxWidth = 520 };
-    readonly TextBlock meta = new() { FontSize = 13, Foreground = Extras.Muted, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, MaxWidth = 520, Margin = new Thickness(0, 6, 0, 0) };
+    readonly TextBlock title = new() { FontSize = 24, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, MaxWidth = 560 };
+    readonly TextBlock meta = new() { FontSize = 13, Foreground = Extras.Muted, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, MaxWidth = 560, Margin = new Thickness(0, 6, 0, 0) };
     readonly Button spin = new() { Content = "🎲  Крутить", Margin = new Thickness(0, 0, 10, 0) }, open = new() { Content = "Смотреть  →", IsEnabled = false };
+    readonly Canvas reel = new() { Height = 300, ClipToBounds = true, Background = Brushes.Transparent };
+    readonly List<Border> cards = [];
     List<(int Id, string Title)> genres = [];
+    List<Anime> six = [];
     Anime? chosen;
+    double offset; bool spinning;
+    const double Gap = 0.62, Radius = 330, CardW = 150, CardH = 214;
+    public const int Picks = 6, Laps = 7;
+
     protected override async Task Load()
     {
         Body.Children.Clear();
-        var filters = new WrapPanel { Margin = new Thickness(0, 0, 0, 18) };
+        var filters = new WrapPanel { Margin = new Thickness(0, 0, 0, 12) };
         filters.Children.Add(new TextBlock { Text = "Жанр", Foreground = Extras.Muted, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) }); filters.Children.Add(genre);
         filters.Children.Add(new TextBlock { Text = "Статус", Foreground = Extras.Muted, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(18, 0, 8, 0) }); filters.Children.Add(status);
         status.ItemsSource = new[] { "Любой", "Вышедшие", "Онгоинги" }; status.SelectedIndex = 0;
         Body.Children.Add(filters);
+        // Барабан: карточки на вращающемся цилиндре, по центру — указатель.
+        var drum = new Grid { Height = 300, Margin = new Thickness(0, 6, 0, 0) };
+        drum.Children.Add(reel);
+        var fade = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(1, 0) };
+        fade.GradientStops.Add(new GradientStop(Color.FromRgb(0x0E, 0x0E, 0x11), 0)); fade.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0x0E, 0x0E, 0x11), 0.22));
+        fade.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0x0E, 0x0E, 0x11), 0.78)); fade.GradientStops.Add(new GradientStop(Color.FromRgb(0x0E, 0x0E, 0x11), 1));
+        drum.Children.Add(new Border { Background = fade, IsHitTestVisible = false });
+        drum.Children.Add(Pointer(true)); drum.Children.Add(Pointer(false));
+        Body.Children.Add(drum);
+        reel.SizeChanged += (_, _) => Layout();
         var stage = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
-        stage.Children.Add(new Border { Width = 220, Height = 312, CornerRadius = new CornerRadius(18), ClipToBounds = true, Background = Extras.Raised, Child = poster, Effect = (System.Windows.Media.Effects.Effect)Application.Current.Resources["Shadow"], RenderTransformOrigin = new Point(.5, .5), RenderTransform = new ScaleTransform(1, 1) });
-        title.Margin = new Thickness(0, 16, 0, 0); stage.Children.Add(title); stage.Children.Add(meta);
+        title.Margin = new Thickness(0, 10, 0, 0); stage.Children.Add(title); stage.Children.Add(meta);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 18, 0, 0) };
         open.Style = (Style)Application.Current.Resources["Primary"];
         actions.Children.Add(spin); actions.Children.Add(open); stage.Children.Add(actions);
@@ -448,9 +463,54 @@ public sealed class RoulettePage(AccountClient client) : ExtrasPage(client, "Р�
         genre.ItemsSource = new[] { "Любой" }.Concat(genres.Select(g => g.Title)).ToList(); genre.SelectedIndex = 0;
         await Spin();
     }
+    static FrameworkElement Pointer(bool top) => new System.Windows.Shapes.Path
+    {
+        Data = Geometry.Parse(top ? "M0,0 L18,0 L9,12 Z" : "M0,12 L18,12 L9,0 Z"), Fill = (Brush)Application.Current.Resources["AccentGradient"],
+        HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = top ? VerticalAlignment.Top : VerticalAlignment.Bottom, IsHitTestVisible = false,
+        Effect = (System.Windows.Media.Effects.Effect)Application.Current.Resources["AccentGlow"]
+    };
+
+    /// <summary>Карточки на цилиндре: угол от центра задаёт сдвиг, масштаб, прозрачность и порядок.</summary>
+    void Layout()
+    {
+        var center = reel.ActualWidth / 2;
+        for (var i = 0; i < cards.Count; i++)
+        {
+            var angle = i * Gap - offset;
+            var card = cards[i];
+            if (Math.Abs(angle) > 1.45) { card.Visibility = Visibility.Collapsed; continue; }
+            var depth = Math.Cos(angle);
+            var scale = 0.5 + 0.5 * depth;
+            card.Visibility = Visibility.Visible;
+            card.Opacity = 0.2 + 0.8 * depth * depth;
+            ((ScaleTransform)card.RenderTransform).ScaleX = scale * (0.75 + 0.25 * depth); ((ScaleTransform)card.RenderTransform).ScaleY = scale;
+            Canvas.SetLeft(card, center + Radius * Math.Sin(angle) - CardW / 2);
+            Canvas.SetTop(card, (reel.ActualHeight - CardH) / 2);
+            Panel.SetZIndex(card, (int)(depth * 1000));
+        }
+    }
+    Border Card(Anime anime, ImageSource? image)
+    {
+        var grid = new Grid();
+        grid.Children.Add(new Image { Source = image, Stretch = Stretch.UniformToFill });
+        grid.Children.Add(new Border { Background = new LinearGradientBrush(Colors.Transparent, Color.FromArgb(0xDD, 0x0E, 0x0E, 0x11), 90), Height = 80, VerticalAlignment = VerticalAlignment.Bottom });
+        grid.Children.Add(new TextBlock { Text = anime.Title, FontSize = 12, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White, TextWrapping = TextWrapping.Wrap, MaxHeight = 34, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(10, 0, 10, 10) });
+        return new Border
+        {
+            Width = CardW, Height = CardH, CornerRadius = new CornerRadius(16), Background = Extras.Raised, Child = grid, ClipToBounds = true,
+            BorderBrush = new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF)), BorderThickness = new Thickness(1),
+            RenderTransform = new ScaleTransform(1, 1), RenderTransformOrigin = new Point(0.5, 0.5), Effect = (System.Windows.Media.Effects.Effect)Application.Current.Resources["Shadow"]
+        };
+    }
+    /// <summary>Конечный угол барабана: после нескольких полных оборотов по центру встаёт выпавшее аниме.</summary>
+    public static double Target(int winner) => (Laps * Picks + winner) * Gap;
+    /// <summary>Плавное замедление к концу, как у настоящего барабана.</summary>
+    public static double Ease(double t) => 1 - Math.Pow(1 - Math.Clamp(t, 0, 1), 4);
+
     async Task Spin()
     {
-        spin.IsEnabled = open.IsEnabled = false; title.Text = "Крутим барабан…"; meta.Text = "";
+        if (spinning) return;
+        spin.IsEnabled = open.IsEnabled = false; title.Text = "Набираем аниме на барабан…"; meta.Text = "";
         List<Anime> pool = [];
         var filter = genre.SelectedIndex > 0 ? "&genres=" + genres[genre.SelectedIndex - 1].Id : "";
         var state = status.SelectedIndex switch { 1 => "released", 2 => "ongoing", _ => "" };
@@ -458,25 +518,46 @@ public sealed class RoulettePage(AccountClient client) : ExtrasPage(client, "Р�
         {
             var seen = Shell.Store.Data.History.Select(h => h.Anime.Id).ToHashSet();
             if (account.SignedIn) foreach (var list in AccountClient.Lists) foreach (var a in await account.List(list)) seen.Add(a.Id);
-            for (var attempt = 0; attempt < 6 && pool.Count < 8; attempt++)
-                pool.AddRange((await Shell.Api.Catalog("", "views", state, Random.Shared.Next(attempt < 3 ? 20 : 6) * 24, default, filter)).Where(a => !seen.Contains(a.Id) && pool.All(p => p.Id != a.Id)));
+            for (var attempt = 0; attempt < 8 && pool.Count < 18; attempt++)
+                pool.AddRange((await Shell.Api.Catalog("", "views", state, Random.Shared.Next(attempt < 4 ? 30 : 8) * 24, default, filter)).Where(a => !seen.Contains(a.Id) && pool.All(p => p.Id != a.Id)));
             if (pool.Count == 0) throw new InvalidOperationException("С такими фильтрами всё уже просмотрено. Ослабь фильтры.");
         });
         if (!ok || Closed) { spin.IsEnabled = true; title.Text = ""; return; }
+        // Каждый раз — шесть новых случайных аниме.
         Random.Shared.Shuffle(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(pool));
-        var steps = Math.Min(pool.Count, 12);
-        for (var i = 0; i < steps; i++)
+        six = pool.Take(Picks).ToList();
+        var images = six.Select(a => { try { return Uri.TryCreate(a.Poster, UriKind.Absolute, out var u) ? (ImageSource)new BitmapImage(u) : null; } catch (Exception e) when (e is NotSupportedException or IOException) { return null; } }).ToList();
+        reel.Children.Clear(); cards.Clear();
+        for (var i = 0; i < (Laps + 2) * Picks; i++) { var card = Card(six[i % six.Count], images[i % six.Count]); cards.Add(card); reel.Children.Add(card); }
+        var winner = Random.Shared.Next(six.Count);
+        // Если аниме меньше шести, они повторяются по кругу: выпадает та карточка, что встанет по центру.
+        var target = Target(winner); var landing = Laps * Picks + winner;
+        offset = 0; Layout();
+        spinning = true; title.Text = "Крутим барабан…";
+        var clock = System.Diagnostics.Stopwatch.StartNew(); var duration = TimeSpan.FromSeconds(5.2); var lastCenter = -1;
+        var done = new TaskCompletionSource();
+        void Frame(object? sender, EventArgs e)
         {
-            var a = pool[i];
-            try { poster.Source = Uri.TryCreate(a.Poster, UriKind.Absolute, out var u) ? new BitmapImage(u) : null; } catch (Exception e) when (e is NotSupportedException or IOException) { poster.Source = null; }
-            title.Text = a.Title;
-            await Task.Delay(60 + i * i * 9);
-            if (Closed) return;
+            if (Closed) { CompositionTarget.Rendering -= Frame; done.TrySetResult(); return; }
+            var t = clock.Elapsed / duration;
+            offset = target * Ease(t); Layout();
+            var centerIndex = (int)Math.Round(offset / Gap);
+            if (centerIndex != lastCenter) { lastCenter = centerIndex; title.Text = six[centerIndex % six.Count].Title; }
+            if (t >= 1) { CompositionTarget.Rendering -= Frame; done.TrySetResult(); }
         }
-        chosen = pool[steps - 1];
+        CompositionTarget.Rendering += Frame;
+        await done.Task;
+        spinning = false;
+        if (Closed) return;
+        chosen = six[landing % six.Count];
+        title.Text = chosen.Title;
         meta.Text = chosen.Meta + (chosen.Genres.Length > 0 ? "\n" + chosen.Genres : "");
-        if (((Border)((StackPanel)title.Parent).Children[0]).RenderTransform is ScaleTransform scale)
-        { var pop = new DoubleAnimation(1.06, TimeSpan.FromMilliseconds(160)) { AutoReverse = true }; scale.BeginAnimation(ScaleTransform.ScaleXProperty, pop); scale.BeginAnimation(ScaleTransform.ScaleYProperty, pop); }
+        var win = cards[landing];
+        win.BorderBrush = (Brush)Application.Current.Resources["AccentGradient"]; win.BorderThickness = new Thickness(3);
+        win.Effect = new System.Windows.Media.Effects.DropShadowEffect { Color = Color.FromRgb(0xFF, 0x4D, 0x67), BlurRadius = 30, ShadowDepth = 0, Opacity = 0.8 };
+        var pop = new DoubleAnimation(1.12, TimeSpan.FromMilliseconds(180)) { AutoReverse = true };
+        ((ScaleTransform)win.RenderTransform).BeginAnimation(ScaleTransform.ScaleXProperty, pop); ((ScaleTransform)win.RenderTransform).BeginAnimation(ScaleTransform.ScaleYProperty, pop);
+        win.Cursor = Cursors.Hand; win.MouseLeftButtonUp += (_, _) => { if (chosen != null) Extras.Open(chosen); };
         spin.IsEnabled = open.IsEnabled = true;
     }
 }

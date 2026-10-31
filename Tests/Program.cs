@@ -171,6 +171,7 @@ internal static class Program
         var older = Progress.Merge(progressStore, System.Text.Json.Nodes.JsonNode.Parse("{\"anime_id\":77,\"episode\":\"1\",\"updated_at\":\"2000-01-01T00:00:00Z\"}"));
         var newer = Progress.Merge(progressStore, System.Text.Json.Nodes.JsonNode.Parse("{\"anime_id\":88,\"episode\":\"5\",\"dubbing\":\"Amedia\",\"player\":\"Kodik\",\"position\":42.5,\"watched\":[\"1\",\"2\"],\"title\":\"С телефона\",\"updated_at\":\"2999-01-01T00:00:00Z\"}"));
         Check(!older && newer && Progress.Get(progressStore, 88)!.Position == 42.5 && progressStore.Data.History.First().Anime.Title == "С телефона" && progressStore.Data.History.First().Number == "5", "synced progress merges newest and appears in continue watching");
+        Check(RoulettePage.Target(2) == (RoulettePage.Laps * RoulettePage.Picks + 2) * 0.62 && RoulettePage.Ease(0) == 0 && RoulettePage.Ease(1) == 1 && RoulettePage.Ease(0.5) > 0.9, "roulette drum lands on the winner after full laps and slows down");
         var unsafeRejected = false; try { StreamResolver.SafeUri("https://127.0.0.1/x"); } catch (InvalidOperationException) { unsafeRejected = true; }
         Check(unsafeRejected, "proxy refuses local addresses");
         var store2 = new LocalStore(Path.Combine(root, "positions")); store2.Data.Positions["5"] = 42; store2.Save();
