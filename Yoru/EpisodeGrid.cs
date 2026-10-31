@@ -31,7 +31,7 @@ public static class EpisodeGrid
             var watched = progress?.IsWatched(episode.Number) ?? false;
             var isCurrent = episode.Number == current;
             var started = !watched && progress != null && progress.Episode == episode.Number && progress.Duration > 0 && progress.Position > 5 ? Math.Min(1, progress.Position / progress.Duration) : 0;
-            var tile = new Grid { Width = 70, Height = 54, Margin = new Thickness(0, 0, 8, 8), Cursor = System.Windows.Input.Cursors.Hand, Background = Brushes.Transparent };
+            var tile = new Grid { Width = 74, Height = 58, Margin = new Thickness(0, 0, 10, 10), Cursor = System.Windows.Input.Cursors.Hand, Background = Brushes.Transparent };
             var body = new Border
             {
                 CornerRadius = new CornerRadius(12), Background = watched ? SeenTile : Tile, ClipToBounds = true,
@@ -40,8 +40,7 @@ public static class EpisodeGrid
                 Effect = isCurrent ? new System.Windows.Media.Effects.DropShadowEffect { Color = Color.FromRgb(0xFF, 0x4D, 0x67), BlurRadius = 14, ShadowDepth = 0, Opacity = 0.6 } : null
             };
             var inner = new Grid();
-            inner.Children.Add(new TextBlock { Text = episode.Number, FontSize = 17, FontWeight = FontWeights.SemiBold, Foreground = watched ? SeenText : Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap, Margin = new Thickness(8, 0, 8, 2) });
-            if (isCurrent) inner.Children.Add(new TextBlock { Text = "сейчас", FontSize = 9, Foreground = Accent, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 4, 0, 0) });
+            inner.Children.Add(new TextBlock { Text = episode.Number, FontSize = 18, FontWeight = FontWeights.SemiBold, Foreground = isCurrent ? Accent : watched ? SeenText : Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap, Margin = new Thickness(8, 0, 8, 2) });
             // Полоска снизу: целиком — просмотрено, частично — где остановился.
             var fill = watched ? 1 : started;
             if (fill > 0)
@@ -112,14 +111,14 @@ public static class EpisodeGrid
     public static FrameworkElement Franchise(Anime anime, LocalStore store, Action<FranchisePart> open, Action refresh)
     {
         var parts = anime.Franchise;
-        var panel = new StackPanel { Margin = new Thickness(0, 24, 0, 0) };
+        var panel = new StackPanel { Margin = new Thickness(0, 36, 0, 0) };
         if (parts.Count < 2) return panel;
         var done = parts.Count(f => Progress.Get(store, f.AnimeId)?.Complete == true);
         var head = new DockPanel();
-        head.Children.Add(new TextBlock { Text = "Порядок просмотра", FontSize = 18, FontWeight = FontWeights.SemiBold });
-        head.Children.Add(new TextBlock { Text = $"просмотрено {done} из {parts.Count}", Foreground = Muted, FontSize = 12, Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
+        head.Children.Add(new TextBlock { Text = "Порядок просмотра", FontSize = 20, FontWeight = FontWeights.SemiBold });
+        head.Children.Add(new TextBlock { Text = $"просмотрено {done} из {parts.Count}", Foreground = Muted, FontSize = 12, Margin = new Thickness(14, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
         panel.Children.Add(head);
-        var bar = new Grid { Height = 6, Margin = new Thickness(0, 10, 0, 12) };
+        var bar = new Grid { Height = 6, Margin = new Thickness(0, 14, 0, 18) };
         bar.Children.Add(new Border { Background = Tile, CornerRadius = new CornerRadius(3) });
         bar.Children.Add(new Border { Background = (Brush)Application.Current.FindResource("AccentGradient"), CornerRadius = new CornerRadius(3), HorizontalAlignment = HorizontalAlignment.Left, Width = 0, Tag = (double)done / parts.Count });
         bar.SizeChanged += (_, e) => ((Border)bar.Children[1]).Width = e.NewSize.Width * (double)((Border)bar.Children[1]).Tag;
@@ -127,20 +126,20 @@ public static class EpisodeGrid
         for (var i = 0; i < parts.Count; i++)
         {
             var part = parts[i]; var p = Progress.Get(store, part.AnimeId); var here = part.AnimeId == anime.Id;
-            var row = new Grid { Margin = new Thickness(0, 0, 0, 8) };
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(28) });
+            var row = new Grid { Margin = new Thickness(0, 0, 0, 10) };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(32) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             row.Children.Add(new TextBlock { Text = (i + 1).ToString(), Foreground = Muted, FontSize = 13, VerticalAlignment = VerticalAlignment.Center });
             var state = p?.Complete == true ? "☾ просмотрено" : p is { Episode.Length: > 0 } ? $"▶ серия {p.Episode}" : p?.WatchedCount > 0 ? $"просмотрено серий: {p.WatchedCount}" : "";
             var info = new StackPanel();
             info.Children.Add(new TextBlock { Text = part.Title, FontSize = 14, FontWeight = here ? FontWeights.SemiBold : FontWeights.Normal, Foreground = here ? Accent : Brushes.White, TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap });
-            info.Children.Add(new TextBlock { Text = string.Join("  ·  ", new[] { part.Relation, part.Type, part.Year > 0 ? part.Year.ToString() : "", here ? "открыто сейчас" : "", state }.Where(s => s.Length > 0)), FontSize = 12, Foreground = Muted, TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis });
-            var openButton = new Button { Content = info, Background = here ? new SolidColorBrush(Color.FromRgb(0x24, 0x18, 0x1E)) : Tile, Padding = new Thickness(12, 8, 12, 8), HorizontalContentAlignment = HorizontalAlignment.Stretch, IsEnabled = !here };
+            info.Children.Add(new TextBlock { Text = string.Join("  ·  ", new[] { part.Relation, part.Type, part.Year > 0 ? part.Year.ToString() : "", here ? "открыто сейчас" : "", state }.Where(s => s.Length > 0)), FontSize = 12, Foreground = Muted, Margin = new Thickness(0, 4, 0, 0), TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis });
+            var openButton = new Button { Content = info, Background = here ? new SolidColorBrush(Color.FromRgb(0x24, 0x18, 0x1E)) : Tile, Padding = new Thickness(16, 12, 16, 12), HorizontalContentAlignment = HorizontalAlignment.Stretch, IsEnabled = !here };
             openButton.Click += (_, _) => open(part);
             Grid.SetColumn(openButton, 1); row.Children.Add(openButton);
             var complete = p?.Complete == true;
-            var check = new Button { Content = complete ? "☾" : "○", Width = 38, Margin = new Thickness(8, 0, 0, 0), Foreground = complete ? SeenText : Muted, Background = complete ? SeenTile : Tile, FontSize = 16, ToolTip = complete ? "Снять отметку" : "Отметить часть просмотренной" };
+            var check = new Button { Content = complete ? "☾" : "○", Width = 44, Margin = new Thickness(10, 0, 0, 0), Foreground = complete ? SeenText : Muted, Background = complete ? SeenTile : Tile, FontSize = 16, ToolTip = complete ? "Снять отметку" : "Отметить часть просмотренной" };
             System.Windows.Automation.AutomationProperties.SetName(check, (complete ? "Снять отметку: " : "Отметить просмотренной: ") + part.Title);
             check.Click += (_, _) => { Progress.SetWatched(store, new Anime { Id = part.AnimeId, Title = part.Title, Poster = part.Poster }, Progress.All, !complete); refresh(); };
             Grid.SetColumn(check, 2); row.Children.Add(check);

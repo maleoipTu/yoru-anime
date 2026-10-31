@@ -90,23 +90,23 @@ final class Extras {
 
  // ───────── Статистика профиля ─────────
  static LinearLayout stats(Activity a,Account account,String username){
-  LinearLayout card=Ui.padded(a,16);card.setBackground(Ui.outlined(a,Ui.PANEL,22));TextView head=Ui.title(a,"Статистика",17);card.addView(head);TextView wait=hint(a,"Считаем…");Ui.add(card,wait,8);
+  LinearLayout card=Ui.padded(a,Ui.PANEL_PAD);card.setBackground(Ui.outlined(a,Ui.PANEL,24));TextView head=Ui.title(a,"Статистика",19);card.addView(head);TextView wait=hint(a,"Считаем…");Ui.add(card,wait,10);
   async(a,()->account.anonRpc("watch_stats",new JSONObject().put("p_username",username)),value->{
    card.removeView(wait);if(!(value instanceof JSONObject))return;JSONObject s=(JSONObject)value;
    LinearLayout numbers=Ui.row(a);String[][] cells={{s.optString("hours","0"),"часов"},{String.valueOf(s.optInt("episodes")),"серий"},{String.valueOf(s.optInt("anime")),"аниме"},{s.isNull("avg_score")?"—":String.format(Locale.ROOT,"%.1f",s.optDouble("avg_score")),"средняя оценка"}};
    for(int i=0;i<cells.length;i++){LinearLayout cell=Ui.column(a);cell.setGravity(Gravity.CENTER_HORIZONTAL);TextView n=Ui.title(a,cells[i][0],20);n.setTextColor(i==0?Ui.ACCENT:i==3?Ui.WARM:Ui.TEXT);cell.addView(n);TextView l=Ui.text(a,cells[i][1],11,Ui.MUTED);l.setGravity(Gravity.CENTER);cell.addView(l);numbers.addView(cell,new LinearLayout.LayoutParams(0,-2,1));}
-   Ui.add(card,numbers,12);
+   Ui.add(card,numbers,16);
    JSONArray genres=s.optJSONArray("genres");
-   if(genres!=null&&genres.length()>0){Ui.add(card,Ui.title(a,"Любимые жанры",14),16);int max=1;for(int i=0;i<genres.length();i++)max=Math.max(max,genres.optJSONObject(i).optInt("count"));
+   if(genres!=null&&genres.length()>0){Ui.add(card,Ui.title(a,"Любимые жанры",15),24);int max=1;for(int i=0;i<genres.length();i++)max=Math.max(max,genres.optJSONObject(i).optInt("count"));
     int[] palette={0xFFFF4D67,0xFFFF8A3D,0xFFFFC14D,0xFF4ADE80,0xFF6FC3FF,0xFFB388FF,0xFFFF8FB8,0xFF7EDCA9,0xFF9FD8FF,0xFFFFE08A};
     for(int i=0;i<Math.min(6,genres.length());i++){JSONObject g=genres.optJSONObject(i);LinearLayout row=Ui.row(a);TextView name=Ui.text(a,g.optString("genre"),12,Ui.TEXT);name.setMaxLines(1);name.setEllipsize(TextUtils.TruncateAt.END);row.addView(name,new LinearLayout.LayoutParams(Ui.dp(a,110),-2));
      FrameLayout track=new FrameLayout(a);track.setBackground(Ui.shape(a,Ui.RAISED,6));View bar=new View(a);bar.setBackground(Ui.shape(a,palette[i%palette.length],6));float share=g.optInt("count")/(float)max;track.addView(bar,new FrameLayout.LayoutParams(0,-1));track.post(()->{bar.getLayoutParams().width=Math.max(Ui.dp(a,6),Math.round(track.getWidth()*share));bar.requestLayout();});
-     row.addView(track,new LinearLayout.LayoutParams(0,Ui.dp(a,12),1));TextView count=Ui.text(a,String.valueOf(g.optInt("count")),12,Ui.MUTED);count.setGravity(Gravity.END);row.addView(count,new LinearLayout.LayoutParams(Ui.dp(a,32),-2));Ui.add(card,row,8);}}
+     row.addView(track,new LinearLayout.LayoutParams(0,Ui.dp(a,12),1));TextView count=Ui.text(a,String.valueOf(g.optInt("count")),12,Ui.MUTED);count.setGravity(Gravity.END);row.addView(count,new LinearLayout.LayoutParams(Ui.dp(a,32),-2));Ui.add(card,row,10);}}
    JSONArray week=s.optJSONArray("weekdays");
    if(week!=null&&week.length()==7){int total=0,max=1;for(int i=0;i<7;i++){total+=week.optInt(i);max=Math.max(max,week.optInt(i));}
-    if(total>0){Ui.add(card,Ui.title(a,"Когда смотрит",14),16);LinearLayout bars=Ui.row(a);bars.setGravity(Gravity.BOTTOM);String[] days={"Пн","Вт","Ср","Чт","Пт","Сб","Вс"};
+    if(total>0){Ui.add(card,Ui.title(a,"Когда смотрит",15),24);LinearLayout bars=Ui.row(a);bars.setGravity(Gravity.BOTTOM);String[] days={"Пн","Вт","Ср","Чт","Пт","Сб","Вс"};
      for(int i=0;i<7;i++){LinearLayout col=Ui.column(a);col.setGravity(Gravity.CENTER_HORIZONTAL|Gravity.BOTTOM);View b=new View(a);b.setBackground(Ui.gradient(a,Ui.ACCENT2,Ui.ACCENT,6,android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM));col.addView(b,new LinearLayout.LayoutParams(Ui.dp(a,18),Math.max(Ui.dp(a,4),Math.round(Ui.dp(a,56)*week.optInt(i)/(float)max))));TextView d=Ui.text(a,days[i],11,Ui.MUTED);Ui.add(col,d,4);bars.addView(col,new LinearLayout.LayoutParams(0,Ui.dp(a,80),1));}
-     Ui.add(card,bars,8);}}
+     Ui.add(card,bars,12);}}
    JSONObject scores=s.optJSONObject("scores");
    if(scores!=null&&scores.length()>0){StringBuilder line=new StringBuilder("Оценки: ");for(int sc=10;sc>=1;sc--)if(scores.optInt(String.valueOf(sc))>0)line.append(sc).append("★×").append(scores.optInt(String.valueOf(sc))).append("  ");Ui.add(card,Ui.text(a,line.toString().trim(),12,Ui.MUTED),12);}
    if(s.optInt("episodes")==0&&(genres==null||genres.length()==0))Ui.add(card,hint(a,"Статистика появится после первых серий в плеере Yoru."),8);

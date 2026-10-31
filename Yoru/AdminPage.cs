@@ -15,7 +15,7 @@ public sealed class AdminPage : UserControl
     readonly AccountClient account;
     readonly StackPanel body = new();
     readonly TextBlock status = new() { FontSize = 12, Margin = new Thickness(0, 8, 0, 0), TextWrapping = TextWrapping.Wrap, Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x9A, 0x8B)) };
-    readonly StackPanel tabs = new() { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 16, 0, 12) };
+    readonly StackPanel tabs = new() { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 24, 0, 20) };
     static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(0x9C, 0x9C, 0xA8));
     static readonly Brush Card = new SolidColorBrush(Color.FromRgb(0x1C, 0x1C, 0x23));
     string tab = "stats";
@@ -23,18 +23,19 @@ public sealed class AdminPage : UserControl
     public AdminPage(AccountClient client)
     {
         account = client;
-        var root = new DockPanel { Margin = new Thickness(28, 24, 28, 18) };
+        var root = new DockPanel { Margin = new Thickness(40, 32, 40, 20) };
         var header = new DockPanel();
         var back = new Button { Content = "←  Назад" }; back.Click += (_, _) => Shell.Back();
         DockPanel.SetDock(back, Dock.Right); header.Children.Add(back);
         var titles = new StackPanel();
-        titles.Children.Add(new TextBlock { Text = "⚑  АДМИНИСТРИРОВАНИЕ", FontSize = 11, FontWeight = FontWeights.SemiBold, Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xC7, 0x68)) });
-        titles.Children.Add(new TextBlock { Text = "Админ-панель Yoru", FontSize = 26, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 6, 0, 0) });
+        titles.Children.Add(new TextBlock { Text = "⚑  Администрирование", FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xC7, 0x68)) });
+        titles.Children.Add(new TextBlock { Text = "Админ-панель Yoru", Style = (Style)Application.Current.Resources["PageTitle"], Margin = new Thickness(0, 8, 0, 0) });
+        titles.Children.Add(new Border { Style = (Style)Application.Current.Resources["Dawn"] });
         header.Children.Add(titles);
         var top = new StackPanel(); top.Children.Add(header);
         foreach (var (key, label) in new[] { ("stats", "Обзор"), ("users", "Пользователи"), ("reviews", "Отзывы"), ("decorations", "Украшения"), ("log", "Журнал") })
         {
-            var button = new Button { Content = label, Margin = new Thickness(0, 0, 8, 0), Tag = key };
+            var button = new Button { Content = label, Margin = new Thickness(0, 0, 10, 0), Tag = key };
             button.Click += async (_, _) => { tab = key; await Show(); };
             tabs.Children.Add(button);
         }
@@ -64,7 +65,7 @@ public sealed class AdminPage : UserControl
         await Run(job);
     }
 
-    static Border Box(UIElement child) => new() { Background = Card, CornerRadius = new CornerRadius(14), Padding = new Thickness(18), Margin = new Thickness(0, 0, 0, 12), Child = child };
+    static Border Box(UIElement child) => new() { Background = Card, CornerRadius = new CornerRadius(18), Padding = new Thickness(22), Margin = new Thickness(0, 0, 0, 16), Child = child };
     static TextBlock Line(string text, double size = 14, Brush? color = null, bool bold = false) => new() { Text = text, FontSize = size, Foreground = color ?? Brushes.WhiteSmoke, FontWeight = bold ? FontWeights.SemiBold : FontWeights.Normal, TextWrapping = TextWrapping.Wrap };
 
     async Task Stats()
@@ -77,7 +78,7 @@ public sealed class AdminPage : UserControl
             var tile = new StackPanel { Width = 170 };
             tile.Children.Add(Line(Rewards.Points(AccountClient.Int(s, key)), 24, new SolidColorBrush(Color.FromRgb(0xFF, 0x8A, 0x9B)), true));
             tile.Children.Add(Line(label, 12, Muted));
-            grid.Children.Add(new Border { Background = Card, CornerRadius = new CornerRadius(14), Padding = new Thickness(16), Margin = new Thickness(0, 0, 10, 10), Child = tile });
+            grid.Children.Add(new Border { Background = Card, CornerRadius = new CornerRadius(16), Padding = new Thickness(20), Margin = new Thickness(0, 0, 12, 12), Child = tile });
         }
         body.Children.Add(grid);
         var topPanel = new StackPanel(); topPanel.Children.Add(Line("Топ по очкам за всё время", 16, null, true));

@@ -29,13 +29,13 @@ public partial class PlayerPage
         roomTimer.Tick += async (_, _) => await Poll();
         foreach (var (title, key) in new[] { ("Плеер", "player"), ("Вместе", "party"), ("Чат серии", "comments") })
         {
-            var tab = new ToggleButton { Content = title, Style = (Style)Application.Current.Resources["Chip"], Padding = new Thickness(6, 8, 6, 8), Margin = new Thickness(0, 0, 6, 0), Tag = key, IsChecked = key == "player" };
+            var tab = new ToggleButton { Content = title, Style = (Style)Application.Current.Resources["Chip"], Padding = new Thickness(6, 10, 6, 10), Margin = new Thickness(0, 0, 6, 0), Tag = key, IsChecked = key == "player" };
             tab.Click += (_, _) => SelectTab(key);
             tabs.Add(tab); SidebarTabs.Children.Add(tab);
         }
         // Метки опенинга/эндинга — в конце вкладки «Плеер».
-        SettingsPanel.Children.Add(new Border { Height = 1, Background = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x33)), Margin = new Thickness(0, 22, 0, 18) });
-        SettingsPanel.Children.Add(new TextBlock { Text = "Отметить заставку", FontSize = 14, FontWeight = FontWeights.SemiBold });
+        SettingsPanel.Children.Add(new Border { Height = 1, Background = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x33)), Margin = new Thickness(0, 28, 0, 24) });
+        SettingsPanel.Children.Add(new TextBlock { Text = "Отметить заставку", FontSize = 16, FontWeight = FontWeights.SemiBold });
         SettingsPanel.Children.Add(new TextBlock { Text = "Поставь видео на начало опенинга или эндинга, нажми «Начало», затем на конец — «Конец». Кнопка пропуска у всех будет вести точно на конец заставки.", FontSize = 12, Foreground = Extras.Muted, TextWrapping = TextWrapping.Wrap, LineHeight = 19, Margin = new Thickness(0, 8, 0, 10) });
         var kind = new ComboBox { ItemsSource = new[] { "Опенинг", "Эндинг" }, SelectedIndex = 0, MinWidth = 0 };
         var range = new TextBlock { FontSize = 12, Foreground = Extras.Muted, Margin = new Thickness(0, 8, 0, 8) };
@@ -98,7 +98,7 @@ public partial class PlayerPage
         partyPanel.Children.Clear();
         if (roomCode.Length == 0)
         {
-            partyPanel.Children.Add(new TextBlock { Text = "Смотреть вместе", FontSize = 18, FontWeight = FontWeights.SemiBold });
+            partyPanel.Children.Add(new TextBlock { Text = "Смотреть вместе", FontSize = 20, FontWeight = FontWeights.SemiBold });
             partyPanel.Children.Add(new TextBlock { Text = "Пауза, перемотка и выбор серии синхронизируются у всех участников. В комнате есть чат и реакции.", FontSize = 12, Foreground = Extras.Muted, TextWrapping = TextWrapping.Wrap, LineHeight = 19, Margin = new Thickness(0, 8, 0, 14) });
             var error = new TextBlock { FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x9A, 0x8B)), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0) };
             var create = new Button { Content = "Создать комнату", Style = (Style)Application.Current.Resources["Primary"], Padding = new Thickness(10, 11, 10, 11) };
@@ -119,7 +119,7 @@ public partial class PlayerPage
             partyPanel.Children.Add(create); partyPanel.Children.Add(code); partyPanel.Children.Add(join); partyPanel.Children.Add(error);
             return;
         }
-        var head = new TextBlock { Text = "Комната " + roomCode, FontSize = 18, FontWeight = FontWeights.SemiBold, Tag = "head" };
+        var head = new TextBlock { Text = "Комната " + roomCode, FontSize = 20, FontWeight = FontWeights.SemiBold, Tag = "head" };
         partyPanel.Children.Add(head);
         var actions = new UniformGrid { Columns = 2, Margin = new Thickness(0, 10, 0, 12) };
         var copy = new Button { Content = "Скопировать код", Margin = new Thickness(0, 0, 4, 0), Padding = new Thickness(6, 8, 6, 8) };

@@ -13,10 +13,10 @@ public sealed class SocialPanel
     readonly LocalStore store;
     public Anime Anime { get; set; }
     public Border Root { get; }
-    readonly ComboBox listBox = new() { MinWidth = 190, Margin = new Thickness(0, 0, 12, 0) };
-    readonly TextBlock rating = new() { Foreground = new SolidColorBrush(Color.FromRgb(0x9A, 0x98, 0xB0)), FontSize = 13, Margin = new Thickness(0, 12, 0, 0), TextWrapping = TextWrapping.Wrap };
-    readonly StackPanel reviews = new() { Margin = new Thickness(0, 8, 0, 0) };
-    readonly StackPanel editor = new() { Visibility = Visibility.Collapsed, Margin = new Thickness(0, 12, 0, 0) };
+    readonly ComboBox listBox = new() { MinWidth = 200, Margin = new Thickness(0, 0, 12, 0) };
+    readonly TextBlock rating = new() { Foreground = new SolidColorBrush(Color.FromRgb(0x9A, 0x98, 0xB0)), FontSize = 13, Margin = new Thickness(0, 16, 0, 0), TextWrapping = TextWrapping.Wrap };
+    readonly StackPanel reviews = new() { Margin = new Thickness(0, 12, 0, 0) };
+    readonly StackPanel editor = new() { Visibility = Visibility.Collapsed, Margin = new Thickness(0, 16, 0, 0) };
     readonly Button rateButton = new() { Content = "Оценить", Margin = new Thickness(0, 0, 0, 0) };
     readonly TextBlock message = new() { Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x9A, 0x8B)), FontSize = 12, Margin = new Thickness(0, 8, 0, 0), TextWrapping = TextWrapping.Wrap };
     JsonObject? mine;
@@ -26,15 +26,15 @@ public sealed class SocialPanel
     {
         owner = window; Anime = anime; store = local;
         var panel = new StackPanel();
-        panel.Children.Add(new TextBlock { Text = "Мой список и оценки", FontSize = 18, FontWeight = FontWeights.SemiBold });
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 12, 0, 0) };
+        panel.Children.Add(new TextBlock { Text = "Мой список и оценки", FontSize = 20, FontWeight = FontWeights.SemiBold });
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 16, 0, 0) };
         listBox.Items.Add("Не в списке"); foreach (var s in AccountClient.Lists) listBox.Items.Add(AccountClient.ListLabel(s));
         System.Windows.Automation.AutomationProperties.SetName(listBox, "Список");
         listBox.SelectionChanged += async (_, _) => { if (!syncing) await ChangeList(); };
         rateButton.Click += (_, _) => ToggleEditor();
         actions.Children.Add(listBox); actions.Children.Add(rateButton);
         panel.Children.Add(actions); panel.Children.Add(editor); panel.Children.Add(message); panel.Children.Add(rating); panel.Children.Add(reviews);
-        Root = new Border { Background = new SolidColorBrush(Color.FromRgb(0x16, 0x16, 0x1B)), BorderBrush = new SolidColorBrush(Color.FromRgb(0x2C, 0x2D, 0x3A)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(14), Padding = new Thickness(20), Margin = new Thickness(0, 0, 0, 18), Child = panel };
+        Root = new Border { Background = (Brush)Application.Current.Resources["SectionGradient"], BorderBrush = new SolidColorBrush(Color.FromRgb(0x26, 0x26, 0x30)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(20), Padding = new Thickness(28), Margin = new Thickness(0, 0, 0, 32), Child = panel };
         if (!account.Config.Configured) Root.Visibility = Visibility.Collapsed;
     }
 
@@ -65,13 +65,13 @@ public sealed class SocialPanel
             reviews.Children.Clear();
             foreach (var r in all.OfType<JsonObject>().Where(r => AccountClient.Text(r, "body").Length > 0).Take(10))
             {
-                var box = new StackPanel { Margin = new Thickness(0, 6, 0, 6) };
+                var box = new StackPanel { Margin = new Thickness(0, 10, 0, 10) };
                 var person = Decor.Person(r["profiles"], account, $"★ {AccountClient.Int(r, "score")} из 10", 36);
                 var username = AccountClient.Text(r["profiles"], "username");
                 var open = new Button { Content = person, Background = Brushes.Transparent, Padding = new Thickness(0), HorizontalContentAlignment = HorizontalAlignment.Left, HorizontalAlignment = HorizontalAlignment.Left };
                 open.Click += (_, _) => Shell.Navigate(new ProfilePage(account, store, username));
                 box.Children.Add(open);
-                box.Children.Add(new TextBlock { Text = AccountClient.Text(r, "body"), Foreground = new SolidColorBrush(Color.FromRgb(0xCF, 0xCD, 0xDC)), FontSize = 14, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(48, 2, 0, 0) });
+                box.Children.Add(new TextBlock { Text = AccountClient.Text(r, "body"), Foreground = new SolidColorBrush(Color.FromRgb(0xCF, 0xCD, 0xDC)), FontSize = 14, TextWrapping = TextWrapping.Wrap, LineHeight = 22, Margin = new Thickness(48, 4, 0, 0) });
                 reviews.Children.Add(box);
             }
         }
@@ -99,14 +99,14 @@ public sealed class SocialPanel
         for (var i = 1; i <= 10; i++)
         {
             var value = i;
-            var b = new Button { Content = value.ToString(), Width = 42, Padding = new Thickness(0, 8, 0, 8), Margin = new Thickness(0, 0, 6, 0) };
+            var b = new Button { Content = value.ToString(), Width = 44, Padding = new Thickness(0, 12, 0, 12), Margin = new Thickness(0, 0, 8, 0) };
             System.Windows.Automation.AutomationProperties.SetName(b, "Оценка " + value);
             b.Click += (_, _) => { score = value; Paint(); };
             buttons.Add(b); row.Children.Add(b);
         }
         Paint();
         editor.Children.Add(row);
-        var text = new TextBox { Text = mine == null ? "" : AccountClient.Text(mine, "body"), AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 90, MaxLength = 1000, Margin = new Thickness(0, 12, 0, 12) };
+        var text = new TextBox { Text = mine == null ? "" : AccountClient.Text(mine, "body"), AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 96, MaxLength = 1000, Margin = new Thickness(0, 16, 0, 16) };
         System.Windows.Automation.AutomationProperties.SetName(text, "Текст отзыва");
         editor.Children.Add(text);
         var actions = new StackPanel { Orientation = Orientation.Horizontal };

@@ -20,14 +20,14 @@ public final class FriendsActivity extends Activity {
   LinearLayout root=Ui.root(this);
   LinearLayout toolbar=Ui.row(this);toolbar.setPadding(Ui.dp(this,8),Ui.dp(this,4),Ui.dp(this,12),Ui.dp(this,4));
   Button back=Ui.iconButton(this,"back","Назад");back.setOnClickListener(v->finish());toolbar.addView(back);
-  TextView heading=Ui.title(this,"Друзья",19);if(android.os.Build.VERSION.SDK_INT>=28)heading.setAccessibilityHeading(true);LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(0,-2,1);hp.leftMargin=Ui.dp(this,4);toolbar.addView(heading,hp);
+  TextView heading=Ui.title(this,"Друзья",20);if(android.os.Build.VERSION.SDK_INT>=28)heading.setAccessibilityHeading(true);LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(0,-2,1);hp.leftMargin=Ui.dp(this,4);toolbar.addView(heading,hp);
   busyBar=new ProgressBar(this);busyBar.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(Ui.ACCENT));busyBar.setVisibility(View.INVISIBLE);toolbar.addView(busyBar,new LinearLayout.LayoutParams(Ui.dp(this,24),Ui.dp(this,24)));
   root.addView(toolbar);
-  ScrollView scroll=new ScrollView(this);scroll.setVerticalScrollBarEnabled(false);LinearLayout page=Ui.column(this);page.setPadding(Ui.dp(this,16),Ui.dp(this,4),Ui.dp(this,16),Ui.dp(this,32));scroll.addView(page);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+  ScrollView scroll=new ScrollView(this);scroll.setVerticalScrollBarEnabled(false);LinearLayout page=Ui.column(this);page.setPadding(Ui.dp(this,Ui.GUTTER),Ui.dp(this,8),Ui.dp(this,Ui.GUTTER),Ui.dp(this,48));scroll.addView(page);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
   if(!account.signedIn()){page.addView(Ui.text(this,"Войди в профиль, чтобы добавлять друзей.",14,Ui.MUTED));return;}
   // Поиск по нику.
   LinearLayout searchRow=Ui.row(this);searchRow.setPadding(Ui.dp(this,16),0,Ui.dp(this,4),0);searchRow.setBackground(Ui.outlined(this,Ui.PANEL,24));
-  search=new EditText(this);search.setHint("Найти по нику");search.setHintTextColor(Ui.MUTED);search.setTextColor(Ui.TEXT);search.setTextSize(15);search.setSingleLine(true);search.setBackgroundColor(android.graphics.Color.TRANSPARENT);search.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);search.setImeOptions(EditorInfo.IME_ACTION_SEARCH);search.setMinHeight(Ui.dp(this,48));search.setContentDescription("Поиск пользователей по нику");
+  search=new EditText(this);search.setHint("Найти по нику");search.setHintTextColor(Ui.MUTED);search.setTextColor(Ui.TEXT);search.setTextSize(15);search.setSingleLine(true);search.setBackgroundColor(android.graphics.Color.TRANSPARENT);search.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);search.setImeOptions(EditorInfo.IME_ACTION_SEARCH);search.setMinHeight(Ui.dp(this,52));search.setContentDescription("Поиск пользователей по нику");
   searchRow.addView(search,new LinearLayout.LayoutParams(0,-2,1));Button go=Ui.iconButton(this,"search","Найти");go.setOnClickListener(v->find());searchRow.addView(go);
   search.setOnEditorActionListener((v,action,event)->{if(action==EditorInfo.IME_ACTION_SEARCH){find();return true;}return false;});
   page.addView(searchRow);results=Ui.column(this);Ui.add(page,results,4);

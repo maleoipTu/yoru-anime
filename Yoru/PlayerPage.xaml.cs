@@ -445,7 +445,7 @@ public partial class PlayerPage : UserControl
         fullscreen=value;
         Shell.Fullscreen(value);
         PlayerHeader.Visibility=PlayerFooter.Visibility=PlayerSidebar.Visibility=value ? Visibility.Collapsed : Visibility.Visible;
-        SidebarColumn.Width=new GridLength(value ? 0 : 320);
+        SidebarColumn.Width=new GridLength(value ? 0 : 340);
     }
     void RuntimeClick(object sender,RoutedEventArgs e) => MainWindow.OpenLink("https://developer.microsoft.com/microsoft-edge/webview2/");
 }

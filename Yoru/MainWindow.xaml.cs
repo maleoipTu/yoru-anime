@@ -308,7 +308,7 @@ public partial class MainWindow : Window
     public void SetFullscreen(bool value)
     {
         Sidebar.Visibility = value ? Visibility.Collapsed : Visibility.Visible;
-        SideColumn.Width = new GridLength(value ? 0 : 232);
+        SideColumn.Width = new GridLength(value ? 0 : 248);
         if (value) { stateBeforeFullscreen = WindowState; WindowState = WindowState.Normal; WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize; WindowState = WindowState.Maximized; }
         else { WindowState = WindowState.Normal; WindowStyle = WindowStyle.SingleBorderWindow; ResizeMode = ResizeMode.CanResize; WindowState = stateBeforeFullscreen; }
     }
@@ -349,14 +349,14 @@ public partial class MainWindow : Window
             foreach (var anime in found)
             {
                 var row = new DockPanel();
-                var poster = new Border { Width = 40, Height = 56, CornerRadius = new CornerRadius(6), ClipToBounds = true, Background = new SolidColorBrush(Color.FromRgb(0x1F, 0x1F, 0x26)) };
+                var poster = new Border { Width = 44, Height = 62, CornerRadius = new CornerRadius(8), ClipToBounds = true, Background = new SolidColorBrush(Color.FromRgb(0x1F, 0x1F, 0x26)) };
                 if (Uri.TryCreate(anime.ImagePath, UriKind.Absolute, out var uri)) poster.Child = new Image { Source = new BitmapImage(uri), Stretch = Stretch.UniformToFill };
                 DockPanel.SetDock(poster, Dock.Left); row.Children.Add(poster);
-                var text2 = new StackPanel { Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+                var text2 = new StackPanel { Margin = new Thickness(14, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
                 text2.Children.Add(new TextBlock { Text = anime.Title, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap });
-                text2.Children.Add(new TextBlock { Text = (anime.Rating > 0 ? anime.Score + "  ·  " : "") + anime.Meta, FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0x9C, 0x9C, 0xA8)), Margin = new Thickness(0, 3, 0, 0), TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis });
+                text2.Children.Add(new TextBlock { Text = (anime.Rating > 0 ? anime.Score + "  ·  " : "") + anime.Meta, FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0x9C, 0x9C, 0xA8)), Margin = new Thickness(0, 5, 0, 0), TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis });
                 row.Children.Add(text2);
-                var button = new Button { Content = row, Background = Brushes.Transparent, HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(8, 6, 8, 6) };
+                var button = new Button { Content = row, Background = Brushes.Transparent, HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(10, 8, 10, 8) };
                 System.Windows.Automation.AutomationProperties.SetName(button, anime.Title);
                 button.Click += (_, _) => OpenAnime(anime);
                 SuggestList.Children.Add(button);
@@ -410,25 +410,25 @@ public partial class MainWindow : Window
     {
         if (genreList == null) try { genreList = await api.Genres(default); } catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidOperationException or JsonException) { genreList = []; }
         var chosen = new HashSet<int>(filterGenres);
-        var panel = new StackPanel { Width = 600 };
-        panel.Children.Add(new TextBlock { Text = "Жанры", FontSize = 15, FontWeight = FontWeights.SemiBold });
-        var wrap = new WrapPanel { Margin = new Thickness(0, 10, 0, 0) };
+        var panel = new StackPanel { Width = 640 };
+        panel.Children.Add(new TextBlock { Text = "Жанры", FontSize = 16, FontWeight = FontWeights.SemiBold });
+        var wrap = new WrapPanel { Margin = new Thickness(0, 12, 0, 0) };
         foreach (var (id, title) in genreList)
         {
-            var toggle = new ToggleButton { Content = title, IsChecked = chosen.Contains(id), Margin = new Thickness(0, 0, 6, 6), Padding = new Thickness(12, 6, 12, 6), Style = (Style)FindResource("Chip") };
+            var toggle = new ToggleButton { Content = title, IsChecked = chosen.Contains(id), Margin = new Thickness(0, 0, 8, 8), Padding = new Thickness(14, 8, 14, 8), Style = (Style)FindResource("Chip") };
             toggle.Checked += (_, _) => chosen.Add(id); toggle.Unchecked += (_, _) => chosen.Remove(id);
             wrap.Children.Add(toggle);
         }
         if (genreList.Count == 0) wrap.Children.Add(new TextBlock { Text = "Жанры не загрузились — годы и рейтинг работают.", Foreground = new SolidColorBrush(Color.FromRgb(0x9C, 0x9C, 0xA8)) });
-        panel.Children.Add(new ScrollViewer { Content = wrap, MaxHeight = 220 });
+        panel.Children.Add(new ScrollViewer { Content = wrap, MaxHeight = 240 });
         var years = Enumerable.Range(1960, DateTime.Now.Year - 1958).Reverse().Select(y => y.ToString()).Prepend("Любой").ToList();
         var from = new ComboBox { ItemsSource = years, SelectedItem = filterFrom > 0 ? filterFrom.ToString() : "Любой", Margin = new Thickness(0, 0, 12, 0) };
         var to = new ComboBox { ItemsSource = years, SelectedItem = filterTo > 0 ? filterTo.ToString() : "Любой" };
         var ages = new[] { "Любой", "0+", "6+", "12+", "16+", "18+" };
         var age = new ComboBox { ItemsSource = ages, SelectedItem = filterAge < 0 ? "Любой" : filterAge + "+" , Margin = new Thickness(12, 0, 0, 0) };
-        var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 16, 0, 0) };
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 24, 0, 0) };
         foreach (var (label, box) in new (string, ComboBox)[] { ("С года", from), ("По год", to), ("Рейтинг", age) })
-        { var col = new StackPanel(); col.Children.Add(new TextBlock { Text = label, FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0x9C, 0x9C, 0xA8)), Margin = new Thickness(0, 0, 0, 6) }); col.Children.Add(box); row.Children.Add(col); }
+        { var col = new StackPanel(); col.Children.Add(new TextBlock { Text = label, FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0x9C, 0x9C, 0xA8)), Margin = new Thickness(0, 0, 0, 8) }); col.Children.Add(box); row.Children.Add(col); }
         panel.Children.Add(row);
         var studios = PopularStudios.OrderBy(x => x.Title, StringComparer.OrdinalIgnoreCase).ToList();
         if (filterStudio != null && studios.All(x => x.Id != filterStudio.Id)) studios.Insert(0, filterStudio);
@@ -436,17 +436,17 @@ public partial class MainWindow : Window
         var length = new ComboBox { ItemsSource = Lengths.Select(l => l.Label).ToList(), SelectedIndex = filterLength, Margin = new Thickness(0, 0, 12, 0), MinWidth = 150 };
         var studioBox = new ComboBox { ItemsSource = studioNames, SelectedItem = filterStudio?.Title ?? "Любая", Margin = new Thickness(0, 0, 12, 0), MinWidth = 170, MaxDropDownHeight = 300 };
         var translate = new ComboBox { ItemsSource = Translates.Select(t => t.Label).ToList(), SelectedIndex = Math.Max(0, Array.FindIndex(Translates, t => t.Value == filterTranslate)), MinWidth = 150 };
-        var row2 = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 14, 0, 0) };
+        var row2 = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 16, 0, 0) };
         foreach (var (label, box) in new (string, ComboBox)[] { ("Длительность", length), ("Студия", studioBox), ("Озвучка", translate) })
-        { var col = new StackPanel(); col.Children.Add(new TextBlock { Text = label, FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0x9C, 0x9C, 0xA8)), Margin = new Thickness(0, 0, 0, 6) }); col.Children.Add(box); row2.Children.Add(col); }
+        { var col = new StackPanel(); col.Children.Add(new TextBlock { Text = label, FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0x9C, 0x9C, 0xA8)), Margin = new Thickness(0, 0, 0, 8) }); col.Children.Add(box); row2.Children.Add(col); }
         panel.Children.Add(row2);
-        var finished = new CheckBox { Content = "Только завершённые", IsChecked = filterFinished, Margin = new Thickness(0, 14, 0, 0) };
+        var finished = new CheckBox { Content = "Только завершённые", IsChecked = filterFinished, Margin = new Thickness(0, 20, 0, 0) };
         panel.Children.Add(finished);
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 18, 0, 0) };
-        var apply = new Button { Content = "Показать", Style = (Style)FindResource("Primary") }; var reset = new Button { Content = "Сбросить", Margin = new Thickness(10, 0, 0, 0) };
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 24, 0, 0) };
+        var apply = new Button { Content = "Показать", Style = (Style)FindResource("Primary") }; var reset = new Button { Content = "Сбросить", Margin = new Thickness(12, 0, 0, 0) };
         actions.Children.Add(apply); actions.Children.Add(reset); panel.Children.Add(actions);
         var popup = new Popup { PlacementTarget = FilterButton, Placement = PlacementMode.Bottom, StaysOpen = false, AllowsTransparency = true,
-            Child = new Border { Background = new SolidColorBrush(Color.FromRgb(0x16, 0x16, 0x1B)), BorderBrush = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x33)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(14), Padding = new Thickness(18), Margin = new Thickness(0, 8, 16, 16), Child = panel, Effect = (System.Windows.Media.Effects.Effect)FindResource("Shadow") } };
+            Child = new Border { Background = new SolidColorBrush(Color.FromRgb(0x16, 0x16, 0x1B)), BorderBrush = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x33)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(20), Padding = new Thickness(24), Margin = new Thickness(0, 8, 16, 16), Child = panel, Effect = (System.Windows.Media.Effects.Effect)FindResource("Shadow") } };
         int Parse(object? v) => int.TryParse(v as string, out var y) ? y : 0;
         apply.Click += async (_, _) =>
         {
