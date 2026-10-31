@@ -113,8 +113,7 @@ final class Progress {
    android.graphics.drawable.GradientDrawable bg=seen?new android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR,new int[]{0xFF3A172B,0xFF1E152C}):new android.graphics.drawable.GradientDrawable();
    if(!seen)bg.setColor(Ui.RAISED);bg.setCornerRadius(Ui.dp(a,14));bg.setStroke(Ui.dp(a,here?2:1),here?Ui.ACCENT:seen?0x55FF8A9B:Ui.LINE);
    body.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x24FFFFFF),bg,null));body.setClipToOutline(true);
-   TextView label=Ui.text(a,episode.number,16,seen?0xFFFFB3C1:Ui.TEXT);label.setTypeface(Ui.MEDIUM);label.setGravity(Gravity.CENTER);label.setMaxLines(1);body.addView(label,new FrameLayout.LayoutParams(-1,-1));
-   if(here){TextView now=Ui.text(a,"сейчас",9,Ui.ACCENT);FrameLayout.LayoutParams np=new FrameLayout.LayoutParams(-2,-2,Gravity.TOP|Gravity.CENTER_HORIZONTAL);np.topMargin=Ui.dp(a,4);body.addView(now,np);}
+   TextView label=Ui.text(a,episode.number,16,here?Ui.ACCENT:seen?0xFFFFB3C1:Ui.TEXT);label.setTypeface(Ui.MEDIUM);label.setGravity(Gravity.CENTER);label.setMaxLines(1);body.addView(label,new FrameLayout.LayoutParams(-1,-1));
    float fill=seen?1:started;
    if(fill>0){
     // Тонкая скруглённая полоска внутри плитки, а не по краю.

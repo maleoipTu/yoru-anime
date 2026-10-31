@@ -40,8 +40,7 @@ public static class EpisodeGrid
                 Effect = isCurrent ? new System.Windows.Media.Effects.DropShadowEffect { Color = Color.FromRgb(0xFF, 0x4D, 0x67), BlurRadius = 14, ShadowDepth = 0, Opacity = 0.6 } : null
             };
             var inner = new Grid();
-            inner.Children.Add(new TextBlock { Text = episode.Number, FontSize = 17, FontWeight = FontWeights.SemiBold, Foreground = watched ? SeenText : Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap, Margin = new Thickness(8, 0, 8, 2) });
-            if (isCurrent) inner.Children.Add(new TextBlock { Text = "сейчас", FontSize = 9, Foreground = Accent, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 4, 0, 0) });
+            inner.Children.Add(new TextBlock { Text = episode.Number, FontSize = 17, FontWeight = FontWeights.SemiBold, Foreground = isCurrent ? Accent : watched ? SeenText : Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap, Margin = new Thickness(8, 0, 8, 2) });
             // Полоска снизу: целиком — просмотрено, частично — где остановился.
             var fill = watched ? 1 : started;
             if (fill > 0)
