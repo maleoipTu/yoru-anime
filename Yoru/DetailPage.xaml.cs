@@ -14,6 +14,7 @@ public partial class DetailPage : UserControl
     bool changingSelection;
     bool expanded;
     bool refreshOnActivate;
+    Episode? preferred;
     public bool WantsSettings { get; private set; }
     readonly SocialPanel social;
     public DetailPage(Anime item, YummyClient client, LocalStore local)
@@ -23,7 +24,9 @@ public partial class DetailPage : UserControl
         Loaded += async (_, _) => await social.Refresh();
         IsVisibleChanged += async (_, e) => { if (e.NewValue is true && refreshOnActivate) { refreshOnActivate = false; await social.Refresh(); } };
         Loaded += async (_, _) => await LoadVideos();
-        Unloaded += (_, _) => cts.Cancel();
+        Loaded += (_, _) => Progress.Changed += ProgressChanged;
+        Unloaded += (_, _) => { cts.Cancel(); Progress.Changed -= ProgressChanged; };
+        IsVisibleChanged += (_, e) => { if (e.NewValue is true) { RenderEpisodes(); RenderFranchise(); } };
     }
     void Render()
     {
@@ -32,6 +35,28 @@ public partial class DetailPage : UserControl
         DescriptionText.Text = anime.Description.Length > 0 ? anime.Description : "Описание пока не добавлено.";
         if (Uri.TryCreate(anime.ImagePath, UriKind.Absolute, out var uri)) PosterImage.Source = new BitmapImage(uri);
         UpdateFavorite();
+        StudioChips.Children.Clear();
+        foreach (var studio in anime.Studios)
+        {
+            var chip = new Button { Content = "Студия: " + studio.Title, Padding = new Thickness(12, 5, 12, 5), Margin = new Thickness(0, 0, 6, 6), FontSize = 12, ToolTip = "Показать все аниме студии" };
+            chip.Click += (_, _) => Shell.Main?.ShowStudio(studio);
+            StudioChips.Children.Add(chip);
+        }
+        RenderFranchise();
+    }
+    void ProgressChanged(long id) { if (id == 0 || id == anime.Id || anime.Franchise.Any(f => f.AnimeId == id)) Dispatcher.Invoke(() => { RenderEpisodes(); RenderFranchise(); }); }
+    void RenderFranchise() => FranchiseHost.Content = EpisodeGrid.Franchise(anime, store, part => Shell.Navigate(new DetailPage(new Anime { Id = part.AnimeId, Title = part.Title, Poster = part.Poster }, api, store)), RenderFranchise);
+    /// <summary>Плитки серий выбранной озвучки и плеера с отметками «просмотрено».</summary>
+    void RenderEpisodes()
+    {
+        if (EpisodeBox.ItemsSource is not List<Episode> list || list.Count == 0) { EpisodesSection.Visibility = Visibility.Collapsed; return; }
+        var progress = Progress.Get(store, anime.Id);
+        EpisodesSection.Visibility = Visibility.Visible;
+        var seen = list.Count(v => progress?.IsWatched(v.Number) == true);
+        WatchedText.Text = $"просмотрено {seen} из {list.Count} · кружок в углу — отметить вручную";
+        EpisodeTiles.Content = EpisodeGrid.Build(list, progress, (EpisodeBox.SelectedItem as Episode)?.Number,
+            episode => { EpisodeBox.SelectedItem = episode; WatchClick(this, new RoutedEventArgs()); },
+            episode => { Progress.Toggle(store, anime, episode.Number); RenderEpisodes(); RenderFranchise(); });
     }
     void UpdateFavorite() => FavoriteButton.Content = store.Data.Favorites.Any(a => a.Id == anime.Id) ? "♥  В избранном" : "♡  В избранное";
     async Task LoadVideos()
@@ -47,13 +72,16 @@ public partial class DetailPage : UserControl
             var result = await api.Detail(anime.Id, cts.Token);
             if (cts.IsCancellationRequested) return;
             anime = result.Anime; social.Anime = anime; videos = result.Videos; Render(); _ = AccountClient.Shared.NoteAnime(anime);
+            await Progress.PullAnime(store, anime.Id);
+            if (cts.IsCancellationRequested) return;
             if (videos.Count == 0) { VideoStatus.Text = "Для этого аниме API не вернул доступных видео. Попробуй открыть его на сайте."; return; }
             VideoStatus.Text = $"Доступно серий: {videos.Select(v => v.Number).Distinct().Count()}. Выбери озвучку.";
             Selectors.Visibility = Visibility.Visible;
             WatchButton.Visibility = Visibility.Visible;
             TrackBox.ItemsSource = PlaybackSources.Dubbings(videos);
-            var last = store.Data.History.FirstOrDefault(h => h.Anime.Id == anime.Id);
-            TrackBox.SelectedItem = PlaybackSources.Resume(videos, last)?.Dubbing;
+            // Любимая озвучка этого тайтла (синхронизируется между устройствами), затем — из истории.
+            preferred = Progress.Preferred(videos, Progress.Get(store, anime.Id), store.Data.History.FirstOrDefault(h => h.Anime.Id == anime.Id));
+            TrackBox.SelectedItem = preferred?.Dubbing;
             if (TrackBox.SelectedIndex < 0) TrackBox.SelectedIndex = 0;
         }
         catch (OperationCanceledException) { if (!cts.IsCancellationRequested) Failed("Сервер не ответил вовремя. Попробуй ещё раз."); }
@@ -64,7 +92,7 @@ public partial class DetailPage : UserControl
     {
         if (changingSelection || TrackBox.SelectedItem is not string dubbing) return;
         var old = ProviderBox.SelectedItem as string;
-        var last = PlaybackSources.Resume(videos, store.Data.History.FirstOrDefault(h => h.Anime.Id == anime.Id));
+        var last = preferred;
         changingSelection = true;
         ProviderBox.ItemsSource = PlaybackSources.Players(videos, dubbing);
         ProviderBox.SelectedItem = old ?? (last?.Dubbing == dubbing ? last.Player : null);
@@ -79,9 +107,10 @@ public partial class DetailPage : UserControl
         var selectedNumber = (EpisodeBox.SelectedItem as Episode)?.Number;
         var trackVideos = PlaybackSources.Episodes(videos, dubbing, player);
         EpisodeBox.ItemsSource = trackVideos;
-        var last = store.Data.History.FirstOrDefault(h => h.Anime.Id == anime.Id);
-        EpisodeBox.SelectedItem = trackVideos.FirstOrDefault(v => v.Number == (selectedNumber ?? last?.Number)) ?? trackVideos.FirstOrDefault();
+        EpisodeBox.SelectedItem = trackVideos.FirstOrDefault(v => v.Number == (selectedNumber ?? preferred?.Number)) ?? trackVideos.FirstOrDefault();
+        RenderEpisodes();
     }
+    void EpisodeChanged(object sender, SelectionChangedEventArgs e) { if (!changingSelection) RenderEpisodes(); }
     void FavoriteClick(object sender, RoutedEventArgs e) { store.ToggleFavorite(anime); UpdateFavorite(); }
     void SiteClick(object sender, RoutedEventArgs e) => MainWindow.OpenLink("https://yummyani.me/catalog/item/" + Uri.EscapeDataString(anime.Alias));
     void SetupClick(object sender, RoutedEventArgs e) { WantsSettings = true; Shell.Home("settings"); }

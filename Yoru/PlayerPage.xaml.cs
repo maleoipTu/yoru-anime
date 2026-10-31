@@ -35,8 +35,9 @@ public partial class PlayerPage : UserControl
         SyncSelection(selected);
         SeriesBox.SelectionChanged += (_,_) => { if(!changing) UpdateSelectionHint(); };
         Loaded += async (_, _) => await InitializePlayer();
+        Loaded += (_, _) => { Progress.Changed += ProgressChanged; RenderEpisodes(); };
         BuildSocial();
-        Unloaded += (_, _) => { if(closed) return; closed=true; watchTimer.Stop(); SocialClosed(); resolveCts?.Cancel(); SavePrefs(); if(fullscreen) Shell.Fullscreen(false); Browser.Dispose(); };
+        Unloaded += (_, _) => { Progress.Changed -= ProgressChanged; if(closed) return; closed=true; if(lastSeconds>0) Progress.Track(store,anime,current,lastSeconds,duration,true); watchTimer.Stop(); SocialClosed(); resolveCts?.Cancel(); SavePrefs(); if(fullscreen) Shell.Fullscreen(false); Browser.Dispose(); };
     }
     void Status(string message, string state)
     {
@@ -148,7 +149,7 @@ public partial class PlayerPage : UserControl
                     else if(state=="error") Status("Видео недоступно · можно открыть плеер сайта","error");
                     else if(state=="playing") { Status("Идёт просмотр · "+current.Label,state); Presence(true); }
                     else if(state=="paused") { Status("Пауза · "+current.Label,state); Presence(false); }
-                    else if(state=="ended") { Status("Серия закончилась · можно перейти к следующей",state); if(nativeMode) SavePosition(0, true); }
+                    else if(state=="ended") { Status("Серия закончилась · можно перейти к следующей",state); if(nativeMode) SavePosition(0, true); MarkWatched(current); }
                     else if(state=="time")
                     {
                         var seconds=ApiParser.Number(ApiParser.Field(doc.RootElement,"value"));
@@ -156,6 +157,8 @@ public partial class PlayerPage : UserControl
                         if(length>0) duration=length;
                         if(nativeMode) SavePosition(seconds, false);
                         lastSeconds=seconds;
+                        Progress.Track(store,anime,current,seconds,duration);
+                        AutoWatched(seconds);
                         if(seconds>=1) Status($"Идёт просмотр · {TimeSpan.FromSeconds(seconds):mm\\:ss}","time:"+(int)seconds);
                     }
                     else if(state is "invalid-source" or "frame-error") Failed("Не получилось открыть видео. Выбери другой плеер справа.");
@@ -189,7 +192,11 @@ public partial class PlayerPage : UserControl
     {
         if(!initialized || closed) return;
         if(episode.Id!=current.Id) forceSite=false;
-        current=episode; sourceFailed=false; resolved=null; resolveCts?.Cancel(); duration=0;
+        if(lastSeconds>0 && episode.Id!=current.Id) Progress.Track(store,anime,current,lastSeconds,duration,true);
+        current=episode; sourceFailed=false; resolved=null; resolveCts?.Cancel(); duration=0; lastSeconds=0;
+        // Выбор озвучки и плеера сразу становится любимым для тайтла (и уходит на другие устройства).
+        Progress.Track(store,anime,episode,Progress.StartPosition(store,anime.Id,episode),0,true);
+        RenderEpisodes();
         nativeMode=StreamResolver.Supports(episode.Url) && !forceSite;
         SyncSelection(episode);
         navigationSession=Guid.NewGuid().ToString("N");
@@ -218,7 +225,7 @@ public partial class PlayerPage : UserControl
             var streams=new System.Text.Json.Nodes.JsonArray();
             foreach(var stream in result.Streams) streams.Add(new System.Text.Json.Nodes.JsonObject { ["label"]=stream.Label, ["url"]=stream.Url, ["mime"]=stream.Mime });
             Post(new System.Text.Json.Nodes.JsonObject { ["cmd"]="load", ["session"]=session, ["streams"]=streams, ["quality"]=store.Data.Quality,
-                ["speed"]=store.Data.Speed is >= 0.5 and <= 2 ? store.Data.Speed : 1, ["autoNext"]=store.Data.AutoNext, ["hasNext"]=NextButton.IsEnabled, ["start"]=store.Position(episode.Id) });
+                ["speed"]=store.Data.Speed is >= 0.5 and <= 2 ? store.Data.Speed : 1, ["autoNext"]=store.Data.AutoNext, ["hasNext"]=NextButton.IsEnabled, ["start"]=Progress.StartPosition(store,anime.Id,episode) });
             Status("Плеер Yoru · "+episode.Label,"loaded");
             SendIntro(); RoomLoaded();
             try { store.Started(anime,episode); } catch(IOException) { }
@@ -336,6 +343,30 @@ public partial class PlayerPage : UserControl
         var options=PlaybackSources.Episodes(videos,episode.Dubbing,episode.Player);
         SeriesBox.ItemsSource=options; SeriesBox.SelectedItem=options.FirstOrDefault(v=>v.Id==episode.Id);
         changing=false; UpdateSelectionHint();
+    }
+    // ───── Просмотренные серии ─────
+    long autoMarked=-1;
+    /// <summary>Серия считается просмотренной с начала эндинга (если он размечен) или с 90% длительности.</summary>
+    void AutoWatched(double seconds)
+    {
+        if(autoMarked==current.Id || duration<=0 || seconds<=0) return;
+        var ending=intro["ending"]?["start"] is System.Text.Json.Nodes.JsonValue v && v.TryGetValue<double>(out var s) ? s : 0;
+        if(seconds>=duration*0.9 || (ending>60 && ending<duration && seconds>=ending)) MarkWatched(current);
+    }
+    void MarkWatched(Episode episode)
+    {
+        if(autoMarked==episode.Id) return;
+        autoMarked=episode.Id;
+        if(Progress.Get(store,anime.Id)?.IsWatched(episode.Number)!=true) Progress.SetWatched(store,anime,episode.Number,true);
+    }
+    void ProgressChanged(long id) { if(id==0 || id==anime.Id) Dispatcher.Invoke(RenderEpisodes); }
+    void RenderEpisodes()
+    {
+        if(closed) return;
+        var list=PlaybackSources.Episodes(videos,current.Dubbing,current.Player);
+        var progress=Progress.Get(store,anime.Id);
+        PlayerWatchedText.Text=$"просмотрено {list.Count(v=>progress?.IsWatched(v.Number)==true)} из {list.Count}";
+        PlayerEpisodes.Content=EpisodeGrid.Build(list,progress,current.Number,episode=>{ if(!initialized) { current=episode; _=InitializePlayer(); } else NavigateEpisode(episode); },episode=>Progress.Toggle(store,anime,episode.Number));
     }
     void UpdateSelectionHint()
     {
