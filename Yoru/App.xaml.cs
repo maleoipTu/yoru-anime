@@ -6,7 +6,7 @@ public partial class App : Application
     {
         DispatcherUnhandledException += (_, args) =>
         {
-            MessageBox.Show("Не удалось завершить действие. Попробуйте снова.\n\n" + args.Exception.Message, "Yoru", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show(Current?.MainWindow, "Что-то пошло не так", "Не удалось завершить действие. Попробуй снова.\n\n" + args.Exception.Message);
             args.Handled = true;
         };
         base.OnStartup(e);

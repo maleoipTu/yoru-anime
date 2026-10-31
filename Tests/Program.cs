@@ -117,6 +117,7 @@ internal static class Program
         Check(Rewards.Threshold(null) == TimeSpan.FromMinutes(10) && Rewards.Threshold(TimeSpan.FromMinutes(24)) == TimeSpan.FromMinutes(12) && Rewards.Threshold(TimeSpan.FromMinutes(3)) == TimeSpan.FromMinutes(5), "watch threshold between 5 and 12 minutes");
         Check(Rewards.ValidUsername("haruka_01") && !Rewards.ValidUsername("Haruka") && !Rewards.ValidUsername("ab"), "username rules");
         Check(Rewards.Error("not_enough_points") == "Не хватает очков." && Rewards.Error("Invalid login credentials").StartsWith("Неверная"), "server errors explained in Russian");
+        Check(PlayerPage.LimitRange("bytes=0-") == "bytes=0-8388607" && PlayerPage.LimitRange("bytes=100-200") == "bytes=100-200" && PlayerPage.LimitRange(null) == null, "video proxy range limited to 8 MB chunks");
         Check(ImportPage.UserId("https://old.yummyani.me/users/id529123") == 529123 && ImportPage.UserId(" 1000 ") == 1000 && ImportPage.UserId("yummyani.me") == 0, "old YummyAnime profile id parsed");
         var imported = ImportPage.Item(System.Text.Json.Nodes.JsonNode.Parse("""{"anime_id":1512,"title":"Ван-Пис","poster":{"big":"//static.yani.tv/p.webp"},"genres":[{"title":"Экшен"}],"user":{"rating":9}}""")!, "watching", true);
         Check(AccountClient.Long(imported, "anime_id") == 1512 && AccountClient.Text(imported, "poster") == "//static.yani.tv/p.webp" && imported["genres"]![0]!.ToString() == "Экшен" && imported["score"]!.GetValue<double>() == 9 && AccountClient.Bool(imported, "favorite"), "old YummyAnime list item mapped");
