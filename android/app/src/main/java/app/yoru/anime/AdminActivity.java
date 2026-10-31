@@ -1,6 +1,7 @@
 package app.yoru.anime;
 
 import android.app.*;
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.InputType;
 import android.text.TextUtils;
@@ -93,7 +94,15 @@ public final class AdminActivity extends Activity {
   ok.setOnClickListener(v->{d.dismiss();done.accept(value.getText().toString(),extra==null?"":extra.getText().toString().trim());});
  }
  EditText field(String hint,int type){EditText e=new EditText(this);e.setHint(hint);e.setHintTextColor(Ui.MUTED);e.setTextColor(Ui.TEXT);e.setInputType(type);e.setSingleLine(true);e.setMinHeight(Ui.dp(this,52));e.setPadding(Ui.dp(this,14),0,Ui.dp(this,14),0);e.setBackground(Ui.outlined(this,Ui.RAISED,14));e.setContentDescription(hint);return e;}
- static String kind(String k){return k.equals("frame")?"рамка":k.equals("badge")?"значок":"цвет ника";}
+ static final String[][] KINDS={{"frame","обводка аватара"},{"badge","значок"},{"name_color","цвет ника"},{"avatar_deco","украшение аватара"},{"profile_effect","эффект профиля"},{"profile_frame","рамка профиля"}};
+ static String kind(String k){for(String[] x:KINDS)if(x[0].equals(k))return x[1];return k;}
+ static List<String> kindLabels(){List<String> r=new ArrayList<>();for(String[] x:KINDS)r.add(x[1]);return r;}
+ static String kindId(String label){for(String[] x:KINDS)if(x[1].equals(label))return x[0];return "frame";}
+ static final String STYLE_HELP="Рисунок кодом (необязательно): cat_ears, bunny, halo, horns, headphones, crown, orbit, sakura_wreath, pumpkin — для аватара; sparkles, bubbles, petals, fireflies, hearts, starfall, bats, snow — эффекты; vines, neon, constellation, flames, crystal, moon, cobweb — рамки профиля";
+ EditText pendingImage;static final int PICK_IMAGE=51;
+ @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(request!=PICK_IMAGE||result!=RESULT_OK||data==null||data.getData()==null||pendingImage==null)return;EditText target=pendingImage;android.net.Uri uri=data.getData();
+  background(()->{String mime=getContentResolver().getType(uri);if(mime==null)mime="image/png";byte[] bytes=readAll(uri);if(bytes.length>8*1024*1024)throw new java.io.IOException("Файл больше 8 МБ");String ext=mime.contains("gif")?"gif":mime.contains("webp")?"webp":mime.contains("jpeg")?"jpg":"png";return account.upload("decor-"+System.currentTimeMillis()+"."+ext,bytes,mime);},url->{target.setText(url);Toast.makeText(this,"Картинка загружена",Toast.LENGTH_SHORT).show();});}
+ byte[] readAll(android.net.Uri uri) throws java.io.IOException{try(java.io.InputStream in=getContentResolver().openInputStream(uri);java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream()){if(in==null)throw new java.io.IOException("Файл недоступен");byte[] b=new byte[16384];int n;while((n=in.read(b))!=-1){out.write(b,0,n);if(out.size()>9*1024*1024)break;}return out.toByteArray();}}
 
  void reviews(){background(()->(JSONArray)account.rpc("admin_recent_reviews",new JSONObject().put("p_limit",100)),rows->{
   if(rows.length()==0)content.addView(Ui.text(this,"Отзывов пока нет.",14,Ui.MUTED));
@@ -118,7 +127,7 @@ public final class AdminActivity extends Activity {
   JSONObject src=d==null?new JSONObject():d;JSONObject style=src.optJSONObject("style");if(style==null)style=new JSONObject();
   LinearLayout panel=Ui.column(this);
   EditText id=field("id: латиница, например frame_spring",InputType.TYPE_CLASS_TEXT);id.setText(src.optString("id"));id.setEnabled(d==null);
-  String[] k={src.optString("kind","frame")};Button kindField=Ui.field(this,"Тип");Ui.fieldValue(kindField,"Тип",kind(k[0]));kindField.setOnClickListener(v->Ui.choose(this,"Тип",Arrays.asList("рамка","значок","цвет ника"),kind(k[0]),c->{k[0]=c.equals("рамка")?"frame":c.equals("значок")?"badge":"name_color";Ui.fieldValue(kindField,"Тип",c);}));
+  String[] k={src.optString("kind","frame")};Button kindField=Ui.field(this,"Тип");Ui.fieldValue(kindField,"Тип",kind(k[0]));kindField.setOnClickListener(v->Ui.choose(this,"Тип",kindLabels(),kind(k[0]),c->{k[0]=kindId(c);Ui.fieldValue(kindField,"Тип",c);}));
   EditText title=field("Название",InputType.TYPE_CLASS_TEXT);title.setText(src.optString("title"));
   EditText desc=field("Описание",InputType.TYPE_CLASS_TEXT);desc.setText(src.optString("description"));
   EditText price=field("Цена в очках",InputType.TYPE_CLASS_NUMBER);price.setText(String.valueOf(src.optInt("price",100)));
@@ -128,14 +137,18 @@ public final class AdminActivity extends Activity {
   EditText colorField=field("Цвета через пробел: #FF4D67 #FF8A3D",InputType.TYPE_CLASS_TEXT);colorField.setText(cs.toString());
   EditText glyph=field("Глиф значка, например ★",InputType.TYPE_CLASS_TEXT);glyph.setText(style.optString("glyph"));
   EditText until=field("Продаётся до (ГГГГ-ММ-ДД), пусто — всегда",InputType.TYPE_CLASS_TEXT);until.setText(src.isNull("available_until")?"":src.optString("available_until").length()>=10?src.optString("available_until").substring(0,10):"");
+  EditText styleType=field("Рисунок кодом: cat_ears, sparkles, neon…",InputType.TYPE_CLASS_TEXT);styleType.setText(style.optString("type"));
+  EditText image=field("Своя картинка (https://…, PNG/GIF/WebP)",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);image.setText(style.optString("image_url"));
+  Button pick=Ui.tonal(this,"Загрузить картинку…");pick.setOnClickListener(v->{pendingImage=image;startActivityForResult(new Intent(Intent.ACTION_GET_CONTENT).setType("image/*").putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"image/png","image/gif","image/webp","image/jpeg"}),PICK_IMAGE);});
+  TextView styleHelp=Ui.text(this,STYLE_HELP,11,Ui.MUTED);
   boolean[] flags={style.optBoolean("animated"),style.optBoolean("glow"),src.optBoolean("exclusive"),src.optBoolean("active",true)};
   String[] flagNames={"Вращение рамки","Свечение","Только за достижение","Активно"};
-  for(View v:new View[]{id,kindField,title,desc,price,level,rarityField,colorField,glyph,until})Ui.add(panel,v,8);
+  for(View v:new View[]{id,kindField,title,desc,price,level,rarityField,colorField,glyph,styleType,styleHelp,image,pick,until})Ui.add(panel,v,8);
   for(int i=0;i<flags.length;i++){int index=i;CheckBox box=new CheckBox(this);box.setText(flagNames[i]);box.setTextColor(Ui.TEXT);box.setChecked(flags[i]);box.setButtonTintList(android.content.res.ColorStateList.valueOf(Ui.ACCENT));box.setOnCheckedChangeListener((b,c)->flags[index]=c);Ui.add(panel,box,4);}
   Button save=Ui.button(this,"Сохранить",true);Ui.add(panel,save,16);Dialog dialog=Ui.sheet(this,d==null?"Новое украшение":"Украшение",panel,"Закрыть");
   save.setOnClickListener(v->{try{
     JSONObject st=new JSONObject();String[] parts=colorField.getText().toString().trim().split("\\s+");JSONArray arr=new JSONArray();for(String part:parts)if(part.matches("#[0-9A-Fa-f]{6}"))arr.put(part);
-    if(arr.length()>0)st.put("colors",arr);if(!glyph.getText().toString().trim().isEmpty()){st.put("glyph",glyph.getText().toString().trim());st.put("color",arr.length()>0?arr.getString(0):"#FF4D67");}if(flags[0])st.put("animated",true);if(flags[1])st.put("glow",true);
+    if(arr.length()>0)st.put("colors",arr);if(!glyph.getText().toString().trim().isEmpty()){st.put("glyph",glyph.getText().toString().trim());st.put("color",arr.length()>0?arr.getString(0):"#FF4D67");}if(flags[0])st.put("animated",true);if(flags[1])st.put("glow",true);String typeName=styleType.getText().toString().trim();if(typeName.matches("[a-z_]{2,30}"))st.put("type",typeName);String img=image.getText().toString().trim();if(img.startsWith("https://"))st.put("image_url",img);
     String day=until.getText().toString().trim();
     JSONObject payload=new JSONObject().put("id",id.getText().toString().trim().toLowerCase(Locale.ROOT)).put("kind",k[0]).put("title",title.getText().toString().trim()).put("description",desc.getText().toString().trim())
      .put("price",Integer.parseInt(price.getText().toString().trim().isEmpty()?"0":price.getText().toString().trim())).put("min_level",Math.max(1,Integer.parseInt(level.getText().toString().trim().isEmpty()?"1":level.getText().toString().trim())))

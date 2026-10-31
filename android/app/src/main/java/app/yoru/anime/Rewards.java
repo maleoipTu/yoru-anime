@@ -54,6 +54,17 @@ final class Rewards {
   if(text.contains("password should be")||text.contains("weak_password"))return "Пароль слишком простой: нужно минимум 6 символов.";
   if(text.contains("rate limit")||text.contains("over_email_send_rate_limit")||text.contains("429"))return "Слишком много попыток. Подожди немного.";
   if(text.contains("not_enough_points"))return "Не хватает очков.";
+  if(text.contains("room_not_found"))return "Комната не найдена — проверь код.";
+  if(text.contains("room_full"))return "В комнате уже 20 человек.";
+  if(text.contains("not_in_room"))return "Ты уже вышел из комнаты.";
+  if(text.contains("too_fast"))return "Не так быстро — подожди пару секунд.";
+  if(text.contains("not_friends"))return "Дарить можно только друзьям.";
+  if(text.contains("gift_limit"))return "За сутки можно подарить не больше 1000 очков.";
+  if(text.contains("bad_amount"))return "Подарок — от 10 до 500 очков.";
+  if(text.contains("not_giftable"))return "Это украшение нельзя подарить.";
+  if(text.contains("bad_range"))return "Конец должен быть позже начала (не дольше 4 минут).";
+  if(text.contains("empty_comment"))return "Напиши что-нибудь.";
+  if(text.contains("not_in_list"))return "Сначала добавь аниме в список.";
   if(text.contains("level_too_low"))return "Нужен более высокий уровень.";
   if(text.contains("already_owned"))return "Это украшение уже есть.";
   if(text.contains("not_owned"))return "Сначала получи это украшение.";

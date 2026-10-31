@@ -71,7 +71,8 @@ public final class ProfileActivity extends Activity {
     if(state.equals("friend"))background(()->{account.rpc("remove_friend",new JSONObject().put("p_user",p.optString("id")));return true;},ok->loadPublic());
     else if(state.equals("incoming"))background(()->(JSONObject)account.rpc("respond_friend_request",new JSONObject().put("p_requester",p.optString("id")).put("p_accept",true)),r->{Social.announce(this,r);loadPublic();});
     else background(()->(JSONObject)account.rpc("send_friend_request",new JSONObject().put("p_username",p.optString("username"))),r->{Social.announce(this,r);loadPublic();});});
-   Ui.add(hero,friend,14);}
+   Ui.add(hero,friend,14);
+   if(state.equals("friend")){Button gift=Ui.tonal(this,"Подарить");gift.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"gift",Ui.ACCENT,18),null,null,null);gift.setCompoundDrawablePadding(Ui.dp(this,6));gift.setOnClickListener(v->Extras.giftTo(this,account,p,null));Ui.add(hero,gift,8);}}
   content.addView((View)hero.getTag(),new LinearLayout.LayoutParams(-1,-2));
   LinearLayout stats=Ui.row(this);
   stats.addView(stat("moon",String.valueOf(level),"уровень",Ui.ACCENT),new LinearLayout.LayoutParams(0,-1,1));
@@ -82,6 +83,8 @@ public final class ProfileActivity extends Activity {
   LinearLayout listCard=card();listCard.addView(section("Списки"));StringBuilder line=new StringBuilder();for(String key:Account.LISTS){if(line.length()>0)line.append(" · ");line.append(Account.listLabel(key)).append(": ").append(lists.optInt(key));}line.append(" · Отзывов: ").append(data.optInt("reviews"));Ui.add(listCard,Ui.text(this,line.toString(),13,Ui.MUTED),8);Ui.add(content,listCard,12);
   JSONArray showcase=p.optJSONArray("showcase");if(showcase!=null&&showcase.length()>0){Ui.add(content,section("Любимое аниме"),22);HorizontalScrollView strip=new HorizontalScrollView(this);strip.setHorizontalScrollBarEnabled(false);LinearLayout row=Ui.row(this);row.setGravity(Gravity.TOP);strip.addView(row);for(int i=0;i<showcase.length();i++){JSONObject item=showcase.optJSONObject(i);if(item!=null)row.addView(showcaseItem(item),new LinearLayout.LayoutParams(Ui.dp(this,104),-2));}Ui.add(content,strip,8);}
   Set<String> theirs=new HashSet<>();JSONArray ids=data.optJSONArray("achievements");if(ids!=null)for(int i=0;i<ids.length();i++)theirs.add(ids.optString(i));
+  Ui.add(content,Extras.stats(this,account,p.optString("username")),12);
+  JSONArray favorites=data.optJSONArray("favorites");if(favorites!=null&&favorites.length()>0){Ui.add(content,section("Любимые"),22);for(int i=0;i<Math.min(6,favorites.length());i++){JSONObject f=favorites.optJSONObject(i);try{JSONObject raw=new JSONObject().put("anime_id",f.optLong("anime_id")).put("title",f.optString("title")).put("poster",new JSONObject().put("fullsize",f.optString("poster")));Ui.add(content,Extras.animeRow(this,raw,""),8);}catch(JSONException ignored){}}}
   achievementGrid(theirs);
  }
 
@@ -134,6 +137,13 @@ public final class ProfileActivity extends Activity {
   Ui.add(progress,Ui.text(this,"Засчитано серий: "+profile.optInt("episodes_watched")+". Очки начисляются за просмотр в плеере Yoru: "+Rewards.EPISODE_POINTS+" за серию, +"+Rewards.NEW_ANIME_BONUS+" за новое аниме и до +20 за дни подряд. Серия засчитывается после 5–12 минут просмотра. Ещё очки дают достижения.",12,Ui.MUTED),10);
   Ui.add(content,progress,12);
 
+  // Рейтинг, подарки, «Год в Yoru» и перенос со старого сайта.
+  String[][] tools={{"trophy","Рейтинг недели"},{"gift","Подарки"},{"spark","Год в Yoru"},{"party","Смотреть вместе"},{"catalog","Для тебя"},{"download","Перенос с YummyAnime"}};
+  for(int i=0;i<tools.length;i+=2){LinearLayout row=Ui.row(this);for(int j=0;j<2;j++){String[] tool=tools[i+j];Button b=Ui.tonal(this,tool[1]);b.setTextSize(13);b.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,tool[0],Ui.ACCENT,18),null,null,null);b.setCompoundDrawablePadding(Ui.dp(this,6));
+    b.setOnClickListener(v->{switch(tool[1]){case "Рейтинг недели":Extras.leaderboard(this,account);break;case "Подарки":Extras.inbox(this,account,this::refresh);break;case "Год в Yoru":startActivity(new Intent(this,WrappedActivity.class));break;case "Смотреть вместе":joinRoom();break;case "Для тебя":Extras.forYou(this,account);break;default:Extras.importOld(this,account,this::refresh);}});
+    LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);if(j>0)lp.leftMargin=Ui.dp(this,8);row.addView(b,lp);}Ui.add(content,row,i==0?12:8);}
+  Ui.add(content,Extras.stats(this,account,profile.optString("username")),12);
+
   // Витрина любимых аниме.
   LinearLayout showHead=Ui.row(this);showHead.addView(section("Любимое аниме"),new LinearLayout.LayoutParams(0,-2,1));Button change=Ui.textButton(this,"Изменить");change.setOnClickListener(v->editShowcase());showHead.addView(change);Ui.add(content,showHead,22);
   JSONArray showcase=profile.optJSONArray("showcase");
@@ -146,7 +156,7 @@ public final class ProfileActivity extends Activity {
 
   // Магазин украшений.
   LinearLayout decoHead=Ui.row(this);decoHead.addView(section("Украшения"),new LinearLayout.LayoutParams(0,-2,1));TextView balance=Ui.text(this,Rewards.points(points),14,Ui.WARM);balance.setTypeface(Ui.MEDIUM);balance.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"gem",Ui.WARM,16),null,null,null);balance.setCompoundDrawablePadding(Ui.dp(this,6));balance.setContentDescription("Баланс: "+points+" очков");decoHead.addView(balance);Ui.add(content,decoHead,22);
-  LinearLayout tabs=Ui.row(this);String[][] kinds={{"frame","Рамки"},{"badge","Значки"},{"name_color","Цвет ника"}};
+  LinearLayout tabs=Ui.row(this);String[][] kinds={{"avatar_deco","Украшения аватара"},{"profile_effect","Эффекты профиля"},{"profile_frame","Рамки профиля"},{"frame","Обводка аватара"},{"badge","Значки"},{"name_color","Цвет ника"}};
   for(String[] kind:kinds){Button chip=Ui.chip(this,kind[1]);chip.setCompoundDrawablesRelativeWithIntrinsicBounds(null,null,null,null);Ui.chipState(chip,tab.equals(kind[0]));chip.setCompoundDrawablesRelativeWithIntrinsicBounds(null,null,null,null);chip.setContentDescription(kind[1]+(tab.equals(kind[0])?", выбрано":""));chip.setOnClickListener(v->{tab=kind[0];renderProfile();});LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-2,-2);cp.rightMargin=Ui.dp(this,8);tabs.addView(chip,cp);}
   HorizontalScrollView tabScroll=new HorizontalScrollView(this);tabScroll.setHorizontalScrollBarEnabled(false);tabScroll.addView(tabs);Ui.add(content,tabScroll,4);
   List<JSONObject> items=new ArrayList<>();long now=System.currentTimeMillis();
@@ -178,18 +188,20 @@ public final class ProfileActivity extends Activity {
   String id=d.optString("id"),kind=d.optString("kind");JSONObject style=d.optJSONObject("style");if(style==null)style=new JSONObject();
   int price=d.optInt("price"),minLevel=d.optInt("min_level",1);boolean exclusive=d.optBoolean("exclusive");boolean have=(price==0&&!exclusive)||owned.contains(id);
   String until=d.isNull("available_until")?"":d.optString("available_until");
-  String equippedId=profile.optString(kind.equals("frame")?"equipped_frame":kind.equals("badge")?"equipped_badge":"equipped_color");boolean worn=id.equals(equippedId);
+  String equippedId=profile.optString(equippedField(kind));boolean worn=id.equals(equippedId);boolean removable=!kind.equals("frame")&&!kind.equals("name_color");
   LinearLayout tile=Ui.column(this);tile.setPadding(Ui.dp(this,12),Ui.dp(this,14),Ui.dp(this,12),Ui.dp(this,12));tile.setGravity(Gravity.CENTER_HORIZONTAL);
   android.graphics.drawable.GradientDrawable face=Ui.shape(this,worn?Ui.SOFT:Ui.PANEL,18);face.setStroke(Ui.dp(this,1),worn?0xFF7A2A3A:Ui.LINE);
   tile.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x24FFFFFF),face,Ui.shape(this,android.graphics.Color.WHITE,18)));
   FrameLayout preview=new FrameLayout(this);tile.addView(preview,new LinearLayout.LayoutParams(-1,Ui.dp(this,72)));
   if(kind.equals("frame")){Decor.AvatarView a=new Decor.AvatarView(this);a.frame(style);a.person(Decor.name(profile),profile.optString("avatar_url"));preview.addView(a,new FrameLayout.LayoutParams(Ui.dp(this,68),Ui.dp(this,68),Gravity.CENTER));}
   else if(kind.equals("badge")){TextView g=Ui.text(this,"",34,Ui.TEXT);g.setText(Decor.badge(style));g.setGravity(Gravity.CENTER);preview.addView(g,new FrameLayout.LayoutParams(-1,-1));}
+  else if(kind.equals("avatar_deco")){Decor.AvatarView a=new Decor.AvatarView(this);a.frame(Decor.style(byId,profile.optString("equipped_frame","frame_moon")));a.deco(style);a.person(Decor.name(profile),profile.optString("avatar_url"));preview.addView(a,new FrameLayout.LayoutParams(Ui.dp(this,76),Ui.dp(this,76),Gravity.CENTER));}
+  else if(kind.equals("profile_effect")||kind.equals("profile_frame")){preview.addView(new Ornaments.Preview(this,kind,style),new FrameLayout.LayoutParams(Ui.dp(this,104),-1,Gravity.CENTER));}
   else{TextView n=Ui.title(this,Decor.name(profile),18);n.setGravity(Gravity.CENTER);n.setMaxLines(1);n.setEllipsize(TextUtils.TruncateAt.END);Decor.nameColor(n,style);preview.addView(n,new FrameLayout.LayoutParams(-2,-2,Gravity.CENTER));}
   TextView title=Ui.title(this,d.optString("title"),14);title.setGravity(Gravity.CENTER);title.setMaxLines(2);Ui.add(tile,title,8);
   TextView rarity=Ui.text(this,Rewards.rarity(d.optString("rarity"))+(until.isEmpty()||have?"":" · до "+Rewards.until(until)),11,Rewards.rarityColor(d.optString("rarity")));rarity.setGravity(Gravity.CENTER);Ui.add(tile,rarity,4);
   String state;int color;
-  if(worn){state=kind.equals("badge")?"✓ Надето · снять":"✓ Надето";color=Ui.ACCENT;}
+  if(worn){state=removable?"✓ Надето · снять":"✓ Надето";color=Ui.ACCENT;}
   else if(have){state="Надеть";color=Ui.TEXT;}
   else if(exclusive){state="🏆 За достижение";color=0xFF60616F;}
   else if(level<minLevel){state="С уровня "+minLevel;color=0xFF60616F;}
@@ -198,7 +210,7 @@ public final class ProfileActivity extends Activity {
   tile.setClickable(true);tile.setFocusable(true);tile.setContentDescription(d.optString("title")+", "+Rewards.rarity(d.optString("rarity"))+". "+state.replace("◆","цена")+(state.startsWith("◆")?" очков":""));
   tile.setOnClickListener(v->{
    if(busy)return;
-   if(worn){if(kind.equals("badge"))equip(kind,"");return;}
+   if(worn){if(removable)equip(kind,"");return;}
    if(have){equip(kind,id);return;}
    if(exclusive){Toast.makeText(this,d.optString("description"),Toast.LENGTH_LONG).show();return;}
    if(level<minLevel){Toast.makeText(this,"Откроется на уровне "+minLevel,Toast.LENGTH_SHORT).show();return;}
@@ -207,6 +219,12 @@ public final class ProfileActivity extends Activity {
   });
   return tile;
  }
+ void joinRoom(){
+  LinearLayout panel=Ui.column(this);Ui.add(panel,Ui.text(this,"Введи код комнаты от друга. Чтобы создать свою комнату, открой серию и нажми «Вместе».",13,Ui.MUTED),0);
+  EditText field=input("Код комнаты",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);Ui.add(panel,field,12);Button go=Ui.button(this,"Войти",true);Ui.add(panel,go,12);
+  Dialog dialog=Ui.sheet(this,"Смотреть вместе",panel,"Закрыть");go.setOnClickListener(v->{String code=field.getText().toString().trim().toUpperCase(Locale.ROOT);if(code.length()!=6)return;dialog.dismiss();Party.joinCode(this,account,code);});
+ }
+ static String equippedField(String kind){switch(kind){case "frame":return "equipped_frame";case "badge":return "equipped_badge";case "avatar_deco":return "equipped_deco";case "profile_effect":return "equipped_effect";case "profile_frame":return "equipped_pframe";default:return "equipped_color";}}
  void equip(String kind,String id){background(()->(JSONObject)account.rpc("equip_decoration",new JSONObject().put("p_kind",kind).put("p_id",id)),result->{profile=result;renderProfile();});}
  void confirmPurchase(JSONObject d){
   LinearLayout panel=Ui.column(this);int price=d.optInt("price");
@@ -225,8 +243,8 @@ public final class ProfileActivity extends Activity {
   LinearLayout card=Ui.column(this);android.graphics.drawable.GradientDrawable bg=themed?Ui.gradient(this,primary,accent,24,android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM):Ui.outlined(this,Ui.PANEL,24);if(themed)bg.setStroke(Ui.dp(this,1),0x33FFFFFF);card.setBackground(bg);card.setClipToOutline(true);Ui.lift(card,10);
   FrameLayout top=new FrameLayout(this);card.addView(top,new LinearLayout.LayoutParams(-1,Ui.dp(this,176)));
   Media.Banner banner=new Media.Banner(this);top.addView(banner,new FrameLayout.LayoutParams(-1,Ui.dp(this,128)));banner.show(this,p.optString("banner_url"),themed?primary:Ui.ACCENT,themed?accent:Ui.ACCENT2);
-  Decor.AvatarView avatar=new Decor.AvatarView(this);avatar.frame(Decor.style(byId,p.optString("equipped_frame","frame_moon")));avatar.person(Decor.name(p),p.optString("avatar_url"));
-  FrameLayout.LayoutParams ap=new FrameLayout.LayoutParams(Ui.dp(this,96),Ui.dp(this,96),Gravity.BOTTOM|Gravity.START);ap.leftMargin=Ui.dp(this,16);top.addView(avatar,ap);
+  Decor.AvatarView avatar=new Decor.AvatarView(this);avatar.frame(Decor.style(byId,p.optString("equipped_frame","frame_moon")));avatar.deco(Decor.style(byId,p.optString("equipped_deco")));avatar.person(Decor.name(p),p.optString("avatar_url"));
+  int avatarSide=avatar.hasDeco()?132:96;FrameLayout.LayoutParams ap=new FrameLayout.LayoutParams(Ui.dp(this,avatarSide),Ui.dp(this,avatarSide),Gravity.BOTTOM|Gravity.START);ap.leftMargin=Ui.dp(this,16-(avatarSide-96)/2);top.addView(avatar,ap);
   LinearLayout body=Ui.column(this);body.setPadding(Ui.dp(this,18),Ui.dp(this,8),Ui.dp(this,18),Ui.dp(this,18));card.addView(body);
   LinearLayout nameRow=Ui.row(this);TextView name=Ui.title(this,Decor.name(p),22);name.setMaxLines(2);name.setEllipsize(TextUtils.TruncateAt.END);Decor.nameColor(name,Decor.style(byId,p.optString("equipped_color","color_default")));nameRow.addView(name,new LinearLayout.LayoutParams(-2,-2));
   CharSequence badge=Decor.badge(Decor.style(byId,p.optString("equipped_badge")));if(badge.length()>0){TextView glyph=Ui.text(this,"",20,Ui.TEXT);glyph.setText(badge);glyph.setPadding(Ui.dp(this,8),0,0,0);JSONObject d=byId.get(p.optString("equipped_badge"));glyph.setContentDescription("Значок: "+(d==null?"":d.optString("title")));nameRow.addView(glyph);}
@@ -237,7 +255,10 @@ public final class ProfileActivity extends Activity {
   if(!statusText.isEmpty()||own){TextView status=Ui.text(this,statusText.isEmpty()?"Добавь статус — о чём сейчас твой вечер?":statusText,14,statusText.isEmpty()?0x99FFFFFF:Ui.TEXT);status.setPadding(Ui.dp(this,12),Ui.dp(this,10),Ui.dp(this,12),Ui.dp(this,10));status.setBackground(Ui.shape(this,0x33000000,14));Ui.add(body,status,12);}
   String bio=p.optString("bio");
   if(!bio.isEmpty()){LinearLayout about=Ui.column(this);about.setPadding(Ui.dp(this,12),Ui.dp(this,10),Ui.dp(this,12),Ui.dp(this,12));about.setBackground(Ui.shape(this,0x33000000,14));TextView head=Ui.text(this,"ОБО МНЕ",11,0xBBFFFFFF);head.setTypeface(Ui.MEDIUM);head.setLetterSpacing(.08f);about.addView(head);Ui.add(about,Ui.text(this,bio,14,Ui.TEXT),6);Ui.add(body,about,10);}
-  body.setTag(card);return body;
+  FrameLayout holder=new FrameLayout(this);holder.addView(card,new FrameLayout.LayoutParams(-1,-2));
+  Ornaments.Overlay overlay=new Ornaments.Overlay(this);overlay.set(p.optString("equipped_effect").isEmpty()?null:Decor.style(byId,p.optString("equipped_effect")),p.optString("equipped_pframe").isEmpty()?null:Decor.style(byId,p.optString("equipped_pframe")));
+  holder.addView(overlay,new FrameLayout.LayoutParams(-1,-1));overlay.setElevation(Ui.dp(this,11));
+  body.setTag(holder);return body;
  }
 
  void editProfile(){

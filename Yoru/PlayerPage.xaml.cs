@@ -22,9 +22,10 @@ public partial class PlayerPage : UserControl
     long watchedEpisode = -1; int watchedSeconds; bool playing, awardSent; DateTime awardRetryAt;
     // Нативный режим: прямой поток Kodik в собственном плеере (native.html), видео идёт через прокси приложения.
     bool nativeMode, forceSite; StreamResolver.Result? resolved; CancellationTokenSource? resolveCts; double duration; DateTime lastPositionSave;
-    public PlayerPage(Anime item, List<Episode> list, Episode selected, LocalStore local, AccountClient? accountClient = null)
+    public PlayerPage(Anime item, List<Episode> list, Episode selected, LocalStore local, AccountClient? accountClient = null, string? room = null)
     {
         InitializeComponent();
+        roomCode=room ?? "";
         account=accountClient;
         watchTimer.Tick += async (_, _) => await WatchTick();
         anime=item; videos=list; current=selected; store=local;
@@ -32,7 +33,8 @@ public partial class PlayerPage : UserControl
         SyncSelection(selected);
         SeriesBox.SelectionChanged += (_,_) => { if(!changing) UpdateSelectionHint(); };
         Loaded += async (_, _) => await InitializePlayer();
-        Unloaded += (_, _) => { if(closed) return; closed=true; watchTimer.Stop(); resolveCts?.Cancel(); SavePrefs(); if(fullscreen) Shell.Fullscreen(false); Browser.Dispose(); };
+        BuildSocial();
+        Unloaded += (_, _) => { if(closed) return; closed=true; watchTimer.Stop(); SocialClosed(); resolveCts?.Cancel(); SavePrefs(); if(fullscreen) Shell.Fullscreen(false); Browser.Dispose(); };
     }
     void Status(string message, string state)
     {
@@ -130,6 +132,7 @@ public partial class PlayerPage : UserControl
                         try { store.Started(anime,current); } catch(IOException) { Status("Плеер загружен · не удалось сохранить историю",state); }
                     }
                     else if(state=="ready" && nativeMode) _ = StartNative(current, navigationSession);
+                    else if(state=="control") RoomControl(ApiParser.Number(ApiParser.Field(doc.RootElement,"value")), ApiParser.Field(doc.RootElement,"paused").ValueKind==JsonValueKind.True);
                     else if(state=="next") Move(1);
                     else if(state=="site") { forceSite=true; NavigateEpisode(current); }
                     else if(state=="retry") NavigateEpisode(current);
@@ -139,8 +142,8 @@ public partial class PlayerPage : UserControl
                     else if(state=="speed") { store.Data.Speed=ApiParser.Number(ApiParser.Field(doc.RootElement,"value")); SavePrefs(); }
                     else if(state=="autonext") { store.Data.AutoNext=ApiParser.Field(doc.RootElement,"value").ValueKind==JsonValueKind.True; SavePrefs(); }
                     else if(state=="error") Status("Видео недоступно · можно открыть плеер сайта","error");
-                    else if(state=="playing") Status("Идёт просмотр · "+current.Label,state);
-                    else if(state=="paused") Status("Пауза · "+current.Label,state);
+                    else if(state=="playing") { Status("Идёт просмотр · "+current.Label,state); Presence(true); }
+                    else if(state=="paused") { Status("Пауза · "+current.Label,state); Presence(false); }
                     else if(state=="ended") { Status("Серия закончилась · можно перейти к следующей",state); if(nativeMode) SavePosition(0, true); }
                     else if(state=="time")
                     {
@@ -148,6 +151,7 @@ public partial class PlayerPage : UserControl
                         var length=ApiParser.Number(ApiParser.Field(doc.RootElement,"duration"));
                         if(length>0) duration=length;
                         if(nativeMode) SavePosition(seconds, false);
+                        lastSeconds=seconds;
                         if(seconds>=1) Status($"Идёт просмотр · {TimeSpan.FromSeconds(seconds):mm\\:ss}","time:"+(int)seconds);
                     }
                     else if(state is "invalid-source" or "frame-error") Failed("Не получилось открыть видео. Выбери другой плеер справа.");
@@ -192,6 +196,7 @@ public partial class PlayerPage : UserControl
         var index=playlist.FindIndex(v=>v.Id==episode.Id);
         PreviousButton.IsEnabled=index>0; NextButton.IsEnabled=index>=0 && index<playlist.Count-1;
         Status("Загрузка · "+episode.Label,"loading");
+        EpisodeChanged(episode);
         if(nativeMode) { TrackLabel.Text=episode.Track+" · плеер Yoru без рекламы"; Browser.CoreWebView2.Navigate($"https://{Host}/native.html?session={navigationSession}"); }
         else Browser.CoreWebView2.Navigate($"https://{Host}/index.html?src={Uri.EscapeDataString(episode.Url)}&session={navigationSession}");
     }
@@ -210,6 +215,7 @@ public partial class PlayerPage : UserControl
             Post(new System.Text.Json.Nodes.JsonObject { ["cmd"]="load", ["session"]=session, ["streams"]=streams, ["quality"]=store.Data.Quality,
                 ["speed"]=store.Data.Speed is >= 0.5 and <= 2 ? store.Data.Speed : 1, ["autoNext"]=store.Data.AutoNext, ["hasNext"]=NextButton.IsEnabled, ["start"]=store.Position(episode.Id) });
             Status("Плеер Yoru · "+episode.Label,"loaded");
+            SendIntro(); RoomLoaded();
             try { store.Started(anime,episode); } catch(IOException) { }
         }
         catch(Exception ex) when (ex is InvalidOperationException or System.Net.Http.HttpRequestException or TaskCanceledException or JsonException)
@@ -324,7 +330,7 @@ public partial class PlayerPage : UserControl
         fullscreen=value;
         Shell.Fullscreen(value);
         PlayerHeader.Visibility=PlayerFooter.Visibility=PlayerSidebar.Visibility=value ? Visibility.Collapsed : Visibility.Visible;
-        SidebarColumn.Width=new GridLength(value ? 0 : 270);
+        SidebarColumn.Width=new GridLength(value ? 0 : 320);
     }
     void RuntimeClick(object sender,RoutedEventArgs e) => MainWindow.OpenLink("https://developer.microsoft.com/microsoft-edge/webview2/");
 }

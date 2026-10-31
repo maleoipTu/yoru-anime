@@ -73,6 +73,12 @@ public sealed class LibraryData
     public string Quality { get; set; } = "";
     public double Speed { get; set; } = 1;
     public bool AutoNext { get; set; } = true;
+    /// <summary>Application ID из Discord Developer Portal для статуса «Смотрит» в Discord.</summary>
+    public string DiscordClientId { get; set; } = "";
+    public bool DiscordPresence { get; set; } = true;
+    public bool NotifyEpisodes { get; set; } = true;
+    /// <summary>Сколько серий уже вышло у отслеживаемых аниме — для уведомлений о новых.</summary>
+    public Dictionary<string, int> Aired { get; set; } = [];
 }
 public sealed class LocalStore
 {

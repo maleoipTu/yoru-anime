@@ -22,7 +22,7 @@ final class Social {
  /** Строка пользователя: аватар с рамкой, ник в его цвете, значок и подпись. */
  static LinearLayout person(Activity activity,JSONObject p,Map<String,JSONObject> decor,String subtitle,int avatarDp){
   LinearLayout row=Ui.row(activity);row.setPadding(Ui.dp(activity,4),Ui.dp(activity,8),Ui.dp(activity,4),Ui.dp(activity,8));
-  Decor.AvatarView avatar=new Decor.AvatarView(activity);avatar.frame(Decor.style(decor,p.optString("equipped_frame","frame_moon")));avatar.person(Decor.name(p),p.optString("avatar_url"));row.addView(avatar,new LinearLayout.LayoutParams(Ui.dp(activity,avatarDp),Ui.dp(activity,avatarDp)));
+  Decor.AvatarView avatar=new Decor.AvatarView(activity);avatar.frame(Decor.style(decor,p.optString("equipped_frame","frame_moon")));avatar.deco(Decor.style(decor,p.optString("equipped_deco")));avatar.person(Decor.name(p),p.optString("avatar_url"));row.addView(avatar,new LinearLayout.LayoutParams(Ui.dp(activity,avatarDp),Ui.dp(activity,avatarDp)));
   LinearLayout text=Ui.column(activity);LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(0,-2,1);tp.leftMargin=Ui.dp(activity,12);row.addView(text,tp);
   LinearLayout nameRow=Ui.row(activity);TextView name=Ui.title(activity,Decor.name(p),15);name.setMaxLines(1);name.setEllipsize(TextUtils.TruncateAt.END);Decor.nameColor(name,Decor.style(decor,p.optString("equipped_color","color_default")));nameRow.addView(name,new LinearLayout.LayoutParams(-2,-2));
   CharSequence badge=Decor.badge(Decor.style(decor,p.optString("equipped_badge")));if(badge.length()>0){TextView g=Ui.text(activity,"",15,Ui.TEXT);g.setText(badge);g.setPadding(Ui.dp(activity,6),0,0,0);nameRow.addView(g);}
