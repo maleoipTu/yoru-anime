@@ -2,7 +2,8 @@
 # Проверка миграций Supabase на чистом PostgreSQL:
 #  1) первая миграция применяется дважды (идемпотентность) и проверяются правила аккаунтов;
 #  2) поверх уже заполненной базы накатывается вторая миграция (путь обновления), тоже дважды;
-#  3) проверяются списки, достижения, streak, друзья и отзывы.
+#  3) проверяются списки, достижения, streak, друзья и отзывы;
+#  4) набор администрации: видимость в каталоге, надевание только админами, выдача и отзыв.
 # Нужны psql и переменные PGHOST/PGUSER (например, сервис postgres в GitHub Actions).
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -21,3 +22,5 @@ run supabase/migrations/20261101000000_party_stats.sql; run supabase/migrations/
 psql -q -v ON_ERROR_STOP=1 -d "$db" -f supabase/tests/party_test.sql | tail -1
 run supabase/migrations/20261102000000_progress_sync.sql; run supabase/migrations/20261102000000_progress_sync.sql
 psql -q -v ON_ERROR_STOP=1 -d "$db" -f supabase/tests/progress_test.sql | tail -1
+run supabase/migrations/20261103000000_admin_decor.sql; run supabase/migrations/20261103000000_admin_decor.sql
+psql -q -v ON_ERROR_STOP=1 -d "$db" -f supabase/tests/admin_decor_test.sql | tail -1
