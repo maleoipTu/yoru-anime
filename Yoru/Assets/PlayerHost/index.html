@@ -22,7 +22,7 @@
  const veil=document.getElementById('veil');
  const wake=()=>{veil.style.display='none';document.documentElement.classList.remove('idle');};
  veil.addEventListener('mousemove',wake);veil.addEventListener('mousedown',wake);
- window.chrome?.webview?.addEventListener('message',e=>{const m=e.data;if(!m||m.session!==session)return;if(m.cmd==='idle'){document.documentElement.classList.add('idle');veil.style.display='block';}else if(m.cmd==='active')wake();});
+ window.chrome?.webview?.addEventListener?.('message',e=>{const m=e.data;if(!m||m.session!==session)return;if(m.cmd==='idle'){document.documentElement.classList.add('idle');veil.style.display='block';}else if(m.cmd==='active')wake();});
  frame.addEventListener('load', () => notify('frame-ready'));
  frame.addEventListener('error', () => notify('frame-error'));
  window.addEventListener('message', event => {
