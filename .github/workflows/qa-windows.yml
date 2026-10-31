@@ -1,0 +1,37 @@
+name: Windows design screenshots
+# Ручная проверка дизайна: собирает Windows-версию, проходит по основным экранам и кладёт снимки в ветку qa-shots.
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  shots:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build
+        run: dotnet publish Yoru/Yoru.csproj -c Release -r win-x64 --self-contained true -p:DebugType=None -p:DebugSymbols=false -o outputs/Yoru
+      - name: Take screenshots
+        shell: pwsh
+        run: |
+          $dir = "$PWD\outputs\shots"
+          $env:YORU_QA_SHOTS = $dir
+          $p = Start-Process -FilePath "outputs\Yoru\Yoru.exe" -PassThru
+          if (-not $p.WaitForExit(180000)) { $p.Kill(); Write-Host "::warning::Yoru did not exit in time" }
+          Get-ChildItem $dir | Format-Table Name, Length
+          if (Test-Path "$dir\error.txt") { Get-Content "$dir\error.txt" | Select-Object -First 30 | ForEach-Object { Write-Host "::error::$_" } }
+      - name: Publish to qa-shots branch
+        shell: bash
+        run: |
+          src="$PWD/outputs/shots"; ref="${GITHUB_REF_NAME//\//-}"
+          git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
+          tmp=$(mktemp -d); cd "$tmp"; git init -q; git checkout -q -b qa-shots
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          git fetch -q origin qa-shots && git reset -q origin/qa-shots || true
+          mkdir -p "$ref"; rm -f "$ref"/*; cp "$src"/* "$ref"/
+          git add -A "$ref"; git commit -q -m "Screenshots for $GITHUB_REF_NAME @ ${GITHUB_SHA::7}"
+          git push -q origin qa-shots
