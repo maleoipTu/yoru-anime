@@ -8,8 +8,8 @@
     <TextBlock Text="Сейчас смотришь" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,22"/>
     <TextBlock Text="Озвучка" Foreground="{StaticResource Muted}" FontSize="12" Margin="0,0,0,7"/><ComboBox x:Name="VoiceBox" MinWidth="0" MaxDropDownHeight="270" SelectionChanged="VoiceChanged" AutomationProperties.Name="Озвучка"/>
     <TextBlock Text="Плеер" Foreground="{StaticResource Muted}" FontSize="12" Margin="0,18,0,7"/><ComboBox x:Name="SourceBox" MinWidth="0" MaxDropDownHeight="220" SelectionChanged="SourceChanged" AutomationProperties.Name="Плеер"/>
-    <TextBlock Text="Серия" Foreground="{StaticResource Muted}" FontSize="12" Margin="0,18,0,7"/><ComboBox x:Name="SeriesBox" MinWidth="0" MaxDropDownHeight="270" DisplayMemberPath="Label" AutomationProperties.Name="Серия"/>
-    <Button x:Name="ApplyButton" Content="▶  Смотреть выбранное" Style="{StaticResource Primary}" Click="ApplyClick" Margin="0,20,0,0" Padding="10,12"/>
+    <TextBlock Text="Серия" Visibility="Collapsed"/><ComboBox Visibility="Collapsed" x:Name="SeriesBox" MinWidth="0" MaxDropDownHeight="270" DisplayMemberPath="Label" AutomationProperties.Name="Серия"/>
+    <Button x:Name="ApplyButton" Content="▶  Смотреть с этой озвучкой" Style="{StaticResource Primary}" Click="ApplyClick" Margin="0,20,0,0" Padding="10,12"/>
     <TextBlock x:Name="SelectionHint" FontSize="12" Foreground="#FF9AA8" LineHeight="19" Margin="0,10,0,0"/>
     <DockPanel Margin="0,20,0,8"><TextBlock Text="Серии" FontSize="14" FontWeight="SemiBold"/><TextBlock x:Name="PlayerWatchedText" Foreground="{StaticResource Muted}" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center"/></DockPanel>
     <ContentControl x:Name="PlayerEpisodes" Focusable="False"/>

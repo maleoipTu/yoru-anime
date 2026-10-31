@@ -100,27 +100,36 @@ final class Progress {
  static boolean pullAnime(Context c,long animeId){Account account=new Account(c);if(!account.signedIn())return false;try{return merge(c,new Library(c),account.rpc("anime_progress",new JSONObject().put("p_anime_id",animeId)));}catch(Exception e){return false;}}
 
  // ───── Плитки серий ─────
- /** Плитки серий: нажатие открывает серию, кружок в углу (или долгое нажатие) отмечает просмотренной. */
+ /** Плитки серий в духе Yoru: просмотренная «засыпает» — ночной градиент, луна в углу, полная полоска снизу;
+  *  начатая показывает, сколько просмотрено; текущая подсвечена. Луна в углу или долгое нажатие — отметить вручную. */
  static View tiles(Activity a,List<Episode> episodes,JSONObject p,String current,java.util.function.Consumer<Episode> open,java.util.function.Consumer<Episode> toggle){
   Ui.Flow flow=new Ui.Flow(a,8);
   for(Episode episode:episodes){
    boolean seen=isWatched(p,episode.number),here=episode.number.equals(current);
-   FrameLayout tile=new FrameLayout(a);
-   TextView label=Ui.text(a,episode.number,15,seen?Ui.MUTED:Ui.TEXT);label.setTypeface(Ui.MEDIUM);label.setGravity(Gravity.CENTER);label.setMaxLines(1);
-   android.graphics.drawable.GradientDrawable bg=new android.graphics.drawable.GradientDrawable();bg.setCornerRadius(Ui.dp(a,12));bg.setColor(seen?0xFF182A22:Ui.RAISED);if(here)bg.setStroke(Ui.dp(a,2),Ui.ACCENT);
-   label.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x24FFFFFF),bg,null));
-   label.setContentDescription(episode.label()+(seen?", просмотрено":"")+(here?", сейчас":""));
-   label.setOnClickListener(v->open.accept(episode));label.setOnLongClickListener(v->{toggle.accept(episode);return true;});
-   tile.addView(label,new FrameLayout.LayoutParams(Ui.dp(a,62),Ui.dp(a,46)));
-   TextView mark=Ui.text(a,seen?"✓":"",11,0xFF0E0E11);mark.setTypeface(Typeface.DEFAULT_BOLD);mark.setGravity(Gravity.CENTER);
-   android.graphics.drawable.GradientDrawable dot=new android.graphics.drawable.GradientDrawable();dot.setShape(android.graphics.drawable.GradientDrawable.OVAL);dot.setColor(seen?0xFF3DD68C:0x40FFFFFF);dot.setStroke(Ui.dp(a,1),0x60FFFFFF);mark.setBackground(dot);
-   mark.setContentDescription(seen?"Снять отметку с серии "+episode.number:"Отметить серию "+episode.number+" просмотренной");mark.setOnClickListener(v->toggle.accept(episode));
-   // Зона нажатия кружка больше самого кружка.
-   FrameLayout hit=new FrameLayout(a);hit.setPadding(Ui.dp(a,4),Ui.dp(a,4),Ui.dp(a,4),Ui.dp(a,4));hit.addView(mark,new FrameLayout.LayoutParams(Ui.dp(a,20),Ui.dp(a,20)));hit.setOnClickListener(v->toggle.accept(episode));hit.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-   tile.addView(hit,new FrameLayout.LayoutParams(-2,-2,Gravity.TOP|Gravity.END));
+   double pos=p==null?0:p.optDouble("position",0),dur=p==null?0:p.optDouble("duration",0);
+   float started=!seen&&p!=null&&episode.number.equals(p.optString("episode"))&&dur>0&&pos>5?(float)Math.min(1,pos/dur):0;
+   FrameLayout tile=new FrameLayout(a);tile.setClipChildren(false);tile.setClipToPadding(false);tile.setPadding(0,Ui.dp(a,6),Ui.dp(a,6),0);
+   FrameLayout body=new FrameLayout(a);
+   android.graphics.drawable.GradientDrawable bg=seen?new android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR,new int[]{0xFF3A172B,0xFF1E152C}):new android.graphics.drawable.GradientDrawable();
+   if(!seen)bg.setColor(Ui.RAISED);bg.setCornerRadius(Ui.dp(a,14));bg.setStroke(Ui.dp(a,here?2:1),here?Ui.ACCENT:seen?0x55FF8A9B:Ui.LINE);
+   body.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x24FFFFFF),bg,null));body.setClipToOutline(true);
+   TextView label=Ui.text(a,episode.number,16,seen?0xFFFFB3C1:Ui.TEXT);label.setTypeface(Ui.MEDIUM);label.setGravity(Gravity.CENTER);label.setMaxLines(1);body.addView(label,new FrameLayout.LayoutParams(-1,-1));
+   if(here){TextView now=Ui.text(a,"сейчас",9,Ui.ACCENT);FrameLayout.LayoutParams np=new FrameLayout.LayoutParams(-2,-2,Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);np.bottomMargin=Ui.dp(a,5);body.addView(now,np);}
+   float fill=seen?1:started;
+   if(fill>0){View bar=new View(a);bar.setBackground(new android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,new int[]{Ui.ACCENT,Ui.ACCENT2}));FrameLayout.LayoutParams bp=new FrameLayout.LayoutParams((int)(Ui.dp(a,66)*fill),Ui.dp(a,3),Gravity.BOTTOM|Gravity.START);body.addView(bar,bp);}
+   body.setContentDescription(episode.label()+(seen?", просмотрено":started>0?", просмотрено "+Math.round(started*100)+"%":"")+(here?", сейчас":"")+". Долгое нажатие — отметить просмотренной");
+   body.setOnClickListener(v->open.accept(episode));body.setOnLongClickListener(v->{toggle.accept(episode);return true;});
+   tile.addView(body,new FrameLayout.LayoutParams(Ui.dp(a,66),Ui.dp(a,52)));
+   // Луна в углу: у просмотренной — яркая, у остальных — едва заметная.
+   TextView moon=Ui.text(a,"☾",12,seen?Ui.ON_ACCENT:0xFFFFB3C1);moon.setGravity(Gravity.CENTER);moon.setIncludeFontPadding(false);
+   android.graphics.drawable.GradientDrawable dot=seen?new android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR,new int[]{Ui.ACCENT,Ui.ACCENT2}):new android.graphics.drawable.GradientDrawable();
+   dot.setShape(android.graphics.drawable.GradientDrawable.OVAL);if(!seen)dot.setColor(Ui.LINE);dot.setStroke(Ui.dp(a,2),Ui.BG);moon.setBackground(dot);moon.setAlpha(seen?1f:.55f);
+   moon.setContentDescription(seen?"Снять отметку с серии "+episode.number:"Отметить серию "+episode.number+" просмотренной");moon.setOnClickListener(v->toggle.accept(episode));
+   FrameLayout.LayoutParams mp=new FrameLayout.LayoutParams(Ui.dp(a,24),Ui.dp(a,24),Gravity.TOP|Gravity.END);mp.topMargin=-Ui.dp(a,6);mp.rightMargin=-Ui.dp(a,6);tile.addView(moon,mp);
    flow.addView(tile);
   }
   return flow;
  }
+
 
 }

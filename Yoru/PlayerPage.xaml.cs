@@ -365,7 +365,8 @@ public partial class PlayerPage : UserControl
     void RenderEpisodes()
     {
         if(closed) return;
-        var list=PlaybackSources.Episodes(videos,current.Dubbing,current.Player);
+        // Серии выбранной справа озвучки и плеера (по умолчанию — текущие).
+        var list=PlaybackSources.Episodes(videos,VoiceBox.SelectedItem as string ?? current.Dubbing,SourceBox.SelectedItem as string ?? current.Player);
         var progress=Progress.Get(store,anime.Id);
         PlayerWatchedText.Text=$"просмотрено {list.Count(v=>progress?.IsWatched(v.Number)==true)} из {list.Count}";
         PlayerEpisodes.Content=EpisodeGrid.Build(list,progress,current.Number,episode=>{ if(!initialized) { current=episode; _=InitializePlayer(); } else NavigateEpisode(episode); },episode=>Progress.Toggle(store,anime,episode.Number));
@@ -405,7 +406,8 @@ public partial class PlayerPage : UserControl
     {
         ApplyButton.IsEnabled=SeriesBox.SelectedItem is Episode;
         AlternativeButton.IsEnabled=PlaybackSources.Alternative(videos,current)!=null;
-        SelectionHint.Text=SeriesBox.SelectedItem is not Episode selected ? $"Серии {current.Number} здесь нет. Выбери доступную серию явно." : selected.Id!=current.Id ? "Выбор изменён. Нажми «Смотреть выбранное», чтобы применить." : "";
+        SelectionHint.Text=SeriesBox.SelectedItem is not Episode selected ? $"Серии {current.Number} в этой озвучке нет — выбери серию ниже." : selected.Id!=current.Id ? "Озвучка изменена. Нажми кнопку выше или выбери серию ниже." : "";
+        RenderEpisodes();
     }
     async void ApplyClick(object sender,RoutedEventArgs e)
     {
