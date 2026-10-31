@@ -91,10 +91,20 @@ public static class Sprites
         var s = Get(EffectSheet(type)); if (s == null) return false;
         var now = Now; var sec = now / 1000.0 * EffectPace; var r = new Random(type.Length * 7919 + type[0]);
         var (count, size0) = type switch { "snow" => (40, 16.0), "starfall" => (6, 100.0), "bats" => (7, 50.0), "fireflies" => (18, 32.0), "bubbles" => (16, 32.0), "sparkles" => (22, 26.0), "hearts" => (14, 26.0), _ => (24, 22.0) };
-        for (var i = 0; i < count; i++)
+        // Слои глубины: дальние частицы мельче, бледнее и медленнее (параллакс); пара крупных полупрозрачных
+        // частиц «у самой камеры» для лепестков, снега, пузырей, сердечек и искр. Рисуем от дальних к ближним.
+        var near = type is "petals" or "snow" or "bubbles" or "hearts" or "sparkles" ? 2 : 0;
+        var parts = new (double Rx, double Ry, double Speed, double Phase, double Depth, int Variant, double Jitter, int I)[count + near];
+        for (var k = 0; k < parts.Length; k++)
         {
             double rx = r.NextDouble(), ry = r.NextDouble(), speed = .6 + r.NextDouble() * .8, phase = r.NextDouble(), depth = .45 + r.NextDouble() * .55; var variant = r.Next(Math.Max(1, s.Frames));
-            double size = size0 * depth * (.8 + r.NextDouble() * .4), alpha = .45 + .55 * depth;
+            if (k >= count) depth = 1.6 + depth * .3;
+            parts[k] = (rx, ry, speed * (.55 + .45 * Math.Min(depth, 1.3)), phase, depth, variant, .8 + r.NextDouble() * .4, k);
+        }
+        Array.Sort(parts, (pa, pb) => pa.Depth.CompareTo(pb.Depth));
+        foreach (var (rx, ry, speed, phase, depth, variant, jitter, i) in parts)
+        {
+            double size = size0 * depth * jitter, alpha = depth > 1.2 ? .3 : .45 + .55 * depth;
             switch (type)
             {
                 case "sparkles": { var life = (sec * .35 * speed + phase) % 1; var a = Math.Sin(life * Math.PI); Draw(dc, s, variant, rx * w, ry * h, size * (.4 + .6 * a), size * (.4 + .6 * a), life * 90, a * alpha); break; }

@@ -68,9 +68,19 @@ final class Sprites {
   long now=SystemClock.uptimeMillis();float sec=now/1000f*EFFECT_PACE;Random r=new Random(type.hashCode());
   int count;float base;
   switch(type){case "snow":count=34;base=16;break;case "starfall":count=5;base=90;break;case "bats":count=6;base=46;break;case "fireflies":count=16;base=30;break;case "bubbles":count=14;base=30;break;case "sparkles":count=18;base=24;break;case "hearts":count=12;base=24;break;default:count=20;base=20;}
-  for(int i=0;i<count;i++){
+  // Слои глубины: дальние частицы мельче, бледнее и медленнее (параллакс); пара крупных полупрозрачных частиц
+  // «у самой камеры» для лепестков, снега, пузырей, сердечек и искр. Рисуем от дальних к ближним.
+  int near=type.equals("petals")||type.equals("snow")||type.equals("bubbles")||type.equals("hearts")||type.equals("sparkles")?2:0;
+  float[][] parts=new float[count+near][];
+  for(int k=0;k<parts.length;k++){
    float rx=r.nextFloat(),ry=r.nextFloat(),speed=.6f+r.nextFloat()*.8f,phase=r.nextFloat(),depth=.45f+r.nextFloat()*.55f;int variant=r.nextInt(Math.max(1,s.frames));
-   float size=base*density*depth*(.8f+r.nextFloat()*.4f),alpha=.45f+.55f*depth;
+   if(k>=count)depth=1.6f+depth*.3f;
+   parts[k]=new float[]{rx,ry,speed*(.55f+.45f*Math.min(depth,1.3f)),phase,depth,variant,.8f+r.nextFloat()*.4f,k};
+  }
+  java.util.Arrays.sort(parts,(pa,pb)->Float.compare(pa[4],pb[4]));
+  for(float[] part:parts){
+   float rx=part[0],ry=part[1],speed=part[2],phase=part[3],depth=part[4];int variant=(int)part[5],i=(int)part[7];
+   float size=base*density*depth*part[6],alpha=depth>1.2f?.3f:.45f+.55f*depth;
    switch(type){
     case "sparkles":{float life=(sec*.35f*speed+phase)%1f,a=(float)Math.sin(life*Math.PI);draw(canvas,s,variant,rx*w,ry*h,size*(.4f+.6f*a),size*(.4f+.6f*a),life*90,a*alpha,false,false);break;}
     case "bubbles":{float p=(sec*.05f*speed+phase)%1f;float y=h*(1.1f-p*1.25f),x=rx*w+(float)Math.sin(sec*speed+phase*6)*12*density;draw(canvas,s,variant,x,y,size,size,0,alpha*Math.min(1,(1-p)*3),false,false);break;}
