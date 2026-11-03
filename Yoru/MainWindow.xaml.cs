@@ -76,7 +76,7 @@ public partial class MainWindow : Window
         Activated += async (_, _) => { if ((DateTime.Now - lastSync).TotalSeconds > 30) await SyncProgress(); };
         var syncTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMinutes(2) };
         syncTimer.Tick += async (_, _) => await SyncProgress(); syncTimer.Start();
-        Loaded += async (_, _) => await CheckUpdates();
+        Loaded += async (_, _) => { if (QaShots.Active) { await QaShots.Run(this); return; } await CheckUpdates(); };
         Loaded += (_, _) => { NotifyBox.IsChecked = store.Data.NotifyEpisodes; DiscordBox.IsChecked = store.Data.DiscordPresence; DiscordIdBox.Text = store.Data.DiscordClientId; EpisodeNotifier.Start(store); };
         Closed += (_, _) => EpisodeNotifier.Stop();
         Loaded += async (_, _) =>
@@ -313,12 +313,19 @@ public partial class MainWindow : Window
         else { WindowState = WindowState.Normal; WindowStyle = WindowStyle.SingleBorderWindow; ResizeMode = ResizeMode.CanResize; WindowState = stateBeforeFullscreen; }
     }
 
+    // ───── Снимки экранов для проверки дизайна (только при YORU_QA_SHOTS) ─────
+    internal int QaCardCount => displayed.Count;
+    internal void QaScrollCatalog(double y) => BrowseScroll.ScrollToVerticalOffset(y);
+    internal bool QaOpenFirst() { var first = displayed.FirstOrDefault(); if (first == null) return false; OpenAnime(first); return true; }
+    internal void QaShowSettings() { ClearPages(); SettingsNav.IsChecked = true; }
+    internal void QaShowAuth() { ClearPages(); AuthHost.Content = new AuthView(AccountClient.Shared, () => Task.CompletedTask); AuthHost.Visibility = Visibility.Visible; }
+
     // ───── Вход обязателен ─────
     AuthView? auth;
     void UpdateAuthGate()
     {
         var account = AccountClient.Shared;
-        var locked = account.Config.Configured && !account.SignedIn;
+        var locked = account.Config.Configured && !account.SignedIn && !QaShots.Active;
         if (locked)
         {
             ClearPages();
