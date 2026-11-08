@@ -28,10 +28,15 @@ android {
             }
         }
     }
+    // Общий ключ из репозитория: без секретов CI сборки подписываются одним и тем же ключом и ставятся поверх друг друга.
+    signingConfigs.create('shared') {
+        storeFile file('../yoru-shared.jks'); storePassword 'yoru-shared'; keyAlias 'yoru'; keyPassword 'yoru-shared'
+    }
     buildTypes {
+        debug { signingConfig signingConfigs.shared }
         release {
             minifyEnabled false
-            if (System.getenv('YORU_STORE_FILE')) signingConfig signingConfigs.personal
+            signingConfig System.getenv('YORU_STORE_FILE') ? signingConfigs.personal : signingConfigs.shared
         }
     }
     buildFeatures { buildConfig true }
