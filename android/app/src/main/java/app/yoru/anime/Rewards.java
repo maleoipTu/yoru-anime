@@ -81,7 +81,9 @@ final class Rewards {
  }
 
  /** Сезонное украшение: продаётся ли сейчас и до какого числа. available_until хранится как ISO-время. */
- static boolean onSale(String from,String until,long nowMillis){return (from==null||from.isEmpty()||parse(from)<=nowMillis)&&(until==null||until.isEmpty()||nowMillis<=parse(until));}
+ // JSONObject.optString для null из базы возвращает строку "null" — это значит «без ограничения».
+ static boolean noDate(String iso){return iso==null||iso.isEmpty()||iso.equals("null");}
+ static boolean onSale(String from,String until,long nowMillis){return (noDate(from)||parse(from)<=nowMillis)&&(noDate(until)||nowMillis<=parse(until));}
  static long parse(String iso){try{return java.time.OffsetDateTime.parse(iso).toInstant().toEpochMilli();}catch(Exception e){try{return java.time.LocalDate.parse(iso.substring(0,10)).atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli();}catch(Exception ignored){return 0;}}}
  static String until(String iso){if(iso==null||iso.isEmpty())return "";long t=parse(iso)-86_400_000L;return java.time.Instant.ofEpochMilli(t).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("d MMMM",Locale.forLanguageTag("ru")));}
  static String days(int n){int m=n%100,k=n%10;return n+(m>=11&&m<=14?" дней":k==1?" день":k>=2&&k<=4?" дня":" дней");}
