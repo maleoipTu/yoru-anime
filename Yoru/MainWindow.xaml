@@ -27,6 +27,8 @@
       <TextBlock Text="Моя коллекция" Foreground="#77738A" FontSize="12" FontWeight="SemiBold" Margin="18,32,0,10"/>
       <RadioButton GroupName="Navigation" Style="{StaticResource Nav}" Content="♡    Избранное" Tag="favorites" Checked="Navigate"/>
       <RadioButton GroupName="Navigation" Style="{StaticResource Nav}" Content="↺    История" Tag="history" Checked="Navigate"/>
+      <TextBlock Text="Аккаунт" Foreground="#77738A" FontSize="12" FontWeight="SemiBold" Margin="18,32,0,10"/>
+      <RadioButton x:Name="ShopNav" GroupName="Navigation" Style="{StaticResource Nav}" Content="✦    Магазин украшений" Click="ShopClick" AutomationProperties.Name="Магазин украшений"/>
      </StackPanel>
     </DockPanel>
    </Grid>

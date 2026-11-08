@@ -278,6 +278,7 @@ public partial class MainWindow : Window
         ProfilePoints.Text = $"◆ {Rewards.Points(AccountClient.Int(p, "points"))} · уровень {Rewards.Level(AccountClient.Int(p, "total_earned"))}";
     }
     void ProfileClick(object sender, RoutedEventArgs e) { ClearPages(); PushPage(new ProfilePage(AccountClient.Shared, store)); }
+    void ShopClick(object sender, RoutedEventArgs e) { ClearPages(); PushPage(new ProfilePage(AccountClient.Shared, store, shop: true)); }
     void CardClick(object sender, RoutedEventArgs e) { if (((Button)sender).DataContext is Anime anime) OpenAnime(anime); }
     void HeroClick(object sender, RoutedEventArgs e) { if (featured != null) OpenAnime(featured); }
     void ContinueClick(object sender, RoutedEventArgs e) { var recent = store.Data.History.FirstOrDefault(); if (recent != null) OpenAnime(recent.Anime); }

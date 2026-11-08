@@ -15,18 +15,18 @@ public final class ProfileActivity extends Activity {
  Account account;Library library;
  LinearLayout root,content;ScrollView scroll;ProgressBar busyBar;TextView message;
  JSONObject profile=new JSONObject();JSONArray decorations=new JSONArray();Map<String,JSONObject> byId=new HashMap<>();Set<String> owned=new HashSet<>();
- String tab="frame";boolean registering,busy;int generation;
+ String tab="frame";boolean registering,busy,shopOnly;int generation;
  JSONArray achievements=new JSONArray();Set<String> unlocked=new HashSet<>();String viewing="";boolean isAdmin;
  static final int PICK_AVATAR=41,PICK_BANNER=42;Runnable afterUpload;
 
  @Override public void onCreate(Bundle saved){
   super.onCreate(saved);account=new Account(this);library=new Library(this);
   if(saved!=null){tab=saved.getString("tab","frame");registering=saved.getBoolean("registering");}
-  viewing=getIntent().getStringExtra("username");if(viewing==null)viewing="";
+  viewing=getIntent().getStringExtra("username");if(viewing==null)viewing="";shopOnly=viewing.isEmpty()&&getIntent().getBooleanExtra("shop",false);
   root=Ui.root(this);
   LinearLayout toolbar=Ui.row(this);toolbar.setPadding(Ui.dp(this,8),Ui.dp(this,4),Ui.dp(this,12),Ui.dp(this,4));
   Button back=Ui.iconButton(this,"back","Назад");back.setOnClickListener(v->finish());toolbar.addView(back);
-  TextView heading=Ui.title(this,viewing.isEmpty()?"Профиль":"@"+viewing,20);if(android.os.Build.VERSION.SDK_INT>=28)heading.setAccessibilityHeading(true);LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(0,-2,1);hp.leftMargin=Ui.dp(this,4);toolbar.addView(heading,hp);
+  TextView heading=Ui.title(this,shopOnly?"Магазин украшений":viewing.isEmpty()?"Профиль":"@"+viewing,20);if(android.os.Build.VERSION.SDK_INT>=28)heading.setAccessibilityHeading(true);LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(0,-2,1);hp.leftMargin=Ui.dp(this,4);toolbar.addView(heading,hp);
   busyBar=new ProgressBar(this);busyBar.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(Ui.ACCENT));busyBar.setVisibility(View.INVISIBLE);toolbar.addView(busyBar,new LinearLayout.LayoutParams(Ui.dp(this,24),Ui.dp(this,24)));
   root.addView(toolbar);
   scroll=new ScrollView(this);scroll.setVerticalScrollBarEnabled(false);content=Ui.padded(this,16);content.setPadding(Ui.dp(this,Ui.GUTTER),Ui.dp(this,8),Ui.dp(this,Ui.GUTTER),Ui.dp(this,48));scroll.addView(content);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
@@ -56,6 +56,8 @@ public final class ProfileActivity extends Activity {
   if(!account.signedIn()&&Account.configured()){authForm(text);return;}
   if(message!=null&&message.isAttachedToWindow()){message.setText(text);message.setVisibility(View.VISIBLE);}else Toast.makeText(this,text,Toast.LENGTH_LONG).show();
  }
+ // После покупок в магазине профиль обновляется, чтобы сразу показать надетое.
+ @Override protected void onRestart(){super.onRestart();if(viewing.isEmpty()&&account.signedIn())refresh();}
  void refresh(){background(()->new Object[]{account.profile(),account.decorations(),account.inventory(),account.achievements(),account.unlocked(),account.isAdmin()},result->{profile=(JSONObject)result[0];decorations=(JSONArray)result[1];byId=Decor.index(decorations);@SuppressWarnings("unchecked")Set<String> inventory=(Set<String>)result[2];owned=inventory;achievements=(JSONArray)result[3];@SuppressWarnings("unchecked")Set<String> got=(Set<String>)result[4];unlocked=got;isAdmin=Boolean.TRUE.equals(result[5]);renderProfile();});}
 
  // ───── Чужой профиль ─────
@@ -123,6 +125,11 @@ public final class ProfileActivity extends Activity {
  void renderProfile(){
   int y=scroll.getScrollY();content.removeAllViews();
   int points=profile.optInt("points"),total=profile.optInt("total_earned"),level=Rewards.level(total);
+  if(shopOnly){
+   Ui.add(content,Ui.text(this,"Уровень "+level+" · очки копятся за просмотр в плеере Yoru. Купленное надевается сразу и видно друзьям.",13,Ui.MUTED),4);
+   shop(points,level);
+   message=Ui.text(this,"",13,0xFFFF9A8B);message.setVisibility(View.GONE);Ui.add(content,message,12);
+   scroll.post(()->scroll.scrollTo(0,y));return;}
   LinearLayout hero=hero(profile,true);
   LinearLayout heroActions=Ui.row(this);Button edit=Ui.tonal(this,"Изменить");edit.setOnClickListener(v->editProfile());heroActions.addView(edit,new LinearLayout.LayoutParams(0,-2,1));Button friends=Ui.tonal(this,"Друзья");friends.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"user",Ui.ACCENT,18),null,null,null);friends.setCompoundDrawablePadding(Ui.dp(this,6));friends.setOnClickListener(v->startActivity(new Intent(this,FriendsActivity.class)));LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(0,-2,1);fp.leftMargin=Ui.dp(this,8);heroActions.addView(friends,fp);Ui.add(hero,heroActions,16);
   if(isAdmin){Button admin=Ui.tonal(this,"Админ-панель");admin.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"shield",Ui.ACCENT,18),null,null,null);admin.setCompoundDrawablePadding(Ui.dp(this,6));admin.setOnClickListener(v->startActivity(new Intent(this,AdminActivity.class)));Ui.add(hero,admin,8);}
@@ -140,11 +147,13 @@ public final class ProfileActivity extends Activity {
   Ui.add(progress,Ui.text(this,"Засчитано серий: "+profile.optInt("episodes_watched")+". Очки начисляются за просмотр в плеере Yoru: "+Rewards.EPISODE_POINTS+" за серию, +"+Rewards.NEW_ANIME_BONUS+" за новое аниме и до +20 за дни подряд. Серия засчитывается после 5–12 минут просмотра. Ещё очки дают достижения.",12,Ui.MUTED),10);
   Ui.add(content,progress,16);
 
+  // Украшения теперь в отдельном разделе «Магазин» (нижнее меню); отсюда — быстрый переход.
+  Button store=Ui.tonal(this,"Магазин украшений");store.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"gem",Ui.WARM,18),null,null,null);store.setCompoundDrawablePadding(Ui.dp(this,6));store.setOnClickListener(v->startActivity(new Intent(this,ProfileActivity.class).putExtra("shop",true)));Ui.add(content,store,24);
   // Рейтинг, подарки, «Год в Yoru» и перенос со старого сайта.
   String[][] tools={{"trophy","Рейтинг недели"},{"gift","Подарки"},{"spark","Год в Yoru"},{"party","Смотреть вместе"},{"catalog","Для тебя"},{"download","Перенос с YummyAnime"}};
   for(int i=0;i<tools.length;i+=2){LinearLayout row=Ui.row(this);for(int j=0;j<2;j++){String[] tool=tools[i+j];Button b=Ui.tonal(this,tool[1]);b.setTextSize(13);b.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,tool[0],Ui.ACCENT,18),null,null,null);b.setCompoundDrawablePadding(Ui.dp(this,6));
     b.setOnClickListener(v->{switch(tool[1]){case "Рейтинг недели":Extras.leaderboard(this,account);break;case "Подарки":Extras.inbox(this,account,this::refresh);break;case "Год в Yoru":startActivity(new Intent(this,WrappedActivity.class));break;case "Смотреть вместе":joinRoom();break;case "Для тебя":Extras.forYou(this,account);break;default:Extras.importOld(this,account,this::refresh);}});
-    LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);if(j>0)lp.leftMargin=Ui.dp(this,10);row.addView(b,lp);}Ui.add(content,row,i==0?24:10);}
+    LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);if(j>0)lp.leftMargin=Ui.dp(this,10);row.addView(b,lp);}Ui.add(content,row,10);}
   Ui.add(content,Extras.stats(this,account,profile.optString("username")),24);
 
   // Витрина любимых аниме.
@@ -157,7 +166,15 @@ public final class ProfileActivity extends Activity {
 
   achievementGrid(unlocked);
 
-  // Магазин украшений.
+  message=Ui.text(this,"",13,0xFFFF9A8B);message.setVisibility(View.GONE);Ui.add(content,message,12);
+  Ui.add(content,Ui.text(this,"Аккаунт: "+account.email(),12,Ui.MUTED),26);
+  Button logout=Ui.textButton(this,"Выйти из аккаунта");logout.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);logout.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"logout",Ui.ACCENT,20),null,null,null);logout.setCompoundDrawablePadding(Ui.dp(this,8));logout.setOnClickListener(v->{generation++;setBusy(false);account.signOut();registering=false;authForm("");});Ui.add(content,logout,4);
+  Button updates=Ui.textButton(this,"Проверить обновления · версия "+BuildConfig.VERSION_NAME);updates.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);updates.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"download",Ui.ACCENT,20),null,null,null);updates.setCompoundDrawablePadding(Ui.dp(this,8));updates.setOnClickListener(v->Updater.check(this,true));Ui.add(content,updates,0);
+  scroll.post(()->scroll.scrollTo(0,y));
+ }
+
+ /** Магазин украшений: баланс, вкладки по видам и плитки (в профиле и в отдельном разделе). */
+ void shop(int points,int level){
   LinearLayout decoHead=Ui.row(this);decoHead.addView(section("Украшения"),new LinearLayout.LayoutParams(0,-2,1));TextView balance=Ui.text(this,Rewards.points(points),14,Ui.WARM);balance.setTypeface(Ui.MEDIUM);balance.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"gem",Ui.WARM,16),null,null,null);balance.setCompoundDrawablePadding(Ui.dp(this,6));balance.setContentDescription("Баланс: "+points+" очков");decoHead.addView(balance);Ui.add(content,decoHead,32);
   LinearLayout tabs=Ui.row(this);String[][] kinds={{"avatar_deco","Украшения аватара"},{"profile_effect","Эффекты профиля"},{"profile_frame","Рамки профиля"},{"frame","Обводка аватара"},{"badge","Значки"},{"name_color","Цвет ника"}};
   for(String[] kind:kinds){Button chip=Ui.chip(this,kind[1]);chip.setCompoundDrawablesRelativeWithIntrinsicBounds(null,null,null,null);Ui.chipState(chip,tab.equals(kind[0]));chip.setCompoundDrawablesRelativeWithIntrinsicBounds(null,null,null,null);chip.setContentDescription(kind[1]+(tab.equals(kind[0])?", выбрано":""));chip.setOnClickListener(v->{tab=kind[0];renderProfile();});LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-2,-2);cp.rightMargin=Ui.dp(this,8);tabs.addView(chip,cp);}
@@ -169,11 +186,6 @@ public final class ProfileActivity extends Activity {
   for(int i=0;i<items.size();i+=columns){LinearLayout row=Ui.row(this);row.setGravity(Gravity.TOP);row.setBaselineAligned(false);for(int j=0;j<columns;j++){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-1,1);if(j>0)lp.leftMargin=Ui.dp(this,10);if(i+j<items.size())row.addView(tile(items.get(i+j),points,level),lp);else row.addView(new View(this),lp);}Ui.add(content,row,10);}
   if(items.isEmpty())Ui.add(content,Ui.text(this,busy?"Загружаем украшения…":"Украшения пока не загрузились.",13,Ui.MUTED),8);
 
-  message=Ui.text(this,"",13,0xFFFF9A8B);message.setVisibility(View.GONE);Ui.add(content,message,12);
-  Ui.add(content,Ui.text(this,"Аккаунт: "+account.email(),12,Ui.MUTED),26);
-  Button logout=Ui.textButton(this,"Выйти из аккаунта");logout.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);logout.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"logout",Ui.ACCENT,20),null,null,null);logout.setCompoundDrawablePadding(Ui.dp(this,8));logout.setOnClickListener(v->{generation++;setBusy(false);account.signOut();registering=false;authForm("");});Ui.add(content,logout,4);
-  Button updates=Ui.textButton(this,"Проверить обновления · версия "+BuildConfig.VERSION_NAME);updates.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);updates.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"download",Ui.ACCENT,20),null,null,null);updates.setCompoundDrawablePadding(Ui.dp(this,8));updates.setOnClickListener(v->Updater.check(this,true));Ui.add(content,updates,0);
-  scroll.post(()->scroll.scrollTo(0,y));
  }
 
  View showcaseItem(JSONObject item){
