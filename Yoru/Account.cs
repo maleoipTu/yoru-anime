@@ -47,6 +47,15 @@ public static class Rewards
         ? TimeSpan.FromSeconds(Math.Clamp(d.TotalSeconds * 0.6, 300, 720)) : TimeSpan.FromMinutes(10);
     public static bool ValidUsername(string value) => System.Text.RegularExpressions.Regex.IsMatch(value, "^[a-z0-9_]{3,20}$");
     public static bool ValidEmail(string value) => System.Text.RegularExpressions.Regex.IsMatch(value, @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
+    /// <summary>Короткая запись для плиток: до 10 000 полностью, дальше 12,3k / 1,2M.</summary>
+    public static string Compact(int value)
+    {
+        long v = Math.Abs((long)value); var sign = value < 0 ? "-" : "";
+        if (v < 10_000) return Points(value);
+        var (n, unit) = v >= 1_000_000 ? (v / 1_000_000.0, "M") : (v / 1_000.0, "k");
+        n = Math.Floor(n * 10) / 10;
+        return sign + (n >= 100 || n == Math.Floor(n) ? ((long)n).ToString(CultureInfo.InvariantCulture) : n.ToString("0.0", CultureInfo.GetCultureInfo("ru-RU"))) + unit;
+    }
     public static string Points(int value) => value.ToString("#,0", CultureInfo.GetCultureInfo("ru-RU"));
     public static string Rarity(string value) => value switch { "rare" => "Редкое", "epic" => "Эпическое", "legendary" => "Легендарное", _ => "Обычное" };
     public static string RarityColor(string value) => value switch { "rare" => "#6FC3FF", "epic" => "#BFAEFF", "legendary" => "#FFC768", _ => "#A2A3B6" };

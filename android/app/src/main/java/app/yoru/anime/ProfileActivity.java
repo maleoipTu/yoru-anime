@@ -137,7 +137,7 @@ public final class ProfileActivity extends Activity {
 
   // Очки, уровень, серии.
   LinearLayout stats=Ui.row(this);
-  stats.addView(stat("gem",Rewards.points(points),"очков",Ui.WARM),new LinearLayout.LayoutParams(0,-1,1));
+  stats.addView(stat("gem",Rewards.compact(points),"очков",Ui.WARM),new LinearLayout.LayoutParams(0,-1,1));
   stats.addView(stat("moon",String.valueOf(level),"уровень",Ui.ACCENT),margin(new LinearLayout.LayoutParams(0,-1,1)));
   int streak=profile.optInt("streak_days");stats.addView(stat("calendar",String.valueOf(streak),streak>0?"🔥 дней подряд":"дней подряд",0xFFFF8A5B),margin(new LinearLayout.LayoutParams(0,-1,1)));
   Ui.add(content,stats,16);
@@ -377,7 +377,8 @@ public final class ProfileActivity extends Activity {
  LinearLayout.LayoutParams margin(LinearLayout.LayoutParams p){p.leftMargin=Ui.dp(this,12);return p;}
  View stat(String icon,String value,String caption,int color){
   LinearLayout box=Ui.column(this);box.setPadding(Ui.dp(this,16),Ui.dp(this,14),Ui.dp(this,12),Ui.dp(this,14));box.setBackground(Ui.outlined(this,Ui.PANEL,20));
-  TextView v=Ui.title(this,value,21);v.setTextColor(color);v.setMaxLines(1);v.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,icon,color,16),null,null,null);v.setCompoundDrawablePadding(Ui.dp(this,6));box.addView(v);
+  // Неразрывные пробелы и автоуменьшение шрифта: число не переносится и не обрезается.
+  TextView v=Ui.title(this,value.replace(' ','\u00A0'),21);v.setTextColor(color);v.setSingleLine(true);v.setAutoSizeTextTypeUniformWithConfiguration(12,21,1,android.util.TypedValue.COMPLEX_UNIT_SP);v.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,icon,color,16),null,null,null);v.setCompoundDrawablePadding(Ui.dp(this,6));box.addView(v);
   Ui.add(box,Ui.text(this,caption,12,Ui.MUTED),6);box.setContentDescription(value+" "+caption);box.setFocusable(true);return box;
  }
  EditText input(String hint,int type){
