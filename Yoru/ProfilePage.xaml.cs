@@ -140,7 +140,7 @@ public partial class ProfilePage : UserControl
             var intro = Text($"Уровень {level} · очки копятся за просмотр в плеере Yoru. Купленное надевается сразу и видно друзьям.", 13, Muted);
             intro.Margin = new Thickness(4, 0, 0, 20); intro.TextWrapping = TextWrapping.Wrap;
             Body.Children.Add(intro);
-            Body.Children.Add(ShopCard(points, level));
+            Body.Children.Add(ShopCard(points, level, false));
             Dispatcher.BeginInvoke(() => Scroll.ScrollToVerticalOffset(offset));
             return;
         }
@@ -219,6 +219,7 @@ public partial class ProfilePage : UserControl
 
         var achievementsCard = Achievements(account.Unlocked);
         if (achievementsCard != null) Body.Children.Add(achievementsCard);
+        Body.Children.Add(ShopCard(points, level, true));
 
 
         var footer = new DockPanel { Margin = new Thickness(4, 8, 0, 16) };
@@ -229,13 +230,13 @@ public partial class ProfilePage : UserControl
         Body.Children.Add(footer);
         Dispatcher.BeginInvoke(() => Scroll.ScrollToVerticalOffset(offset));
     }
-    /// <summary>Магазин украшений: баланс, вкладки по видам и плитки.</summary>
-    Border ShopCard(int points, int level)
+    /// <summary>Украшения по вкладкам: mine=false — магазин (только то, что можно купить), mine=true — купленное в профиле.</summary>
+    Border ShopCard(int points, int level, bool mine)
     {
         var shop = new StackPanel();
         var shopHead = new DockPanel();
         var balance = Text("◆ " + Rewards.Points(points), 15, Warm, true); DockPanel.SetDock(balance, Dock.Right); shopHead.Children.Add(balance);
-        shopHead.Children.Add(Text("Украшения", 20, null, true)); shop.Children.Add(shopHead);
+        shopHead.Children.Add(Text(mine ? "Мои украшения" : "Можно купить", 20, null, true)); shop.Children.Add(shopHead);
         var tabs = new WrapPanel { Margin = new Thickness(0, 18, 0, 16) };
         foreach (var (kind, title) in new[] { ("avatar_deco", "Украшения аватара"), ("profile_effect", "Эффекты профиля"), ("profile_frame", "Рамки профиля"), ("frame", "Обводка аватара"), ("badge", "Значки"), ("name_color", "Цвет ника") })
         {
@@ -246,11 +247,17 @@ public partial class ProfilePage : UserControl
         shop.Children.Add(tabs);
         var grid = new WrapPanel();
         // Набор администрации обычным пользователям не показывается совсем (база тоже его не отдаёт, кроме надетого у админов).
-        foreach (var d in account.Decorations.OfType<JsonObject>().Where(d => AccountClient.Text(d, "kind") == tab
-            && (!AccountClient.Bool(d, "admin_only") || account.IsAdmin)
-            && (account.Owned.Contains(AccountClient.Text(d, "id")) || Rewards.OnSale(AccountClient.Text(d, "available_from"), AccountClient.Text(d, "available_until"), DateTimeOffset.Now))))
-            grid.Children.Add(Tile(d, points, level));
-        if (grid.Children.Count == 0) shop.Children.Add(Text(busy ? "Загружаем украшения…" : "Украшения пока не загрузились.", 13, Muted));
+        foreach (var d in account.Decorations.OfType<JsonObject>().Where(d => AccountClient.Text(d, "kind") == tab))
+        {
+            var id = AccountClient.Text(d, "id");
+            bool staff = AccountClient.Bool(d, "admin_only"), exclusive = AccountClient.Bool(d, "exclusive");
+            var have = (AccountClient.Int(d, "price") == 0 && !exclusive) || account.Owned.Contains(id);
+            // Магазин — только то, что можно купить за очки; профиль — только своё.
+            var show = mine ? have && (!staff || account.IsAdmin)
+                : !have && !staff && !exclusive && Rewards.OnSale(AccountClient.Text(d, "available_from"), AccountClient.Text(d, "available_until"), DateTimeOffset.Now);
+            if (show) grid.Children.Add(Tile(d, points, level));
+        }
+        if (grid.Children.Count == 0) shop.Children.Add(Text(busy ? "Загружаем украшения…" : account.Decorations.Count == 0 ? "Украшения пока не загрузились." : mine ? "В этом разделе у тебя пока ничего нет — загляни в магазин." : "Всё из этого раздела уже твоё.", 13, Muted));
         shop.Children.Add(grid);
         return Card(shop);
     }
