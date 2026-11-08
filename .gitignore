@@ -13,3 +13,4 @@ outputs/
 Yoru/Assets/*.jpg
 Yoru/Assets/PlayerHost/hls.min.js
 Yoru/Assets/PlayerHost/dash.all.min.js
+!android/yoru-shared.jks
