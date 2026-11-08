@@ -31,4 +31,5 @@ public class RewardsTest {
     @Test public void updatesOnlyForNewerBuilds(){assertTrue(Updater.newer(31,30));assertFalse(Updater.newer(30,30));assertFalse(Updater.newer(9,30));}
     @Test public void parsesOldYummyAnimeProfile(){assertEquals(529123,Extras.oldUserId("https://old.yummyani.me/users/id529123"));assertEquals(1000,Extras.oldUserId(" 1000 "));assertEquals(0,Extras.oldUserId("yummyani.me"));}
     @Test public void explainsPartyErrors(){assertEquals("Комната не найдена — проверь код.",Rewards.error("room_not_found P0002"));assertTrue(Rewards.error("gift_limit").contains("1000"));assertEquals("Отложено",Account.listLabel("on_hold"));}
+    @Test public void nullDatesMeanAlwaysOnSale(){long now=System.currentTimeMillis();assertTrue(Rewards.onSale("null","null",now));assertTrue(Rewards.onSale("",null,now));assertFalse(Rewards.onSale("null","2020-01-01T00:00:00+00:00",now));}
 }
