@@ -32,6 +32,10 @@ final class Rewards {
   return fallback;
  }
 
+ /** Короткая запись для плиток: до 10 000 полностью, дальше 12,3k / 1,2M. */
+ static String compact(int value){long v=Math.abs((long)value);String sign=value<0?"-":"";if(v<10_000)return points(value);
+  double n;String unit;if(v>=1_000_000){n=v/1_000_000.0;unit="M";}else{n=v/1_000.0;unit="k";}
+  n=Math.floor(n*10)/10;String text=n>=100||n==Math.floor(n)?String.valueOf((long)n):String.format(Locale.ROOT,"%.1f",n).replace('.',',');return sign+text+unit;}
  static String points(int value){return String.format(Locale.ROOT,"%,d",value).replace(',',' ');}
 
  /** Человеческое сообщение для ответа award_watch, когда очки не начислены. */

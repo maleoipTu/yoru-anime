@@ -162,7 +162,7 @@ public partial class ProfilePage : UserControl
 
         // Очки и уровень.
         var stats = new UniformGrid3();
-        stats.Add("◆ " + Rewards.Points(points), "очков", Warm);
+        stats.Add("◆ " + Rewards.Compact(points), "очков", Warm);
         stats.Add(level.ToString(), "уровень", AccentBrush);
         stats.Add("🔥 " + AccountClient.Int(p, "streak_days"), "дней подряд", new SolidColorBrush(Color.FromRgb(0xFF, 0x8A, 0x5B)));
         var progress = new StackPanel();
