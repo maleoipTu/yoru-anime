@@ -378,7 +378,7 @@ public final class ProfileActivity extends Activity {
  View stat(String icon,String value,String caption,int color){
   LinearLayout box=Ui.column(this);box.setPadding(Ui.dp(this,16),Ui.dp(this,14),Ui.dp(this,12),Ui.dp(this,14));box.setBackground(Ui.outlined(this,Ui.PANEL,20));
   // Неразрывные пробелы и автоуменьшение шрифта: число не переносится и не обрезается.
-  TextView v=Ui.title(this,value.replace(' ','\u00A0'),21);v.setTextColor(color);v.setSingleLine(true);v.setAutoSizeTextTypeUniformWithConfiguration(12,21,1,android.util.TypedValue.COMPLEX_UNIT_SP);v.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,icon,color,16),null,null,null);v.setCompoundDrawablePadding(Ui.dp(this,6));box.addView(v);
+  TextView v=Ui.title(this,value.replace(' ','\u00A0').replace('\u2009','\u202F'),21);v.setTextColor(color);v.setSingleLine(true);v.setAutoSizeTextTypeUniformWithConfiguration(12,21,1,android.util.TypedValue.COMPLEX_UNIT_SP);v.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,icon,color,16),null,null,null);v.setCompoundDrawablePadding(Ui.dp(this,6));box.addView(v);
   Ui.add(box,Ui.text(this,caption,12,Ui.MUTED),6);box.setContentDescription(value+" "+caption);box.setFocusable(true);return box;
  }
  EditText input(String hint,int type){
