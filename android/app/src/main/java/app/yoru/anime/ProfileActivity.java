@@ -127,7 +127,7 @@ public final class ProfileActivity extends Activity {
   int points=profile.optInt("points"),total=profile.optInt("total_earned"),level=Rewards.level(total);
   if(shopOnly){
    Ui.add(content,Ui.text(this,"Уровень "+level+" · очки копятся за просмотр в плеере Yoru. Купленное надевается сразу и видно друзьям.",13,Ui.MUTED),4);
-   shop(points,level);
+   shop(points,level,false);
    message=Ui.text(this,"",13,0xFFFF9A8B);message.setVisibility(View.GONE);Ui.add(content,message,12);
    scroll.post(()->scroll.scrollTo(0,y));return;}
   LinearLayout hero=hero(profile,true);
@@ -165,6 +165,7 @@ public final class ProfileActivity extends Activity {
    Ui.add(content,strip,8);}
 
   achievementGrid(unlocked);
+  shop(points,level,true);
 
   message=Ui.text(this,"",13,0xFFFF9A8B);message.setVisibility(View.GONE);Ui.add(content,message,12);
   Ui.add(content,Ui.text(this,"Аккаунт: "+account.email(),12,Ui.MUTED),26);
@@ -174,17 +175,18 @@ public final class ProfileActivity extends Activity {
  }
 
  /** Магазин украшений: баланс, вкладки по видам и плитки (в профиле и в отдельном разделе). */
- void shop(int points,int level){
-  LinearLayout decoHead=Ui.row(this);decoHead.addView(section("Украшения"),new LinearLayout.LayoutParams(0,-2,1));TextView balance=Ui.text(this,Rewards.points(points),14,Ui.WARM);balance.setTypeface(Ui.MEDIUM);balance.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"gem",Ui.WARM,16),null,null,null);balance.setCompoundDrawablePadding(Ui.dp(this,6));balance.setContentDescription("Баланс: "+points+" очков");decoHead.addView(balance);Ui.add(content,decoHead,32);
+ /** mine=false — магазин (только то, что можно купить за очки), mine=true — купленное в профиле. */
+ void shop(int points,int level,boolean mine){
+  LinearLayout decoHead=Ui.row(this);decoHead.addView(section(mine?"Мои украшения":"Можно купить"),new LinearLayout.LayoutParams(0,-2,1));TextView balance=Ui.text(this,Rewards.points(points),14,Ui.WARM);balance.setTypeface(Ui.MEDIUM);balance.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"gem",Ui.WARM,16),null,null,null);balance.setCompoundDrawablePadding(Ui.dp(this,6));balance.setContentDescription("Баланс: "+points+" очков");decoHead.addView(balance);Ui.add(content,decoHead,32);
   LinearLayout tabs=Ui.row(this);String[][] kinds={{"avatar_deco","Украшения аватара"},{"profile_effect","Эффекты профиля"},{"profile_frame","Рамки профиля"},{"frame","Обводка аватара"},{"badge","Значки"},{"name_color","Цвет ника"}};
   for(String[] kind:kinds){Button chip=Ui.chip(this,kind[1]);chip.setCompoundDrawablesRelativeWithIntrinsicBounds(null,null,null,null);Ui.chipState(chip,tab.equals(kind[0]));chip.setCompoundDrawablesRelativeWithIntrinsicBounds(null,null,null,null);chip.setContentDescription(kind[1]+(tab.equals(kind[0])?", выбрано":""));chip.setOnClickListener(v->{tab=kind[0];renderProfile();});LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-2,-2);cp.rightMargin=Ui.dp(this,8);tabs.addView(chip,cp);}
   HorizontalScrollView tabScroll=new HorizontalScrollView(this);tabScroll.setHorizontalScrollBarEnabled(false);tabScroll.addView(tabs);Ui.add(content,tabScroll,4);
   List<JSONObject> items=new ArrayList<>();long now=System.currentTimeMillis();
-  for(int i=0;i<decorations.length();i++){JSONObject d=decorations.optJSONObject(i);if(d==null||!d.optString("kind").equals(tab))continue;if(d.optBoolean("admin_only")&&!isAdmin)continue;boolean have=owned.contains(d.optString("id"));
-   if(!have&&!Rewards.onSale(d.optString("available_from"),d.optString("available_until"),now))continue;items.add(d);}
+  for(int i=0;i<decorations.length();i++){JSONObject d=decorations.optJSONObject(i);if(d==null||!d.optString("kind").equals(tab))continue;boolean staff=d.optBoolean("admin_only"),exclusive=d.optBoolean("exclusive");boolean have=(d.optInt("price")==0&&!exclusive)||owned.contains(d.optString("id"));
+   boolean show=mine?have&&(!staff||isAdmin):!have&&!staff&&!exclusive&&Rewards.onSale(d.optString("available_from"),d.optString("available_until"),now);if(show)items.add(d);}
   int columns=getResources().getConfiguration().screenWidthDp>=600?3:2;
   for(int i=0;i<items.size();i+=columns){LinearLayout row=Ui.row(this);row.setGravity(Gravity.TOP);row.setBaselineAligned(false);for(int j=0;j<columns;j++){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-1,1);if(j>0)lp.leftMargin=Ui.dp(this,10);if(i+j<items.size())row.addView(tile(items.get(i+j),points,level),lp);else row.addView(new View(this),lp);}Ui.add(content,row,10);}
-  if(items.isEmpty())Ui.add(content,Ui.text(this,busy?"Загружаем украшения…":"Украшения пока не загрузились.",13,Ui.MUTED),8);
+  if(items.isEmpty())Ui.add(content,Ui.text(this,busy?"Загружаем украшения…":decorations.length()==0?"Украшения пока не загрузились.":mine?"В этом разделе у тебя пока ничего нет — загляни в магазин.":"Всё из этого раздела уже твоё.",13,Ui.MUTED),8);
 
  }
 
