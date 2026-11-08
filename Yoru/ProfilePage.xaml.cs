@@ -20,10 +20,12 @@ public partial class ProfilePage : UserControl
     static readonly Brush AccentBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0x8A, 0x9B));
 
     readonly string viewing;
-    public ProfilePage(AccountClient client, LocalStore local, string username = "")
+    readonly bool shopOnly;
+    /// <param name="shop">true — отдельный раздел «Магазин украшений» из бокового меню.</param>
+    public ProfilePage(AccountClient client, LocalStore local, string username = "", bool shop = false)
     {
         InitializeComponent();
-        account = client; store = local; viewing = username;
+        account = client; store = local; viewing = username; shopOnly = shop;
         Unloaded += (_, _) => closed = true;
         Loaded += async (_, _) => await Reload();
         IsVisibleChanged += async (_, e) => { if (e.NewValue is true && IsLoaded && !busy) await Reload(); };
@@ -132,6 +134,16 @@ public partial class ProfilePage : UserControl
         var p = account.Profile;
         int points = AccountClient.Int(p, "points"), total = AccountClient.Int(p, "total_earned"), level = Rewards.Level(total);
         Heading.Text = account.DisplayName;
+        if (shopOnly)
+        {
+            Heading.Text = "Магазин украшений";
+            var intro = Text($"Уровень {level} · очки копятся за просмотр в плеере Yoru. Купленное надевается сразу и видно друзьям.", 13, Muted);
+            intro.Margin = new Thickness(4, 0, 0, 20); intro.TextWrapping = TextWrapping.Wrap;
+            Body.Children.Add(intro);
+            Body.Children.Add(ShopCard(points, level));
+            Dispatcher.BeginInvoke(() => Scroll.ScrollToVerticalOffset(offset));
+            return;
+        }
 
         // Шапка в стиле Discord: баннер, аватар поверх края, имя, местоимения, «Обо мне».
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 24, 0, 0) };
@@ -166,6 +178,7 @@ public partial class ProfilePage : UserControl
         var tools = new WrapPanel { Margin = new Thickness(0, 0, 0, 12) };
         foreach (var (icon, title, open) in new (string, string, Action)[]
         {
+            ("✦", "Магазин украшений", () => Shell.Navigate(new ProfilePage(account, store, shop: true))),
             ("🏆", "Рейтинг недели", () => Shell.Navigate(new LeaderboardPage(account))),
             ("🎁", "Подарки", () => Shell.Navigate(new GiftsPage(account))),
             ("✨", "Год в Yoru", () => Shell.Navigate(new WrappedPage(account))),
@@ -207,7 +220,18 @@ public partial class ProfilePage : UserControl
         var achievementsCard = Achievements(account.Unlocked);
         if (achievementsCard != null) Body.Children.Add(achievementsCard);
 
-        // Магазин украшений.
+
+        var footer = new DockPanel { Margin = new Thickness(4, 8, 0, 16) };
+        var logout = new Button { Content = "Выйти из аккаунта", Foreground = AccentBrush, Background = Brushes.Transparent };
+        logout.Click += (_, _) => { account.SignOut(); registering = false; AuthForm(); };
+        DockPanel.SetDock(logout, Dock.Right); footer.Children.Add(logout);
+        footer.Children.Add(new TextBlock { Text = "Аккаунт: " + account.Email, Foreground = Muted, FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
+        Body.Children.Add(footer);
+        Dispatcher.BeginInvoke(() => Scroll.ScrollToVerticalOffset(offset));
+    }
+    /// <summary>Магазин украшений: баланс, вкладки по видам и плитки.</summary>
+    Border ShopCard(int points, int level)
+    {
         var shop = new StackPanel();
         var shopHead = new DockPanel();
         var balance = Text("◆ " + Rewards.Points(points), 15, Warm, true); DockPanel.SetDock(balance, Dock.Right); shopHead.Children.Add(balance);
@@ -228,15 +252,7 @@ public partial class ProfilePage : UserControl
             grid.Children.Add(Tile(d, points, level));
         if (grid.Children.Count == 0) shop.Children.Add(Text(busy ? "Загружаем украшения…" : "Украшения пока не загрузились.", 13, Muted));
         shop.Children.Add(grid);
-        Body.Children.Add(Card(shop));
-
-        var footer = new DockPanel { Margin = new Thickness(4, 8, 0, 16) };
-        var logout = new Button { Content = "Выйти из аккаунта", Foreground = AccentBrush, Background = Brushes.Transparent };
-        logout.Click += (_, _) => { account.SignOut(); registering = false; AuthForm(); };
-        DockPanel.SetDock(logout, Dock.Right); footer.Children.Add(logout);
-        footer.Children.Add(new TextBlock { Text = "Аккаунт: " + account.Email, Foreground = Muted, FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
-        Body.Children.Add(footer);
-        Dispatcher.BeginInvoke(() => Scroll.ScrollToVerticalOffset(offset));
+        return Card(shop);
     }
     string Frame => Field(account.Profile, "equipped_frame", "frame_moon");
     // Набор администрации в магазине: строгая графитовая подложка, тонкий серебряный кант и подпись лунным серебром.
