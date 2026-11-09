@@ -16,7 +16,7 @@ public sealed class FriendsPage : UserControl
     readonly StackPanel results = new() { Margin = new Thickness(0, 12, 0, 0) };
     readonly TextBox search = new() { MinWidth = 360, Margin = new Thickness(0, 0, 12, 0) };
     readonly TextBlock status = new() { Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x9A, 0x8B)), FontSize = 12, Margin = new Thickness(0, 8, 0, 0), TextWrapping = TextWrapping.Wrap };
-    static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(0x9A, 0x98, 0xB0));
+    static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(0x9C, 0x9C, 0xA8));
     static readonly Brush Accent = new SolidColorBrush(Color.FromRgb(0xFF, 0x8A, 0x9B));
 
     public FriendsPage(AccountClient client, LocalStore local)

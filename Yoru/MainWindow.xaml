@@ -13,21 +13,21 @@
     <DockPanel Margin="20,32,20,24">
      <StackPanel DockPanel.Dock="Top" Margin="16,0,0,44">
       <StackPanel Orientation="Horizontal"><Image Source="Assets/yoru-256.png" Width="40" Height="40" Margin="0,0,12,0" RenderOptions.BitmapScalingMode="HighQuality"/><TextBlock Text="yoru" FontSize="32" FontWeight="Bold" VerticalAlignment="Center"/></StackPanel>
-      <TextBlock Text="Твой вечер. Твоё аниме." FontSize="12" Foreground="#8E8AA0" Margin="2,10,0,0"/>
+      <TextBlock Text="Твой вечер. Твоё аниме." FontSize="12" Foreground="#9C9CA8" Margin="2,10,0,0"/>
      </StackPanel>
      <StackPanel DockPanel.Dock="Bottom">
       <Button x:Name="ProfileCard" Click="ProfileClick" Background="#1C1C23" BorderBrush="#2A2A33" BorderThickness="1" Padding="14" Margin="0,0,0,16" HorizontalContentAlignment="Stretch" AutomationProperties.Name="Профиль"><DockPanel><ContentControl x:Name="ProfileAvatar" DockPanel.Dock="Left" Width="44" Height="44" Focusable="False"/><StackPanel Margin="12,0,0,0" VerticalAlignment="Center"><TextBlock x:Name="ProfileName" Text="Войти в аккаунт" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/><TextBlock x:Name="ProfilePoints" Text="Очки и украшения профиля" Foreground="{StaticResource Muted}" FontSize="12" Margin="0,5,0,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/></StackPanel></DockPanel></Button>
       <RadioButton x:Name="SettingsNav" GroupName="Navigation" Style="{StaticResource Nav}" Content="⚙    Настройки" Tag="settings" Checked="Navigate"/>
-      <TextBlock Text="Yoru 0.5 · Windows" Foreground="#7E7A90" FontSize="12" Margin="18,16,0,0"/>
+      <TextBlock x:Name="VersionText" Text="Yoru · Windows" Foreground="#8E8E9C" FontSize="12" Margin="18,16,0,0"/>
      </StackPanel>
      <StackPanel>
-      <TextBlock Text="Обзор" Foreground="#77738A" FontSize="12" FontWeight="SemiBold" Margin="18,0,0,10"/>
+      <TextBlock Text="Обзор" Foreground="#8E8E9C" FontSize="12" FontWeight="SemiBold" Margin="18,0,0,10"/>
       <RadioButton x:Name="CatalogNav" GroupName="Navigation" Style="{StaticResource Nav}" Content="▦    Каталог" Tag="catalog" Checked="Navigate"/>
       <RadioButton GroupName="Navigation" Style="{StaticResource Nav}" Content="◷    Расписание" Tag="schedule" Checked="Navigate"/>
-      <TextBlock Text="Моя коллекция" Foreground="#77738A" FontSize="12" FontWeight="SemiBold" Margin="18,32,0,10"/>
+      <TextBlock Text="Моя коллекция" Foreground="#8E8E9C" FontSize="12" FontWeight="SemiBold" Margin="18,32,0,10"/>
       <RadioButton GroupName="Navigation" Style="{StaticResource Nav}" Content="♡    Избранное" Tag="favorites" Checked="Navigate"/>
       <RadioButton GroupName="Navigation" Style="{StaticResource Nav}" Content="↺    История" Tag="history" Checked="Navigate"/>
-      <TextBlock Text="Аккаунт" Foreground="#77738A" FontSize="12" FontWeight="SemiBold" Margin="18,32,0,10"/>
+      <TextBlock Text="Аккаунт" Foreground="#8E8E9C" FontSize="12" FontWeight="SemiBold" Margin="18,32,0,10"/>
       <RadioButton x:Name="ShopNav" GroupName="Navigation" Style="{StaticResource Nav}" Content="✦    Магазин украшений" Click="ShopClick" AutomationProperties.Name="Магазин украшений"/>
      </StackPanel>
     </DockPanel>
@@ -39,8 +39,8 @@
     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
     <Grid MaxWidth="640" HorizontalAlignment="Stretch" Margin="0,0,24,0">
      <TextBox x:Name="SearchBox" Padding="46,13,100,13" KeyDown="SearchKey" AutomationProperties.Name="Поиск аниме"/>
-     <TextBlock Text="⌕" FontSize="24" Foreground="#8A8A96" Margin="16,0,0,3" VerticalAlignment="Center" IsHitTestVisible="False"/>
-     <TextBlock x:Name="SearchHint" Text="Название аниме…" Foreground="#8E899E" Margin="48,0,96,0" VerticalAlignment="Center" IsHitTestVisible="False"/>
+     <TextBlock Text="⌕" FontSize="24" Foreground="#9C9CA8" Margin="16,0,0,3" VerticalAlignment="Center" IsHitTestVisible="False"/>
+     <TextBlock x:Name="SearchHint" Text="Название аниме…" Foreground="#9C9CA8" Margin="48,0,96,0" VerticalAlignment="Center" IsHitTestVisible="False"/>
      <Button Content="Найти" Click="SearchClick" HorizontalAlignment="Right" Margin="6" Padding="18,6" FontSize="12"/>
      <Popup x:Name="SuggestPopup" PlacementTarget="{Binding ElementName=SearchBox}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True" Width="{Binding ActualWidth, ElementName=SearchBox}"><Border Background="#16161B" BorderBrush="#2A2A33" BorderThickness="1" CornerRadius="16" Padding="8" Margin="0,8,12,16"><Border.Effect><DropShadowEffect BlurRadius="22" ShadowDepth="6" Direction="270" Opacity="0.5"/></Border.Effect><StackPanel x:Name="SuggestList"/></Border></Popup>
     </Grid>
@@ -130,7 +130,7 @@
       <TextBlock Text="Личная коллекция" Style="{StaticResource SectionTitle}"/>
       <TextBlock Text="Избранное и последние открытые серии сохраняются локально, без входа в аккаунт. История помнит серию и озвучку; позицию внутри видео сохраняет сам плеер, если он это поддерживает." Foreground="{StaticResource Muted}" LineHeight="22" Margin="0,14,0,0"/>
      </StackPanel></Border>
-     <TextBlock Text="Yoru — независимый клиент для личного использования. Доступность серий и работа видео зависят от YummyAnime и поставщика плеера. Для просмотра необходим Microsoft Edge WebView2 Runtime." Foreground="#898497" FontSize="12" LineHeight="20" Margin="4,28,0,24"/>
+     <TextBlock Text="Yoru — независимый клиент для личного использования. Доступность серий и работа видео зависят от YummyAnime и поставщика плеера. Для просмотра необходим Microsoft Edge WebView2 Runtime." Foreground="#9C9CA8" FontSize="12" LineHeight="20" Margin="4,28,0,24"/>
     </StackPanel>
    </ScrollViewer>
    <StackPanel Grid.Row="3" Margin="0,12,0,0"><ProgressBar x:Name="BusyBar" Height="2" IsIndeterminate="True" Foreground="#FF4D67" Background="#1F1F26" BorderThickness="0" Visibility="Collapsed"/><TextBlock x:Name="StatusText" Text="" Foreground="#9C9CA8" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"/></StackPanel>

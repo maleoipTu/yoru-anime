@@ -14,7 +14,7 @@ public sealed class SocialPanel
     public Anime Anime { get; set; }
     public Border Root { get; }
     readonly ComboBox listBox = new() { MinWidth = 200, Margin = new Thickness(0, 0, 12, 0) };
-    readonly TextBlock rating = new() { Foreground = new SolidColorBrush(Color.FromRgb(0x9A, 0x98, 0xB0)), FontSize = 13, Margin = new Thickness(0, 16, 0, 0), TextWrapping = TextWrapping.Wrap };
+    readonly TextBlock rating = new() { Foreground = new SolidColorBrush(Color.FromRgb(0x9C, 0x9C, 0xA8)), FontSize = 13, Margin = new Thickness(0, 16, 0, 0), TextWrapping = TextWrapping.Wrap };
     readonly StackPanel reviews = new() { Margin = new Thickness(0, 12, 0, 0) };
     readonly StackPanel editor = new() { Visibility = Visibility.Collapsed, Margin = new Thickness(0, 16, 0, 0) };
     readonly Button rateButton = new() { Content = "Оценить", Margin = new Thickness(0, 0, 0, 0) };

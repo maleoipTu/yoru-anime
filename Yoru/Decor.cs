@@ -112,7 +112,7 @@ public static class Decor
         nameRow.Children.Add(new TextBlock { Text = name, FontSize = 15, FontWeight = FontWeights.SemiBold, Foreground = NameBrush(account.Style(Equipped("equipped_color", "color_default"))) });
         var badge = Badge(account.Style(AccountClient.Text(p, "equipped_badge")), 15); badge.Margin = new Thickness(6, 0, 0, 0); nameRow.Children.Add(badge);
         text.Children.Add(nameRow);
-        if (subtitle.Length > 0) text.Children.Add(new TextBlock { Text = subtitle, FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0x9A, 0x98, 0xB0)), Margin = new Thickness(0, 3, 0, 0), TextWrapping = TextWrapping.Wrap });
+        if (subtitle.Length > 0) text.Children.Add(new TextBlock { Text = subtitle, FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0x9C, 0x9C, 0xA8)), Margin = new Thickness(0, 3, 0, 0), TextWrapping = TextWrapping.Wrap });
         row.Children.Add(text);
         System.Windows.Automation.AutomationProperties.SetName(row, name + ". " + subtitle);
         return row;

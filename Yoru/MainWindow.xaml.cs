@@ -50,6 +50,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent(); WindowTheme.Apply(this); Shell.Main = this;
+        VersionText.Text = $"Yoru {Updater.Current.ToString(3)} · Windows";
         var savedToken = store.ReadToken();
         api.Token = string.IsNullOrWhiteSpace(savedToken) ? AppConfig.DefaultApplicationToken : savedToken;
         TokenBox.Password = api.Token;

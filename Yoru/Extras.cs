@@ -18,7 +18,7 @@ public static class Extras
     public static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(0x9C, 0x9C, 0xA8));
     public static readonly Brush Accent = new SolidColorBrush(Color.FromRgb(0xFF, 0x8A, 0x9B));
     public static readonly Brush Warm = new SolidColorBrush(Color.FromRgb(0xFF, 0xC7, 0x68));
-    public static readonly Brush Raised = new SolidColorBrush(Color.FromRgb(0x21, 0x22, 0x2D));
+    public static readonly Brush Raised = new SolidColorBrush(Color.FromRgb(0x1F, 0x1F, 0x26));
     public static readonly Brush Soft = new SolidColorBrush(Color.FromRgb(0x3A, 0x18, 0x20));
     public static Border Card(UIElement child) => new() { Background = (Brush)Application.Current.Resources["SectionGradient"], BorderBrush = new SolidColorBrush(Color.FromRgb(0x26, 0x26, 0x30)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(20), Padding = new Thickness(28), Margin = new Thickness(0, 0, 0, 24), Child = child };
     public static TextBlock Text(string text, double size = 14, Brush? color = null, bool bold = false) => new() { Text = text, FontSize = size, Foreground = color ?? Brushes.WhiteSmoke, FontWeight = bold ? FontWeights.SemiBold : FontWeights.Normal, TextWrapping = TextWrapping.Wrap };
