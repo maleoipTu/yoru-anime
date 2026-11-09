@@ -13,9 +13,9 @@ public partial class ProfilePage : UserControl
     readonly LocalStore store;
     string tab = "frame";
     bool registering, busy, closed;
-    static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(0x9A, 0x98, 0xB0));
+    static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(0x9C, 0x9C, 0xA8));
     static readonly Brush Panel = new SolidColorBrush(Color.FromRgb(0x16, 0x16, 0x1B));
-    static readonly Brush Line = new SolidColorBrush(Color.FromRgb(0x2C, 0x2D, 0x3A));
+    static readonly Brush Line = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x33));
     static readonly Brush Warm = new SolidColorBrush(Color.FromRgb(0xFF, 0xC7, 0x68));
     static readonly Brush AccentBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0x8A, 0x9B));
 
@@ -321,7 +321,7 @@ public partial class ProfilePage : UserControl
         else if (level < minLevel) { state = "С уровня " + minLevel; color = Muted; }
         else { state = "◆ " + Rewards.Points(price); color = points >= price ? Warm : Muted; }
         panel.Children.Add(new TextBlock { Text = state, FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = color, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0) });
-        var button = new Button { Content = panel, Padding = new Thickness(12, 18, 12, 16), Margin = new Thickness(0, 0, 14, 14), Background = worn ? new SolidColorBrush(Color.FromRgb(0x3A, 0x18, 0x20)) : new SolidColorBrush(Color.FromRgb(0x21, 0x22, 0x2D)), ToolTip = AccountClient.Text(d, "description") };
+        var button = new Button { Content = panel, Padding = new Thickness(12, 18, 12, 16), Margin = new Thickness(0, 0, 14, 14), Background = worn ? new SolidColorBrush(Color.FromRgb(0x3A, 0x18, 0x20)) : new SolidColorBrush(Color.FromRgb(0x1F, 0x1F, 0x26)), ToolTip = AccountClient.Text(d, "description") };
         // Своя подложка у набора администрации: графит с тонким серебряным кантом.
         if (staff) { button.Background = StaffBackground(worn); button.BorderBrush = StaffBorder; button.BorderThickness = new Thickness(1); }
         System.Windows.Automation.AutomationProperties.SetName(button, $"{AccountClient.Text(d, "title")}, {(staff ? "только для администрации" : Rewards.Rarity(rarity))}. {state.Replace("◆", "цена")}");
@@ -534,7 +534,7 @@ public partial class ProfilePage : UserControl
             cell.Children.Add(new TextBlock { Text = AccountClient.Text(a, "title"), FontSize = 11, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, Foreground = open ? Brushes.WhiteSmoke : Muted, Margin = new Thickness(0, 6, 0, 0) });
             var reward = AccountClient.Text(a, "reward").Length > 0 ? " · украшение в награду" : "";
             var tip = $"{AccountClient.Text(a, "description")}" + (AccountClient.Int(a, "points") > 0 ? $" · +{AccountClient.Int(a, "points")} очков" : "") + reward + (open ? " · получено" : "");
-            var border = new Border { Child = cell, Padding = new Thickness(8, 14, 8, 12), Margin = new Thickness(0, 0, 10, 10), CornerRadius = new CornerRadius(14), Background = open ? new SolidColorBrush(Color.FromRgb(0x3A, 0x18, 0x20)) : new SolidColorBrush(Color.FromRgb(0x21, 0x22, 0x2D)), ToolTip = tip };
+            var border = new Border { Child = cell, Padding = new Thickness(8, 14, 8, 12), Margin = new Thickness(0, 0, 10, 10), CornerRadius = new CornerRadius(14), Background = open ? new SolidColorBrush(Color.FromRgb(0x3A, 0x18, 0x20)) : new SolidColorBrush(Color.FromRgb(0x1F, 0x1F, 0x26)), ToolTip = tip };
             System.Windows.Automation.AutomationProperties.SetName(border, AccountClient.Text(a, "title") + ". " + tip);
             wrap.Children.Add(border);
         }
@@ -619,7 +619,7 @@ public partial class ProfilePage : UserControl
             var stack = new StackPanel();
             stack.Children.Add(new TextBlock { Text = value, FontSize = 26, FontWeight = FontWeights.Bold, Foreground = color });
             stack.Children.Add(new TextBlock { Text = caption, FontSize = 12, Foreground = Muted, Margin = new Thickness(0, 4, 0, 0) });
-            Grid.Children.Add(new Border { Background = new SolidColorBrush(Color.FromRgb(0x21, 0x22, 0x2D)), BorderBrush = Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(16), Padding = new Thickness(20, 16, 14, 16), Margin = new Thickness(0, 0, 12, 0), Child = stack });
+            Grid.Children.Add(new Border { Background = new SolidColorBrush(Color.FromRgb(0x1F, 0x1F, 0x26)), BorderBrush = Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(16), Padding = new Thickness(20, 16, 14, 16), Margin = new Thickness(0, 0, 12, 0), Child = stack });
         }
     }
 }

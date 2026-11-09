@@ -233,7 +233,7 @@ public sealed class AdminPage : UserControl
             "badge" => Decor.Badge(styleObject, 26),
             "name_color" => new TextBlock { Text = AccountClient.Text(d, "title"), FontSize = 18, FontWeight = FontWeights.Bold, Foreground = Decor.NameBrush(styleObject) },
             "avatar_deco" => Decor.Avatar(64, account.Style("frame_moon"), account.DisplayName, "", styleObject),
-            "profile_effect" or "profile_frame" => new Grid { Width = 120, Height = 64, Children = { new Border { CornerRadius = new CornerRadius(10), Background = new SolidColorBrush(Color.FromRgb(0x21, 0x22, 0x2D)) }, OrnamentLayer.Overlay(AccountClient.Text(d, "kind") == "profile_effect" ? styleObject : null, AccountClient.Text(d, "kind") == "profile_frame" ? styleObject : null, 10) } },
+            "profile_effect" or "profile_frame" => new Grid { Width = 120, Height = 64, Children = { new Border { CornerRadius = new CornerRadius(10), Background = new SolidColorBrush(Color.FromRgb(0x1F, 0x1F, 0x26)) }, OrnamentLayer.Overlay(AccountClient.Text(d, "kind") == "profile_effect" ? styleObject : null, AccountClient.Text(d, "kind") == "profile_frame" ? styleObject : null, 10) } },
             _ => Decor.Avatar(48, styleObject, account.DisplayName, "")
         });
         var panel = new StackPanel(); panel.Children.Add(preview); panel.Children.Add(grid);

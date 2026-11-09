@@ -131,7 +131,7 @@ public final class ProfileActivity extends Activity {
    message=Ui.text(this,"",13,0xFFFF9A8B);message.setVisibility(View.GONE);Ui.add(content,message,12);
    scroll.post(()->scroll.scrollTo(0,y));return;}
   LinearLayout hero=hero(profile,true);
-  LinearLayout heroActions=Ui.row(this);Button edit=Ui.tonal(this,"Изменить");edit.setOnClickListener(v->editProfile());heroActions.addView(edit,new LinearLayout.LayoutParams(0,-2,1));Button friends=Ui.tonal(this,"Друзья");friends.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"user",Ui.ACCENT,18),null,null,null);friends.setCompoundDrawablePadding(Ui.dp(this,6));friends.setOnClickListener(v->startActivity(new Intent(this,FriendsActivity.class)));LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(0,-2,1);fp.leftMargin=Ui.dp(this,8);heroActions.addView(friends,fp);Ui.add(hero,heroActions,16);
+  LinearLayout heroActions=Ui.row(this);Button edit=Ui.tonal(this,"Изменить");edit.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"settings",Ui.ACCENT,18),null,null,null);edit.setCompoundDrawablePadding(Ui.dp(this,6));edit.setOnClickListener(v->editProfile());heroActions.addView(edit,new LinearLayout.LayoutParams(0,-2,1));Button friends=Ui.tonal(this,"Друзья");friends.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"user",Ui.ACCENT,18),null,null,null);friends.setCompoundDrawablePadding(Ui.dp(this,6));friends.setOnClickListener(v->startActivity(new Intent(this,FriendsActivity.class)));LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(0,-2,1);fp.leftMargin=Ui.dp(this,8);heroActions.addView(friends,fp);Ui.add(hero,heroActions,16);
   if(isAdmin){Button admin=Ui.tonal(this,"Админ-панель");admin.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,"shield",Ui.ACCENT,18),null,null,null);admin.setCompoundDrawablePadding(Ui.dp(this,6));admin.setOnClickListener(v->startActivity(new Intent(this,AdminActivity.class)));Ui.add(hero,admin,8);}
   content.addView((View)hero.getTag(),new LinearLayout.LayoutParams(-1,-2));
 
@@ -139,7 +139,7 @@ public final class ProfileActivity extends Activity {
   LinearLayout stats=Ui.row(this);
   stats.addView(stat("gem",Rewards.compact(points),"очков",Ui.WARM),new LinearLayout.LayoutParams(0,-1,1));
   stats.addView(stat("moon",String.valueOf(level),"уровень",Ui.ACCENT),margin(new LinearLayout.LayoutParams(0,-1,1)));
-  int streak=profile.optInt("streak_days");stats.addView(stat("calendar",String.valueOf(streak),streak>0?"🔥 дней подряд":"дней подряд",0xFFFF8A5B),margin(new LinearLayout.LayoutParams(0,-1,1)));
+  int streak=profile.optInt("streak_days");stats.addView(stat("calendar",String.valueOf(streak),"дней подряд",0xFFFF8A5B),margin(new LinearLayout.LayoutParams(0,-1,1)));
   Ui.add(content,stats,16);
   LinearLayout progress=card();
   LinearLayout pr=Ui.row(this);pr.addView(Ui.title(this,"Уровень "+level,15),new LinearLayout.LayoutParams(0,-2,1));pr.addView(Ui.text(this,"ещё "+Rewards.points(Rewards.toNext(total))+" до "+(level+1),12,Ui.MUTED));progress.addView(pr);
@@ -379,7 +379,7 @@ public final class ProfileActivity extends Activity {
   LinearLayout box=Ui.column(this);box.setPadding(Ui.dp(this,16),Ui.dp(this,14),Ui.dp(this,12),Ui.dp(this,14));box.setBackground(Ui.outlined(this,Ui.PANEL,20));
   // Неразрывные пробелы и автоуменьшение шрифта: число не переносится и не обрезается.
   TextView v=Ui.title(this,value.replace(' ','\u00A0').replace('\u2009','\u202F'),21);v.setTextColor(color);v.setSingleLine(true);v.setAutoSizeTextTypeUniformWithConfiguration(12,21,1,android.util.TypedValue.COMPLEX_UNIT_SP);v.setCompoundDrawablesRelativeWithIntrinsicBounds(new Ui.AppIcon(this,icon,color,16),null,null,null);v.setCompoundDrawablePadding(Ui.dp(this,6));box.addView(v);
-  Ui.add(box,Ui.text(this,caption,12,Ui.MUTED),6);box.setContentDescription(value+" "+caption);box.setFocusable(true);return box;
+  TextView c=Ui.text(this,caption.replace(' ','\u00A0'),12,Ui.MUTED);c.setSingleLine(true);c.setAutoSizeTextTypeUniformWithConfiguration(10,12,1,android.util.TypedValue.COMPLEX_UNIT_SP);Ui.add(box,c,6);box.setContentDescription(value+" "+caption);box.setFocusable(true);return box;
  }
  EditText input(String hint,int type){
   EditText e=new EditText(this);e.setHint(hint);e.setHintTextColor(Ui.MUTED);e.setTextColor(Ui.TEXT);e.setTextSize(15);e.setSingleLine(true);e.setInputType(type);e.setContentDescription(hint);
