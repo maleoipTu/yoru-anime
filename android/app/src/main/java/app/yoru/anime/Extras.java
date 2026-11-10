@@ -189,34 +189,56 @@ final class Extras {
   View fade=new View(a);fade.setBackground(new android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,new int[]{Ui.PANEL,0x00000000,0x00000000,0x00000000,Ui.PANEL}));fade.setTranslationZ(Ui.dp(a,40));drum.addView(fade,new FrameLayout.LayoutParams(-1,-1));
   TextView pointer=Ui.text(a,"▼",16,Ui.ACCENT);pointer.setTranslationZ(Ui.dp(a,41));drum.addView(pointer,new FrameLayout.LayoutParams(-2,-2,Gravity.TOP|Gravity.CENTER_HORIZONTAL));
   TextView pointer2=Ui.text(a,"▲",16,Ui.ACCENT);pointer2.setTranslationZ(Ui.dp(a,41));drum.addView(pointer2,new FrameLayout.LayoutParams(-2,-2,Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL));
-  TextView title=Ui.title(a,"Набираем аниме на барабан…",19);title.setGravity(Gravity.CENTER);title.setMaxLines(3);Ui.add(panel,title,12);
-  TextView meta=Ui.text(a,"Учитываются фильтры каталога и то, что ты ещё не смотрел",13,Ui.MUTED);meta.setGravity(Gravity.CENTER);Ui.add(panel,meta,6);
+  TextView title=Ui.title(a,"Набираем аниме на барабан…",19);title.setGravity(Gravity.CENTER);title.setLines(2);title.setEllipsize(TextUtils.TruncateAt.END);Ui.add(panel,title,12);
+  TextView meta=Ui.text(a,"Учитываются фильтры каталога и то, что ты ещё не смотрел",13,Ui.MUTED);meta.setGravity(Gravity.CENTER);meta.setLines(2);meta.setEllipsize(TextUtils.TruncateAt.END);Ui.add(panel,meta,6);
   LinearLayout actions=Ui.row(a);Button again=Ui.tonal(a,"🎲 Крутить ещё"),open=Ui.button(a,"Смотреть",true);actions.addView(again,new LinearLayout.LayoutParams(0,-2,1));LinearLayout.LayoutParams op=new LinearLayout.LayoutParams(0,-2,1);op.leftMargin=Ui.dp(a,8);actions.addView(open,op);Ui.add(panel,actions,18);
   again.setEnabled(false);open.setEnabled(false);
   android.app.Dialog dialog=Ui.sheet(a,"Рулетка",panel,"Закрыть рулетку");
   Anime[] chosen={null};List<View> cards=new ArrayList<>();float[] offset={0};
+  // Списки пользователя читаются один раз на всю рулетку; вращение останавливается, когда шторку закрыли.
+  Set<Long> seen=new HashSet<>();boolean[] seenLoaded={false};android.animation.ValueAnimator[] running={null};
+  dialog.setOnDismissListener(d->{if(running[0]!=null)running[0].cancel();});
   int cardW=Ui.dp(a,124),cardH=Ui.dp(a,176);float radius=Ui.dp(a,250);
   Runnable layout=()->{float center=reel.getWidth()/2f;for(int i=0;i<cards.size();i++){View card=cards.get(i);float angle=i*GAP-offset[0];if(Math.abs(angle)>1.45f){card.setVisibility(View.INVISIBLE);continue;}float depth=(float)Math.cos(angle),scale=.5f+.5f*depth;
    card.setVisibility(View.VISIBLE);card.setAlpha(.2f+.8f*depth*depth);card.setScaleX(scale*(.75f+.25f*depth));card.setScaleY(scale);card.setTranslationX(center+radius*(float)Math.sin(angle)-cardW/2f);card.setTranslationZ(depth*Ui.dp(a,20));}};
   reel.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->layout.run());
   Runnable spin=new Runnable(){public void run(){again.setEnabled(false);open.setEnabled(false);title.setText("Набираем аниме на барабан…");meta.setText("");
-   async(a,()->{Set<Long> seen=new HashSet<>();for(Anime x:library.history())seen.add(x.id);if(account.signedIn())for(String key:Account.LISTS)for(Anime x:account.list(key))seen.add(x.id);
+   chosen[0]=null;
+   async(a,()->{try{
+     if(!seenLoaded[0]){Set<Long> mine=new HashSet<>();for(Anime x:library.history())mine.add(x.id);
+      // Без сети или входа списки недоступны — рулетка всё равно работает, просто по истории на устройстве.
+      if(account.signedIn())for(String key:Account.LISTS)try{for(Anime x:account.list(key))mine.add(x.id);}catch(Exception ignored){}
+      synchronized(seen){seen.addAll(mine);}seenLoaded[0]=true;}
+     Set<Long> skip;synchronized(seen){skip=new HashSet<>(seen);}
      Random random=new Random();List<Anime> pool=new ArrayList<>();Set<Long> ids=new HashSet<>();
-     for(int attempt=0;attempt<8&&pool.size()<18;attempt++){List<Anime> page=Api.catalog(Api.get("anime?limit=24&sort=views&sort_forward=false&offset="+random.nextInt(attempt<4?30:8)*24+(status.isEmpty()?"":"&status="+status)+filters));for(Anime x:page)if(!seen.contains(x.id)&&(age<0||x.ageValue()==age)&&ids.add(x.id))pool.add(x);}
-     if(pool.isEmpty())throw new IOException("С такими фильтрами всё уже просмотрено. Ослабь фильтры каталога.");Collections.shuffle(pool);return new ArrayList<>(pool.subList(0,Math.min(PICKS,pool.size())));},
-    six->{if(!dialog.isShowing())return;
+     // Случайные страницы; диапазон сужается до первой страницы — иначе при строгих фильтрах все запросы уходят «за конец» каталога.
+     int[] reach={30,30,12,12,4,2,1,1};boolean any=false;
+     for(int attempt=0;attempt<reach.length&&pool.size()<18;attempt++){List<Anime> page=Api.catalog(Api.get("anime?limit=24&sort=views&sort_forward=false&offset="+random.nextInt(reach[attempt])*24+(status.isEmpty()?"":"&status="+status)+filters));any|=!page.isEmpty();for(Anime x:page)if(!skip.contains(x.id)&&(age<0||x.ageValue()==age)&&ids.add(x.id))pool.add(x);}
+     if(pool.isEmpty())return (Object)(any?"С такими фильтрами всё уже просмотрено. Ослабь фильтры каталога.":"По этим фильтрам ничего не нашлось. Ослабь фильтры каталога.");
+     Collections.shuffle(pool);return (Object)new ArrayList<>(pool.subList(0,Math.min(PICKS,pool.size())));
+    }catch(Exception e){return (Object)problem(e);}},
+    result->{if(!dialog.isShowing())return;
+     // Ошибка не оставляет шторку в вечной загрузке: показываем причину и даём крутить снова.
+     if(result instanceof String){title.setText("Не получилось собрать барабан");meta.setText((String)result);again.setEnabled(true);return;}
+     @SuppressWarnings("unchecked")List<Anime> six=(List<Anime>)result;
      // Каждый раз — шесть новых случайных аниме, повторённых по кругу барабана.
-     reel.removeAllViews();cards.clear();
-     for(int i=0;i<(LAPS+2)*PICKS;i++){Anime x=six.get(i%six.size());FrameLayout card=new FrameLayout(a);ImageView poster=new ImageView(a);Ui.round(poster,16);Ui.poster(a,poster,x.poster);card.addView(poster,new FrameLayout.LayoutParams(-1,-1));
+     reel.removeAllViews();cards.clear();List<ImageView> posters=new ArrayList<>();
+     for(int i=0;i<(LAPS+2)*PICKS;i++){Anime x=six.get(i%six.size());FrameLayout card=new FrameLayout(a);ImageView poster=new ImageView(a);Ui.round(poster,16);posters.add(poster);
+      if(i<six.size())Ui.poster(a,poster,x.poster);else{poster.setScaleType(ImageView.ScaleType.CENTER_CROP);poster.setImageDrawable(new Ui.PosterPlaceholder(a));}card.addView(poster,new FrameLayout.LayoutParams(-1,-1));
       View shade=new View(a);shade.setBackground(new android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0x00000000,0xDD0E0E11}));FrameLayout.LayoutParams sp=new FrameLayout.LayoutParams(-1,Ui.dp(a,70),Gravity.BOTTOM);card.addView(shade,sp);
       TextView name=Ui.text(a,x.title,11,Ui.TEXT);name.setTypeface(Ui.MEDIUM);name.setMaxLines(2);name.setEllipsize(TextUtils.TruncateAt.END);FrameLayout.LayoutParams np=new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM);np.setMargins(Ui.dp(a,8),0,Ui.dp(a,8),Ui.dp(a,8));card.addView(name,np);
       card.setBackground(Ui.shape(a,Ui.RAISED,16));card.setClipToOutline(true);card.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
       FrameLayout.LayoutParams cp=new FrameLayout.LayoutParams(cardW,cardH,Gravity.CENTER_VERTICAL|Gravity.START);reel.addView(card,cp);cards.add(card);}
+     // Копии карточек подхватывают картинку оригинала, когда она загрузится (а не качают её ещё восемь раз).
+     Runnable[] share={null};int[] tries={0};share[0]=()->{if(!dialog.isShowing()||posters.isEmpty()||posters.get(0).getParent()==null)return;boolean waiting=false;
+      for(int i=six.size();i<posters.size();i++){ImageView copy=posters.get(i);if(copy.getTag()!=null)continue;android.graphics.drawable.Drawable source=posters.get(i%six.size()).getDrawable();
+       if(source instanceof android.graphics.drawable.BitmapDrawable){copy.setImageBitmap(((android.graphics.drawable.BitmapDrawable)source).getBitmap());copy.setTag("shared");}else waiting=true;}
+      if(waiting&&tries[0]++<80)reel.postDelayed(share[0],250);};share[0].run();
      int winner=new Random().nextInt(six.size()),landing=LAPS*PICKS+winner;float target=landing*GAP;offset[0]=0;layout.run();title.setText("Крутим барабан…");
-     android.animation.ValueAnimator anim=android.animation.ValueAnimator.ofFloat(0,1);anim.setDuration(5200);anim.setInterpolator(null);int[] last={-1};
+     android.animation.ValueAnimator anim=android.animation.ValueAnimator.ofFloat(0,1);anim.setDuration(5200);anim.setInterpolator(null);int[] last={-1};if(running[0]!=null)running[0].cancel();running[0]=anim;boolean[] cancelled={false};
      anim.addUpdateListener(v->{offset[0]=target*ease((float)v.getAnimatedValue());layout.run();int c=Math.round(offset[0]/GAP);if(c!=last[0]){last[0]=c;title.setText(six.get(c%six.size()).title);}});
-     anim.addListener(new android.animation.AnimatorListenerAdapter(){@Override public void onAnimationEnd(android.animation.Animator x){if(a.isDestroyed())return;Anime won=six.get(landing%six.size());chosen[0]=won;title.setText(won.title);title.announceForAccessibility("Выпало: "+won.title);meta.setText(won.meta()+(won.genres().isEmpty()?"":"\n"+won.genres()));
-      View card=cards.get(landing);android.graphics.drawable.GradientDrawable glow=Ui.shape(a,Ui.RAISED,16);glow.setStroke(Ui.dp(a,3),Ui.ACCENT);card.setForeground(glow);card.animate().scaleX(1.12f).scaleY(1.12f).setDuration(180).withEndAction(()->card.animate().scaleX(1).scaleY(1).setDuration(180));
+     anim.addListener(new android.animation.AnimatorListenerAdapter(){@Override public void onAnimationCancel(android.animation.Animator x){cancelled[0]=true;}@Override public void onAnimationEnd(android.animation.Animator x){if(cancelled[0]||a.isDestroyed()||!dialog.isShowing())return;Anime won=six.get(landing%six.size());chosen[0]=won;title.setText(won.title);title.announceForAccessibility("Выпало: "+won.title);meta.setText(won.meta()+(won.genres().isEmpty()?"":"\n"+won.genres()));
+      View card=cards.get(landing);android.graphics.drawable.GradientDrawable glow=Ui.shape(a,android.graphics.Color.TRANSPARENT,16);glow.setStroke(Ui.dp(a,3),Ui.ACCENT);card.setForeground(glow);card.animate().scaleX(1.12f).scaleY(1.12f).setDuration(180).withEndAction(()->card.animate().scaleX(1).scaleY(1).setDuration(180));
       card.setOnClickListener(v->open.performClick());again.setEnabled(true);open.setEnabled(true);}});
      anim.start();});}};
   again.setOnClickListener(v->spin.run());open.setOnClickListener(v->{if(chosen[0]!=null)a.startActivity(new Intent(a,DetailActivity.class).putExtra("anime",chosen[0].raw.toString()));});
