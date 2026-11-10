@@ -15,6 +15,7 @@ for r, n in enumerate(names):
             d = ImageDraw.Draw(sheet); cx, cy = x0 + 120, y0 + 120
             d.ellipse([cx - 86, cy - 86, cx + 86, cy + 86], fill=(255, 138, 61))
             d.ellipse([cx - 78, cy - 78, cx + 78, cy + 78], fill=(120, 160, 140))
-        part = img.crop((fr * spec['w'], 0, (fr + 1) * spec['w'], spec['h']))
+        cols = spec.get('cols', spec['frames']); fx, fy = (fr % cols) * spec['w'], (fr // cols) * spec['h']
+        part = img.crop((fx, fy, fx + spec['w'], fy + spec['h']))
         sheet.alpha_composite(part, (x0, y0))
 sheet.save(sys.argv[3] if len(sys.argv) > 3 else '/tmp/preview.png')

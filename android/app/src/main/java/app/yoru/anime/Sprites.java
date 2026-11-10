@@ -16,13 +16,14 @@ final class Sprites {
  static final float EFFECT_PACE=1.6f,FRAME_PACE=1.4f;
  private Sprites(){}
  static final class Sheet {
-  final Bitmap bitmap;final int w,h,frames,fps;final float scale;
-  Sheet(Bitmap bitmap,int w,int h,int frames,int fps,float scale){this.bitmap=bitmap;this.w=w;this.h=h;this.frames=frames;this.fps=fps;this.scale=scale;}
+  final Bitmap bitmap;final int w,h,frames,fps,cols;final float scale;
+  Sheet(Bitmap bitmap,int w,int h,int frames,int fps,int cols,float scale){this.bitmap=bitmap;this.w=w;this.h=h;this.frames=frames;this.fps=fps;this.cols=cols>0?cols:frames;this.scale=scale;}
   int frameAt(long millis){return frames<=1||fps<=0?0:(int)((millis*fps/1000)%frames);}
-  Rect src(int frame){int fw=Math.round(w*scale),fh=Math.round(h*scale);int i=Math.max(0,Math.min(frames-1,frame));return new Rect(i*fw,0,i*fw+fw,fh);}
+  // Кадры лежат сеткой: cols в ряд (старые листы — одна лента).
+  Rect src(int frame){int fw=Math.round(w*scale),fh=Math.round(h*scale);int i=Math.max(0,Math.min(frames-1,frame)),x=i%cols*fw,y=i/cols*fh;return new Rect(x,y,x+fw,y+fh);}
  }
  static JSONObject manifest;
- static final android.util.LruCache<String,Sheet> CACHE=new android.util.LruCache<String,Sheet>(48*1024*1024){protected int sizeOf(String k,Sheet s){return s.bitmap.getByteCount();}};
+ static final android.util.LruCache<String,Sheet> CACHE=new android.util.LruCache<String,Sheet>(64*1024*1024){protected int sizeOf(String k,Sheet s){return s.bitmap.getByteCount();}};
  static final Paint PAINT=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);
 
  static synchronized JSONObject manifest(Context c){
@@ -37,7 +38,7 @@ final class Sprites {
   try(InputStream in=c.getAssets().open("decor/"+name+".png")){
    BitmapFactory.Options o=new BitmapFactory.Options();o.inSampleSize=small?2:1;
    Bitmap b=BitmapFactory.decodeStream(in,null,o);if(b==null)return null;
-   Sheet s=new Sheet(b,spec.optInt("w"),spec.optInt("h"),Math.max(1,spec.optInt("frames",1)),spec.optInt("fps"),small?.5f:1f);
+   Sheet s=new Sheet(b,spec.optInt("w"),spec.optInt("h"),Math.max(1,spec.optInt("frames",1)),spec.optInt("fps"),spec.optInt("cols"),small?.5f:1f);
    CACHE.put(key,s);return s;
   }catch(Exception e){return null;}
  }

@@ -2,38 +2,44 @@
  "cat_ears": {
   "w": 240,
   "h": 240,
-  "frames": 40,
-  "fps": 30
+  "frames": 60,
+  "fps": 30,
+  "cols": 8
  },
  "bunny": {
   "w": 240,
   "h": 240,
-  "frames": 40,
-  "fps": 30
+  "frames": 60,
+  "fps": 30,
+  "cols": 8
  },
  "halo": {
   "w": 240,
   "h": 240,
-  "frames": 40,
-  "fps": 30
+  "frames": 60,
+  "fps": 30,
+  "cols": 8
  },
  "horns": {
   "w": 240,
   "h": 240,
-  "frames": 40,
-  "fps": 30
+  "frames": 60,
+  "fps": 30,
+  "cols": 8
  },
  "headphones": {
   "w": 240,
   "h": 240,
-  "frames": 40,
-  "fps": 30
+  "frames": 60,
+  "fps": 30,
+  "cols": 8
  },
  "crown": {
   "w": 240,
   "h": 240,
-  "frames": 40,
-  "fps": 30
+  "frames": 60,
+  "fps": 30,
+  "cols": 8
  },
  "orbit_hearts": {
   "w": 240,
@@ -50,14 +56,16 @@
  "sakura_wreath": {
   "w": 240,
   "h": 240,
-  "frames": 40,
-  "fps": 30
+  "frames": 60,
+  "fps": 30,
+  "cols": 8
  },
  "pumpkin": {
   "w": 240,
   "h": 240,
-  "frames": 40,
-  "fps": 30
+  "frames": 60,
+  "fps": 30,
+  "cols": 8
  },
  "fx_sparkle": {
   "w": 64,

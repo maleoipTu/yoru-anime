@@ -22,10 +22,12 @@ for (const a of sets) {
     const svg = a.draw(t, i).replace(/id="([^"]+)"/g, `id="$1_${i}"`).replace(/url\(#([^)]+)\)/g, `url(#$1_${i})`).replace(/href="#([^"]+)"/g, `href="#$1_${i}"`);
     frames.push(`<div style="width:${a.w}px;height:${a.h}px;flex:none">${svg}</div>`);
   }
-  await page.setViewportSize({ width: Math.min(a.w * a.frames, 16000), height: a.h });
-  await page.setContent(`<html><body style="margin:0;background:transparent"><div id="s" style="display:flex;width:${a.w * a.frames}px">${frames.join('')}</div></body></html>`);
+  // Длинные анимации укладываются сеткой (cols кадров в ряд): лента шире ~8–16 тыс. px не помещается в текстуру на телефонах.
+  const cols = a.cols || a.frames, rows = Math.ceil(a.frames / cols);
+  await page.setViewportSize({ width: Math.min(a.w * cols, 16000), height: a.h * rows });
+  await page.setContent(`<html><body style="margin:0;background:transparent"><div id="s" style="display:flex;flex-wrap:wrap;width:${a.w * cols}px">${frames.join('')}</div></body></html>`);
   await page.locator('#s').screenshot({ path: path.join(raw, a.name + '.png'), omitBackground: true });
-  manifest[a.name] = { w: a.w, h: a.h, frames: a.frames, fps: a.fps || 0 };
+  manifest[a.name] = { w: a.w, h: a.h, frames: a.frames, fps: a.fps || 0, ...(a.cols ? { cols: a.cols } : {}) };
 }
 await browser.close();
 const prev = fs.existsSync(path.join(out, 'manifest.json')) ? JSON.parse(fs.readFileSync(path.join(out, 'manifest.json'))) : {};
