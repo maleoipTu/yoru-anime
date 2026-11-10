@@ -25,7 +25,7 @@ final class Social {
   Decor.AvatarView avatar=new Decor.AvatarView(activity);avatar.frame(Decor.style(decor,p.optString("equipped_frame","frame_moon")));avatar.deco(Decor.style(decor,p.optString("equipped_deco")));avatar.person(Decor.name(p),p.optString("avatar_url"));row.addView(avatar,new LinearLayout.LayoutParams(Ui.dp(activity,avatarDp),Ui.dp(activity,avatarDp)));
   LinearLayout text=Ui.column(activity);LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(0,-2,1);tp.leftMargin=Ui.dp(activity,12);row.addView(text,tp);
   LinearLayout nameRow=Ui.row(activity);TextView name=Ui.title(activity,Decor.name(p),15);name.setMaxLines(1);name.setEllipsize(TextUtils.TruncateAt.END);Decor.nameColor(name,Decor.style(decor,p.optString("equipped_color","color_default")));nameRow.addView(name,new LinearLayout.LayoutParams(-2,-2));
-  CharSequence badge=Decor.badge(Decor.style(decor,p.optString("equipped_badge")));if(badge.length()>0){TextView g=Ui.text(activity,"",15,Ui.TEXT);g.setText(badge);g.setPadding(Ui.dp(activity,6),0,0,0);nameRow.addView(g);}
+  CharSequence badge=Decor.badge(activity,Decor.style(decor,p.optString("equipped_badge")),15);if(badge.length()>0){TextView g=Ui.text(activity,"",15,Ui.TEXT);g.setText(badge);g.setPadding(Ui.dp(activity,6),0,0,0);nameRow.addView(g);}
   text.addView(nameRow);
   if(subtitle!=null&&!subtitle.isEmpty()){TextView sub=Ui.text(activity,subtitle,12,Ui.MUTED);sub.setMaxLines(2);sub.setEllipsize(TextUtils.TruncateAt.END);Ui.add(text,sub,3);}
   row.setContentDescription(Decor.name(p)+(subtitle==null?"":". "+subtitle));

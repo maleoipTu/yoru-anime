@@ -178,5 +178,83 @@
   "h": 72,
   "frames": 1,
   "fps": 0
+ },
+ "bd_moon": {
+  "w": 96,
+  "h": 96,
+  "frames": 1,
+  "fps": 0
+ },
+ "bd_star": {
+  "w": 96,
+  "h": 96,
+  "frames": 1,
+  "fps": 0
+ },
+ "bd_sakura": {
+  "w": 96,
+  "h": 96,
+  "frames": 1,
+  "fps": 0
+ },
+ "bd_spark": {
+  "w": 96,
+  "h": 96,
+  "frames": 1,
+  "fps": 0
+ },
+ "bd_blade": {
+  "w": 96,
+  "h": 96,
+  "frames": 1,
+  "fps": 0
+ },
+ "bd_balance": {
+  "w": 96,
+  "h": 96,
+  "frames": 1,
+  "fps": 0
+ },
+ "bd_crown": {
+  "w": 96,
+  "h": 96,
+  "frames": 1,
+  "fps": 0
+ },
+ "bd_finisher": {
+  "w": 96,
+  "h": 96,
+  "frames": 1,
+  "fps": 0
+ },
+ "bd_critic": {
+  "w": 96,
+  "h": 96,
+  "frames": 1,
+  "fps": 0
+ },
+ "bd_heart": {
+  "w": 96,
+  "h": 96,
+  "frames": 1,
+  "fps": 0
+ },
+ "bd_pumpkin": {
+  "w": 96,
+  "h": 96,
+  "frames": 1,
+  "fps": 0
+ },
+ "bd_snow": {
+  "w": 96,
+  "h": 96,
+  "frames": 1,
+  "fps": 0
+ },
+ "bd_admin": {
+  "w": 96,
+  "h": 96,
+  "frames": 1,
+  "fps": 0
  }
 }

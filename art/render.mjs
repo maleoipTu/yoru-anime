@@ -9,7 +9,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const out = path.join(here, 'assets', 'decor'), raw = path.join(here, 'build', 'raw');
 fs.mkdirSync(out, { recursive: true }); fs.mkdirSync(raw, { recursive: true });
 const sets = [];
-for (const file of ['avatar.mjs', 'effects.mjs', 'frames.mjs']) if (fs.existsSync(path.join(here, file))) sets.push(...(await import('./' + file)).default);
+for (const file of ['avatar.mjs', 'effects.mjs', 'frames.mjs', 'badges.mjs']) if (fs.existsSync(path.join(here, file))) sets.push(...(await import('./' + file)).default);
 const only = process.argv[2];
 const browser = await chromium.launch();
 const page = await browser.newPage({ deviceScaleFactor: 1 });

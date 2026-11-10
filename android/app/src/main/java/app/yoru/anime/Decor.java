@@ -30,6 +30,13 @@ final class Decor {
   view.post(apply);
  }
  /** Глиф значка в его цвете, например «★». */
+ /** Значок у ника: рисованный (style.sprite) высотой sizeSp, а если рисунка нет — символ шрифта. */
+ static CharSequence badge(android.content.Context c,JSONObject style,float sizeSp){
+  Sprites.Sheet sheet=Sprites.get(c,style.optString("sprite"),false);if(sheet==null)return badge(style);
+  int px=Math.round(android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP,sizeSp*1.25f,c.getResources().getDisplayMetrics()));
+  android.graphics.drawable.BitmapDrawable d=new android.graphics.drawable.BitmapDrawable(c.getResources(),sheet.bitmap);d.setFilterBitmap(true);d.setBounds(0,0,px,px);
+  SpannableString s=new SpannableString("\uFFFC");s.setSpan(new android.text.style.ImageSpan(d,android.os.Build.VERSION.SDK_INT>=29?android.text.style.DynamicDrawableSpan.ALIGN_CENTER:android.text.style.DynamicDrawableSpan.ALIGN_BASELINE),0,1,0);return s;
+ }
  static CharSequence badge(JSONObject style){String glyph=style.optString("glyph");if(glyph.isEmpty())return "";SpannableString s=new SpannableString(glyph);s.setSpan(new ForegroundColorSpan(Rewards.color(style.optString("color"),Ui.ACCENT)),0,glyph.length(),0);return s;}
 
  /** Круглый аватар: картинка, GIF/анимированный WebP или WebM, либо первая буква ника; вокруг — рамка из украшения. */

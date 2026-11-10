@@ -213,7 +213,7 @@ public final class ProfileActivity extends Activity {
   tile.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x24FFFFFF),face,Ui.shape(this,android.graphics.Color.WHITE,18)));
   FrameLayout preview=new FrameLayout(this);tile.addView(preview,new LinearLayout.LayoutParams(-1,Ui.dp(this,72)));
   if(kind.equals("frame")){Decor.AvatarView a=new Decor.AvatarView(this);a.frame(style);a.person(Decor.name(profile),profile.optString("avatar_url"));preview.addView(a,new FrameLayout.LayoutParams(Ui.dp(this,68),Ui.dp(this,68),Gravity.CENTER));}
-  else if(kind.equals("badge")){TextView g=Ui.text(this,"",34,Ui.TEXT);g.setText(Decor.badge(style));g.setGravity(Gravity.CENTER);preview.addView(g,new FrameLayout.LayoutParams(-1,-1));}
+  else if(kind.equals("badge")){TextView g=Ui.text(this,"",34,Ui.TEXT);g.setText(Decor.badge(this,style,34));g.setGravity(Gravity.CENTER);preview.addView(g,new FrameLayout.LayoutParams(-1,-1));}
   else if(kind.equals("avatar_deco")){Decor.AvatarView a=new Decor.AvatarView(this);a.frame(Decor.style(byId,profile.optString("equipped_frame","frame_moon")));a.deco(style);a.person(Decor.name(profile),profile.optString("avatar_url"));preview.addView(a,new FrameLayout.LayoutParams(Ui.dp(this,76),Ui.dp(this,76),Gravity.CENTER));}
   else if(kind.equals("profile_effect")||kind.equals("profile_frame")){preview.addView(new Ornaments.Preview(this,kind,style),new FrameLayout.LayoutParams(Ui.dp(this,104),-1,Gravity.CENTER));}
   else{TextView n=Ui.title(this,Decor.name(profile),18);n.setGravity(Gravity.CENTER);n.setMaxLines(1);n.setEllipsize(TextUtils.TruncateAt.END);Decor.nameColor(n,style);preview.addView(n,new FrameLayout.LayoutParams(-2,-2,Gravity.CENTER));}
@@ -268,7 +268,7 @@ public final class ProfileActivity extends Activity {
   int avatarSide=avatar.hasDeco()?132:96;FrameLayout.LayoutParams ap=new FrameLayout.LayoutParams(Ui.dp(this,avatarSide),Ui.dp(this,avatarSide),Gravity.BOTTOM|Gravity.START);ap.leftMargin=Ui.dp(this,16-(avatarSide-96)/2);top.addView(avatar,ap);
   LinearLayout body=Ui.column(this);body.setPadding(Ui.dp(this,18),Ui.dp(this,8),Ui.dp(this,18),Ui.dp(this,18));card.addView(body);
   LinearLayout nameRow=Ui.row(this);TextView name=Ui.title(this,Decor.name(p),24);name.setMaxLines(2);name.setEllipsize(TextUtils.TruncateAt.END);Decor.nameColor(name,Decor.style(byId,p.optString("equipped_color","color_default")));nameRow.addView(name,new LinearLayout.LayoutParams(-2,-2));
-  CharSequence badge=Decor.badge(Decor.style(byId,p.optString("equipped_badge")));if(badge.length()>0){TextView glyph=Ui.text(this,"",20,Ui.TEXT);glyph.setText(badge);glyph.setPadding(Ui.dp(this,8),0,0,0);JSONObject d=byId.get(p.optString("equipped_badge"));glyph.setContentDescription("Значок: "+(d==null?"":d.optString("title")));nameRow.addView(glyph);}
+  CharSequence badge=Decor.badge(this,Decor.style(byId,p.optString("equipped_badge")),20);if(badge.length()>0){TextView glyph=Ui.text(this,"",20,Ui.TEXT);glyph.setText(badge);glyph.setPadding(Ui.dp(this,8),0,0,0);JSONObject d=byId.get(p.optString("equipped_badge"));glyph.setContentDescription("Значок: "+(d==null?"":d.optString("title")));nameRow.addView(glyph);}
   body.addView(nameRow);
   String handle="@"+p.optString("username")+(p.optString("pronouns").isEmpty()?"":"  ·  "+p.optString("pronouns"));Ui.add(body,Ui.text(this,handle,13,0xCCFFFFFF),4);
   if(p.optBoolean("banned")){TextView ban=Ui.badge(this,0x55FF4D67,Ui.TEXT);ban.setText("Аккаунт заблокирован");Ui.add(body,ban,8);}
