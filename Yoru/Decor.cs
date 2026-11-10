@@ -33,8 +33,15 @@ public static class Decor
     }
     /// <summary>Цвет ника: один цвет или горизонтальный градиент.</summary>
     public static Brush NameBrush(JsonObject style) => Gradient(Colors(style, Color.FromRgb(0xF4, 0xF2, 0xFA)), new Point(0, 0.5), new Point(1, 0.5));
-    public static TextBlock Badge(JsonObject style, double size)
+    /// <summary>Значок у ника: рисованный (style.sprite), а если рисунка нет — символ шрифта.</summary>
+    public static FrameworkElement Badge(JsonObject style, double size)
     {
+        if (Sprites.Get(AccountClient.Text(style, "sprite")) is { } sheet)
+        {
+            var image = new Image { Source = sheet.Frame(0), Width = size * 1.3, Height = size * 1.3, VerticalAlignment = VerticalAlignment.Center, SnapsToDevicePixels = true };
+            RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
+            return image;
+        }
         var glyph = AccountClient.Text(style, "glyph");
         return new TextBlock { Text = glyph, FontSize = size, Foreground = new SolidColorBrush(Parse(AccountClient.Text(style, "color"), Accent)), VerticalAlignment = VerticalAlignment.Center, Visibility = glyph.Length > 0 ? Visibility.Visible : Visibility.Collapsed };
     }

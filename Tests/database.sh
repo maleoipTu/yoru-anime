@@ -24,3 +24,5 @@ run supabase/migrations/20261102000000_progress_sync.sql; run supabase/migration
 psql -q -v ON_ERROR_STOP=1 -d "$db" -f supabase/tests/progress_test.sql | tail -1
 run supabase/migrations/20261103000000_admin_decor.sql; run supabase/migrations/20261103000000_admin_decor.sql
 psql -q -v ON_ERROR_STOP=1 -d "$db" -f supabase/tests/admin_decor_test.sql | tail -1
+run supabase/migrations/20261110000000_drawn_badges.sql; run supabase/migrations/20261110000000_drawn_badges.sql
+psql -q -v ON_ERROR_STOP=1 -d "$db" -Atc "select case when count(*)=13 then 'drawn badges ok' else 'FAIL drawn badges' end from public.decorations where kind='badge' and style->>'sprite' like 'bd_%' and style ? 'glyph'" | grep ok
