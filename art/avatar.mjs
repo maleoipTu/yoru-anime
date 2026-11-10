@@ -100,22 +100,45 @@ const horns = t => {
     ${horn(-122, -1)}${horn(-58, 1)}${lick(-120, 0)}${lick(-60, .37)}${embers}`);
 };
 
+// Наушники: полноразмерные, с мягким оголовьем и подсветкой, цвет которой за цикл плавно проходит весь круг.
+// Чаши слегка «качают» в бит, на них прыгает эквалайзер, от чаш улетают ноты.
 const headphones = t => {
-  const beat = Math.max(0, sin(t * 4)) ** 2, pulse = .45 + .55 * beat;
-  const notes = [0, .34, .67].map((ph, i) => { const p = (t + ph) % 1, x = 214 + sin(p * 1.5 + i * .3) * 10 - p * 6 + (i - 1) * 5, y = 128 - p * 84; return `<g transform="translate(${f(x)} ${f(y)}) scale(${f(.8 + .2 * (1 - p))})" opacity="${f(Math.min(1, (1 - p) * 1.6))}" filter="url(#sh)"><path d="M0 0 v-18 l12 -4 v16" fill="none" stroke="#FFD08A" stroke-width="2.6" stroke-linecap="round"/><ellipse cx="-3" cy="1" rx="5" ry="4" fill="#FFB347"/><ellipse cx="9" cy="-3" rx="5" ry="4" fill="#FFB347"/></g>`; }).join('');
+  const beat = Math.max(0, sin(t * 4)) ** 2, hue = d => `hsl(${f(((t * 360 + d) % 360 + 360) % 360)} 95% 66%)`;
+  const bandD = r => { const [x0, y0] = at(-158, r), [x1, y1] = at(-22, r); return `M${f(x0)} ${f(y0)} A${r} ${r} 0 0 1 ${f(x1)} ${f(y1)}`; };
   const cup = side => {
-    const x = C + side * 94;
-    return `<g filter="url(#sh)"><rect x="${f(x - 17)}" y="92" width="34" height="62" rx="15" fill="url(#cup)" stroke="#121218" stroke-width="2"/>
-      <rect x="${f(x - 11)}" y="100" width="22" height="46" rx="10" fill="#22222C"/>
-      <rect x="${f(x - 11)}" y="100" width="22" height="46" rx="10" fill="none" stroke="#FF8A3D" stroke-width="3" stroke-opacity="${f(pulse)}" filter="url(#g)"/>
-      <path d="M${f(x - 10 * side)} 98 v30" stroke="#FFFFFF" stroke-opacity=".3" stroke-width="3" stroke-linecap="round"/></g>`;
+    const x = C + side * 95, y = 132, k = 1 + .035 * beat;
+    const bars = [-1, 0, 1].map(i => { const h = 5 + 9 * (.5 + .5 * Math.sin((t * 4 + i * .23 + (side > 0 ? .4 : 0)) * TAU)) * (.6 + .4 * Math.sin((t * 2 + i * .31) * TAU) ** 2);
+      return `<rect x="${f(i * 6.5 - 2)}" y="${f(-h)}" width="4" height="${f(h * 2)}" rx="2" fill="${hue(side * 40 + i * 25)}"/>`; }).join('');
+    return `<g transform="translate(${f(x)} ${y}) rotate(${side * -7}) scale(${f(k)})">
+      <ellipse cx="${-side * 9}" cy="0" rx="15" ry="31" fill="#0D0D12" stroke="#000" stroke-opacity=".5" stroke-width="1.5"/>
+      <ellipse cx="${-side * 9}" cy="0" rx="10" ry="26" fill="none" stroke="#3A3A48" stroke-width="2" opacity=".7"/>
+      <ellipse cx="0" cy="0" rx="21" ry="35" fill="url(#shell)" stroke="#07070A" stroke-width="2.2"/>
+      <ellipse cx="0" cy="0" rx="16" ry="29" fill="none" stroke="${hue(side * 40)}" stroke-width="7" opacity="${f(.25 + .3 * beat)}" filter="url(#soft)"/>
+      <ellipse cx="0" cy="0" rx="16" ry="29" fill="none" stroke="${hue(side * 40)}" stroke-width="2.6" opacity="${f(.75 + .25 * beat)}"/>
+      <ellipse cx="0" cy="0" rx="12.5" ry="25" fill="#15151C"/>
+      <g filter="url(#g)">${bars}</g>
+      <path d="M${-side * 13} -24 C${-side * 18} -10 ${-side * 18} 8 ${-side * 14} 20" stroke="#FFFFFF" stroke-opacity=".28" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    </g>`;
   };
-  return svg(W, W, `<defs>${shadow('sh', 3, 2.5, .5)}${glow('g', 3)}${lin('band', [[0, '#5C5C70'], [.5, '#33333F'], [1, '#1D1D25']])}${lin('cup', [[0, '#4C4C5E'], [1, '#1E1E26']], 0, 0, 1, 0)}</defs>
-    <path d="M${C - 94} 112 C${C - 96} 38 ${C + 96} 38 ${C + 94} 112" fill="none" stroke="#101016" stroke-width="17" stroke-linecap="round" filter="url(#sh)"/>
-    <path d="M${C - 94} 112 C${C - 96} 38 ${C + 96} 38 ${C + 94} 112" fill="none" stroke="url(#band)" stroke-width="13" stroke-linecap="round"/>
-    <path d="M${C - 80} 76 C${C - 60} 46 ${C + 60} 46 ${C + 80} 76" fill="none" stroke="#FFFFFF" stroke-opacity=".28" stroke-width="3" stroke-linecap="round"/>
-    ${[-1, 1].flatMap(side => [0, .5].map(ph => { const p = (t * 4 + ph) % 1, r = 20 + p * 24, x = C + side * 104; return `<path d="M${f(x + side * r * .3)} ${f(123 - r * .7)} Q${f(x + side * r * .8)} 123 ${f(x + side * r * .3)} ${f(123 + r * .7)}" stroke="#FFB36B" stroke-width="${f(2.8 - p * 1.6)}" fill="none" stroke-linecap="round" opacity="${f((1 - p) * .7)}"/>`; })).join('')}
-    ${cup(-1)}${cup(1)}${notes}`);
+  const yoke = side => { const [bx, by] = at(side > 0 ? -22 : -158, 101); return `<path d="M${f(bx)} ${f(by - 2)} L${f(C + side * 96)} 104" stroke="#07070A" stroke-width="10" stroke-linecap="round"/><path d="M${f(bx)} ${f(by - 2)} L${f(C + side * 96)} 104" stroke="url(#metal)" stroke-width="6" stroke-linecap="round"/>`; };
+  const notes = [0, .25, .5, .75].map((ph, i) => { const p = (t + ph) % 1, side = i % 2 ? -1 : 1, x = C + side * (92 - p * 26) + sin(p * 1.5 + i * .3) * 7, y = 92 - p * 70, sc = .75 + .3 * Math.sin(p * Math.PI);
+    return `<g transform="translate(${f(x)} ${f(y)}) rotate(${f(side * (8 - p * 20))}) scale(${f(sc)})" opacity="${f(Math.sin(p * Math.PI) ** .7)}" filter="url(#sh)">
+      <path d="M0 0 v-17 l11 -4 v15" fill="none" stroke="${hue(i * 70)}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+      <ellipse cx="-3.4" cy="0" rx="4.4" ry="3.3" fill="${hue(i * 70)}" transform="rotate(-18 -3.4 0)"/><ellipse cx="7.6" cy="-6" rx="4.4" ry="3.3" fill="${hue(i * 70)}" transform="rotate(-18 7.6 -6)"/></g>`; }).join('');
+  // Блик, пробегающий по оголовью раз за цикл.
+  const sweep = -158 + ((t * 1.4) % 1) * 136, sweepOp = t * 1.4 < 1 ? Math.sin(t * 1.4 * Math.PI) : 0, [sx0, sy0] = at(sweep - 9, 101), [sx1, sy1] = at(sweep + 9, 101);
+  return svg(W, W, `<defs>${shadow('sh', 3, 2.5, .5)}${glow('g', 1.6)}${blur('soft', 4)}
+    ${lin('shell', [[0, '#4A4A5C'], [.5, '#2A2A36'], [1, '#141419']], 0, 0, 1, 1)}${lin('metal', [[0, '#C9CEDA'], [.5, '#8A90A2'], [1, '#5A5F70']])}
+    ${lin('pad', [[0, '#3C3C4A'], [1, '#1B1B22']])}${lin('bandg', [[0, '#55556A'], [.5, '#2D2D3A'], [1, '#17171D']])}</defs>
+    <g filter="url(#sh)">
+      <path d="${bandD(101)}" fill="none" stroke="#07070A" stroke-width="16" stroke-linecap="round"/>
+      <path d="${bandD(101)}" fill="none" stroke="url(#bandg)" stroke-width="12" stroke-linecap="round"/>
+      <path d="${bandD(94.5)}" fill="none" stroke="url(#pad)" stroke-width="7" stroke-linecap="round" stroke-dasharray="118 400" stroke-dashoffset="-52"/>
+      <path d="${bandD(104.5)}" fill="none" stroke="${hue(0)}" stroke-width="1.8" stroke-linecap="round" opacity="${f(.55 + .35 * beat)}" stroke-dasharray="150 400" stroke-dashoffset="-36"/>
+      <path d="${bandD(103)}" fill="none" stroke="#FFFFFF" stroke-opacity=".22" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="90 400" stroke-dashoffset="-40"/>
+      ${sweepOp > .02 ? `<path d="M${f(sx0)} ${f(sy0)} A101 101 0 0 1 ${f(sx1)} ${f(sy1)}" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" opacity="${f(.55 * sweepOp)}" filter="url(#soft)"/>` : ''}
+      ${yoke(-1)}${yoke(1)}${cup(-1)}${cup(1)}
+    </g>${notes}`);
 };
 
 const crown = t => {
