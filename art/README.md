@@ -8,4 +8,4 @@ node art/render.mjs        # всё (или: node art/render.mjs pf_ — тол�
 python3 art/optimize.py    # пережать в art/assets/decor (почти без потерь: ошибка ≤ 2 уровней из 255)
 ```
 
-`art/assets/decor` подключается в Android (assets) и Windows (Assets/decor). `manifest.json` хранит размер кадра, число кадров и частоту.
+`art/assets/decor` подключается в Android (assets) и Windows (Assets/decor). `manifest.json` хранит размер кадра, число кадров, частоту и `cols` — сколько кадров в ряду (длинные анимации лежат сеткой, без `cols` лист — одна лента).

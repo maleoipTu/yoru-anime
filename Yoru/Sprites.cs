@@ -10,7 +10,7 @@ namespace Yoru;
 /// </summary>
 public static class Sprites
 {
-    public sealed class Sheet(BitmapSource source, int w, int h, int frames, int fps)
+    public sealed class Sheet(BitmapSource source, int w, int h, int frames, int fps, int cols = 0)
     {
         public int W { get; } = w; public int H { get; } = h; public int Frames { get; } = frames; public int Fps { get; } = fps;
         readonly CroppedBitmap?[] cut = new CroppedBitmap?[frames];
@@ -18,8 +18,11 @@ public static class Sprites
         {
             i = Math.Clamp(i, 0, Frames - 1);
             if (cut[i] is { } ready) return ready;
-            var scale = source.PixelWidth / (double)(W * Frames);
-            var crop = new CroppedBitmap(source, new Int32Rect((int)Math.Round(i * W * scale), 0, (int)Math.Round(W * scale), Math.Min(source.PixelHeight, (int)Math.Round(H * scale))));
+            // Кадры лежат сеткой: perRow в ряд (старые листы — одна лента).
+            var perRow = cols > 0 ? cols : Frames;
+            var scale = source.PixelWidth / (double)(W * perRow);
+            int x = (int)Math.Round(i % perRow * W * scale), y = (int)Math.Round(i / perRow * H * scale);
+            var crop = new CroppedBitmap(source, new Int32Rect(x, y, Math.Min(source.PixelWidth - x, (int)Math.Round(W * scale)), Math.Min(source.PixelHeight - y, (int)Math.Round(H * scale))));
             crop.Freeze(); cut[i] = crop; return crop;
         }
         public int FrameAt(long millis) => Frames <= 1 || Fps <= 0 ? 0 : (int)(millis * Fps / 1000 % Frames);
@@ -45,7 +48,7 @@ public static class Sprites
             {
                 var image = new BitmapImage();
                 image.BeginInit(); image.UriSource = new Uri(Path.Combine(Folder, name + ".png")); image.CacheOption = BitmapCacheOption.OnLoad; image.EndInit(); image.Freeze();
-                sheet = new Sheet(image, AccountClient.Int(spec, "w"), AccountClient.Int(spec, "h"), Math.Max(1, AccountClient.Int(spec, "frames")), AccountClient.Int(spec, "fps"));
+                sheet = new Sheet(image, AccountClient.Int(spec, "w"), AccountClient.Int(spec, "h"), Math.Max(1, AccountClient.Int(spec, "frames")), AccountClient.Int(spec, "fps"), AccountClient.Int(spec, "cols"));
             }
             catch (Exception e) when (e is IOException or NotSupportedException or UriFormatException) { }
         cache[name] = sheet;
